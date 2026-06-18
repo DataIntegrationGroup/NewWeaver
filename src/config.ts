@@ -16,10 +16,10 @@ export const STA_BASE_URL =
   env.VITE_STA_BASE_URL ??
   "https://sta.newmexicowaterdata.org/FROST/v1.1"
 
-// Secondary STA server (FROST) hosting City of Albuquerque (CABQ) and other
+// Secondary STA server (FROST), "st2", hosting CABQ, BernCo, OSE and other
 // agency monitoring data. Same protocol, different deployment/path.
-export const STA_CABQ_BASE_URL =
-  env.VITE_STA_CABQ_BASE_URL ??
+export const STA_ST2_BASE_URL =
+  env.VITE_STA_ST2_BASE_URL ??
   "https://st2.newmexicowaterdata.org/FROST-Server/v1.1"
 
 // DIE pygeoapi base. Placeholder until Phase 1 stands up the public endpoint

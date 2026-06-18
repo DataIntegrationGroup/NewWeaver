@@ -9,7 +9,7 @@
  */
 import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
-import { STA_CABQ_BASE_URL } from "@/config"
+import { STA_ST2_BASE_URL } from "@/config"
 
 /** MapLibre paint/layout for a vector layer, kept loose at the catalog level. */
 export interface LayerStyle {
@@ -55,6 +55,38 @@ const pointStyle: LayerStyle = {
   },
 }
 
+function staPoint(color: string): LayerStyle {
+  return { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": color } }
+}
+
+/**
+ * Agencies served by the st2 FROST server, each filtered by
+ * `properties/agency`. Counts are approximate location totals at time of
+ * wiring. CABQ is on by default; the rest start hidden to avoid clutter.
+ */
+const ST2_AGENCIES: { code: string; title: string; color: string }[] = [
+  { code: "CABQ", title: "City of Albuquerque (CABQ)", color: "#d97706" },
+  { code: "BernCo", title: "Bernalillo County", color: "#047857" },
+  { code: "OSE", title: "NM Office of the State Engineer", color: "#0891b2" },
+  { code: "OSE-Roswell", title: "OSE — Roswell District", color: "#0e7490" },
+  { code: "SanAcaciaReach", title: "San Acacia Reach", color: "#7c3aed" },
+  { code: "PVACD", title: "Pecos Valley ACD", color: "#db2777" },
+  { code: "EBWPC", title: "EBWPC", color: "#ea580c" },
+  { code: "EBID", title: "Elephant Butte Irrigation District", color: "#65a30d" },
+  { code: "CityOfRoswell", title: "City of Roswell", color: "#c026d3" },
+]
+
+const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
+  id: `st2-${a.code.toLowerCase()}`,
+  title: a.title,
+  description: `${a.title} monitoring locations from the st2 FROST server (agency=${a.code}).`,
+  source: "sta",
+  staBaseUrl: STA_ST2_BASE_URL,
+  defaultVisible: a.code === "CABQ",
+  query: { $filter: `properties/agency eq '${a.code}'`, $top: 2000 },
+  style: staPoint(a.color),
+}))
+
 export const LAYER_CATALOG: LayerConfig[] = [
   {
     id: "monitoring-locations",
@@ -63,26 +95,16 @@ export const LAYER_CATALOG: LayerConfig[] = [
     source: "sta",
     defaultVisible: true,
     query: { $top: 1000 },
-    style: { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": "#1d4ed8" } },
+    style: staPoint("#1d4ed8"),
   },
-  {
-    id: "cabq-wells",
-    title: "CABQ groundwater wells",
-    description:
-      "City of Albuquerque monitoring wells (groundwater levels/elevations), from the st2 FROST server.",
-    source: "sta",
-    staBaseUrl: STA_CABQ_BASE_URL,
-    defaultVisible: true,
-    query: { $filter: "properties/agency eq 'CABQ'", $top: 1000 },
-    style: { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": "#d97706" } },
-  },
+  ...st2AgencyLayers,
   {
     id: "water-levels-summary",
     title: "Water-levels summary",
     description: "Integrated water-level statistics computed by DIE.",
     source: "features",
     collectionId: "water_levels_summary",
-    style: { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": "#86911A" } },
+    style: staPoint("#047857"),
   },
   {
     id: "latest-tds",
@@ -90,7 +112,7 @@ export const LAYER_CATALOG: LayerConfig[] = [
     description: "Latest total dissolved solids, computed by DIE.",
     source: "features",
     collectionId: "latest_tds",
-    style: { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": "#C04034" } },
+    style: staPoint("#dc2626"),
   },
 ]
 
