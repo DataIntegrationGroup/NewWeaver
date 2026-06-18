@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:bdd": "cucumber-js"
+    "test:bdd": "NODE_OPTIONS='--import ./bdd-register.mjs' cucumber-js",
+    "test:bdd:all": "NODE_OPTIONS='--import ./bdd-register.mjs' cucumber-js --profile all"
   },
   "dependencies": {
     "@fontsource/open-sans": "^5.2.7",

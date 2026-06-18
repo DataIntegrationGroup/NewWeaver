@@ -62,9 +62,14 @@ pnpm lint
 
 ## Status
 
-Phase 0/2 skeleton: app shell + basemap + typed data clients + layer catalog.
-The map layers, inspect panels, charts, filtering, and URL state described in
-`features/` are not yet implemented.
+Phase 2 (in progress): app shell + basemap + typed data clients + layer
+catalog, with catalog layers rendering on the map end-to-end via TanStack
+Query — one STA layer (monitoring locations, MapLibre-clustered) and the
+Features collections (`water_levels_summary`, `latest_tds`) as GeoJSON sources.
+
+The `@client` specs run and pass (`pnpm test:bdd`). Inspect panels, attribute
+tables, time-series charts, filtering, and URL state (the `@frontend` specs)
+are not yet implemented and need a browser harness (`pnpm test:bdd:all`).
 
 > Upstream data plumbing (Aqueduct → FROST; DIE → pygeoapi) is **referenced
 > only** — it lives in other repos and is out of scope here.
