@@ -11,8 +11,8 @@ export interface Selection {
 }
 
 export interface WeaverSearch {
-  /** Visible layer ids. */
-  layers: string[]
+  /** Visible layer ids. Optional in the URL (defaults applied on read). */
+  layers?: string[]
   /** Map center + zoom. */
   lng?: number
   lat?: number

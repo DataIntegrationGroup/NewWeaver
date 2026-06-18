@@ -13,8 +13,8 @@ import {
  * (layers, extent, selection, filters) is reflected in a shareable link.
  */
 export function useViewState() {
-  const search = useSearch({ from: "/" }) as WeaverSearch
-  const navigate = useNavigate({ from: "/" })
+  const search = useSearch({ from: "/map" }) as WeaverSearch
+  const navigate = useNavigate({ from: "/map" })
 
   // Discrete actions push history (so Back restores the prior view); the
   // frequent map-move updates replace it (no history spam).
@@ -30,9 +30,10 @@ export function useViewState() {
     search,
     selection,
     toggleLayer(id: string) {
-      const layers = search.layers.includes(id)
-        ? search.layers.filter((x) => x !== id)
-        : [...search.layers, id]
+      const current = search.layers ?? []
+      const layers = current.includes(id)
+        ? current.filter((x) => x !== id)
+        : [...current, id]
       patch({ layers })
     },
     setView(lng: number, lat: number, z: number) {

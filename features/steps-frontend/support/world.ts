@@ -74,9 +74,15 @@ export class BrowserWorld extends World {
     return baseURL
   }
 
+  /** Open the map app (default) at an optional search string. */
   async open(search = "") {
-    await this.page.goto(`${baseURL}/${search}`)
+    await this.page.goto(`${baseURL}/map${search}`)
     await this.page.getByTestId("map").waitFor()
+  }
+
+  /** Navigate to an arbitrary path (e.g. "/", "/help"). */
+  async goto(path: string) {
+    await this.page.goto(`${baseURL}${path}`)
   }
 
   /** Select a feature via the app's test seam (deterministic, no canvas click). */

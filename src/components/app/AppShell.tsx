@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react"
+import { Link } from "@tanstack/react-router"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
+import {
+  NavBar,
+  NavBarBrand,
+  NavBarNav,
+  NavBarLink,
+  NavBarActions,
+} from "@/components/ui/navbar"
+import { PageShell } from "@/components/ui/page"
 import { NEW_MEXICO_VIEW } from "@/components/ui/map"
 import { LAYER_CATALOG, getLayer } from "@/catalog/layers"
 import { useViewState } from "@/hooks/useViewState"
@@ -31,7 +40,8 @@ export function AppShell() {
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>()
   const [tableOpen, setTableOpen] = useState(false)
 
-  const visibleLayers = LAYER_CATALOG.filter((l) => search.layers.includes(l.id))
+  const layerIds = search.layers ?? []
+  const visibleLayers = LAYER_CATALOG.filter((l) => layerIds.includes(l.id))
   const selectedLayer = selection ? getLayer(selection.layerId) : undefined
 
   // Active layer for the table: the selected layer, else first visible.
@@ -58,11 +68,22 @@ export function AppShell() {
   }, [select, clearSelection])
 
   return (
-    <div className="flex h-svh flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
-        <div className="flex items-baseline gap-3">
-          <h1 className="!text-2xl !leading-none">Weaver</h1>
-          <p className="text-sm text-muted-foreground">New Mexico Water Data</p>
+    <PageShell>
+      <NavBar fluid>
+        <div className="flex items-center gap-2">
+          <NavBarBrand asChild>
+            <Link to="/">Weaver</Link>
+          </NavBarBrand>
+          <NavBarNav>
+            <NavBarLink asChild>
+              <Link to="/about">About</Link>
+            </NavBarLink>
+            <NavBarLink asChild>
+              <Link to="/help" data-testid="nav-help">
+                Help
+              </Link>
+            </NavBarLink>
+          </NavBarNav>
         </div>
         <FilterControls
           bbox={!!search.bbox}
@@ -70,7 +91,7 @@ export function AppShell() {
           onBboxChange={setBbox}
           onQueryChange={setQuery}
         />
-        <div className="flex items-center gap-3">
+        <NavBarActions>
           <Button
             variant="outline"
             size="sm"
@@ -82,12 +103,12 @@ export function AppShell() {
           </Button>
           <Badge variant="secondary">v0.1.0</Badge>
           <ModeToggle />
-        </div>
-      </header>
+        </NavBarActions>
+      </NavBar>
 
       <div className="flex min-h-0 flex-1">
         <aside className="w-72 shrink-0 overflow-y-auto border-r bg-card p-5">
-          <LayerList visible={search.layers} onToggle={toggleLayer} />
+          <LayerList visible={layerIds} onToggle={toggleLayer} />
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col">
@@ -127,6 +148,6 @@ export function AppShell() {
           />
         )}
       </div>
-    </div>
+    </PageShell>
   )
 }
