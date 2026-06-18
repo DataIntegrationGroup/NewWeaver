@@ -39,6 +39,7 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
   const yTitle = unit ? `Depth to water (${unit})` : "Value"
 
   const option = {
+    animation: false,
     grid: { left: 64, right: 16, top: 24, bottom: 48 },
     xAxis: {
       type: "time",

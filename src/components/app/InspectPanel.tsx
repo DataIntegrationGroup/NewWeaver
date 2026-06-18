@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 
 import type { LayerConfig, FeaturesLayer, StaLayer } from "@/catalog/layers"
@@ -87,6 +87,14 @@ function StaInspect({ layer, featureId, onClose }: { layer: StaLayer } & Omit<In
 
   const { data: datastreams, isLoading } = useDatastreams(featureId, layer.staBaseUrl)
   const [dsId, setDsId] = useState<string | undefined>(undefined)
+
+  // Auto-select the first datastream when a location's datastreams load.
+  useEffect(() => {
+    if (datastreams && datastreams.length > 0) {
+      setDsId(String(datastreams[0]["@iot.id"]))
+    }
+  }, [datastreams])
+
   const selected = datastreams?.find((d) => String(d["@iot.id"]) === dsId)
 
   return (
