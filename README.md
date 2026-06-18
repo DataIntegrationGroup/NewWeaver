@@ -64,14 +64,16 @@ pnpm lint
 
 ## Status
 
-Phase 2 (in progress): app shell + basemap + typed data clients + layer
-catalog, with catalog layers rendering on the map end-to-end via TanStack
-Query — one STA layer (monitoring locations, MapLibre-clustered) and the
-Features collections (`water_levels_summary`, `latest_tds`) as GeoJSON sources.
+Phase 2–3: app shell + basemap + typed data clients + config-driven layer
+catalog (incl. all st2 agencies); catalog layers render on the map via TanStack
+Query. Implemented: feature/point selection → inspect panel, monitoring point →
+datastreams → ECharts time-series, TanStack attribute table (sort/paginate, row
+↔ map selection), text + map-extent filtering, and full URL-encoded view state
+(layers, extent, selection — shareable + Back-navigable).
 
-The `@client` specs run and pass (`pnpm test:bdd`). Inspect panels, attribute
-tables, time-series charts, filtering, and URL state (the `@frontend` specs)
-are not yet implemented and need a browser harness (`pnpm test:bdd:all`).
+Specs: `@client` adapter contracts pass headless (`pnpm test:bdd`). The
+`@frontend` specs drive the real UI in Chromium via Playwright with mocked APIs
+(`pnpm test:bdd:frontend`) — see [features/README.md](features/README.md).
 
 > Upstream data plumbing (Aqueduct → FROST; DIE → pygeoapi) is **referenced
 > only** — it lives in other repos and is out of scope here.

@@ -5,19 +5,21 @@ import {
   Outlet,
 } from "@tanstack/react-router"
 import { AppShell } from "@/components/app/AppShell"
+import { validateSearch } from "@/lib/urlState"
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
 })
 
 /**
- * Index route — the map view. Map/layer/selection state will be encoded in
- * this route's search params (Phase 3) so any view is a shareable link.
+ * Index route — the map view. Visible layers, map extent, and selection are
+ * encoded in this route's search params so any view is a shareable link.
  */
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: AppShell,
+  validateSearch,
 })
 
 const routeTree = rootRoute.addChildren([indexRoute])

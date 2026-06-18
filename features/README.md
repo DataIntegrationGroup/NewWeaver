@@ -23,8 +23,24 @@ Other tags: `@smoke` (core happy paths), `@regression` (full suite),
 
 ## Runner
 
-`@cucumber/cucumber` (cucumber-js, TypeScript). Steps live in
-`features/steps/`. Run: `pnpm test:bdd` (e.g. `cucumber-js --tags @smoke`).
+`@cucumber/cucumber` (cucumber-js, TypeScript), two profiles with disjoint
+step/support dirs (each registers its own World):
+
+- **`pnpm test:bdd`** — default profile, `@client`. Steps in `features/steps/`.
+  Headless, mocked `fetch`, no browser. Runs anywhere.
+- **`pnpm test:bdd:frontend`** — `frontend` profile, `@frontend`. Steps in
+  `features/steps-frontend/`. Drives the real UI in **Chromium via Playwright**
+  with STA/Features calls mocked from `features/steps-frontend/support/fixtures.ts`.
+  The World starts a Vite dev server + browser. Prereqs (once):
+
+  ```bash
+  pnpm install
+  pnpm exec playwright install chromium
+  ```
+
+  Map interactions use a small test seam (`window.__weaver*`) the app exposes,
+  so selection/extent are deterministic without driving the WebGL canvas.
+  `@skip`-tagged scenarios are excluded.
 
 ## Scope
 

@@ -48,3 +48,33 @@ export function useFeaturesLayer(layer: FeaturesLayer) {
     placeholderData: EMPTY,
   })
 }
+
+/** Datastreams available at an STA monitoring location. */
+export function useDatastreams(
+  locationId: string | undefined,
+  staBaseUrl?: string
+) {
+  return useQuery({
+    queryKey: ["sta", staBaseUrl ?? "default", "datastreams", locationId],
+    enabled: !!locationId,
+    queryFn: () => staClient(staBaseUrl).datastreamsForLocation(locationId!),
+  })
+}
+
+/** Observations for a datastream, oldest→newest for charting. */
+export function useObservations(
+  datastreamId: string | number | undefined,
+  staBaseUrl?: string
+) {
+  return useQuery({
+    queryKey: ["sta", staBaseUrl ?? "default", "observations", datastreamId],
+    enabled: datastreamId !== undefined && datastreamId !== null,
+    queryFn: async () => {
+      const res = await staClient(staBaseUrl).observationsForDatastream(
+        datastreamId!,
+        { $orderby: "phenomenonTime asc", $top: 2000 }
+      )
+      return res.value
+    },
+  })
+}

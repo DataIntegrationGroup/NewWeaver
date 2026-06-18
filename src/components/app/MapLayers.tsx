@@ -6,55 +6,82 @@ import {
   type FeaturesLayer,
 } from "@/catalog/layers"
 import { useStaLayer, useFeaturesLayer } from "@/hooks/useLayerData"
+import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
 
-/**
- * STA monitoring points as a GeoJSON source.
- *
- * Clustering is disabled for now — points render individually. MapLibre's
- * built-in clustering (plan §9.5) can be re-enabled later by setting
- * `cluster` on the Source and adding cluster/count layers.
- */
-function StaSource({ layer }: { layer: StaLayer }) {
+/** Render-layer id (the MapLibre layer that receives clicks) for a catalog layer. */
+export function renderLayerId(layer: LayerConfig): string {
+  return layer.source === "sta" ? `${layer.id}-points` : `${layer.id}-render`
+}
+
+interface LayerProps2 {
+  layer: LayerConfig
+  filters: FeatureFilters
+  selectedFeatureId?: string
+}
+
+function highlightLayer(id: string, selectedFeatureId?: string) {
+  if (!selectedFeatureId) return null
+  return (
+    <Layer
+      {...({
+        id: `${id}-highlight`,
+        type: "circle",
+        filter: ["==", ["to-string", ["get", "id"]], selectedFeatureId],
+        paint: {
+          "circle-radius": 9,
+          "circle-color": "transparent",
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#111827",
+        },
+      } as unknown as LayerProps)}
+    />
+  )
+}
+
+function StaSource({ layer, filters, selectedFeatureId }: { layer: StaLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useStaLayer(layer)
   if (!data) return null
+  const fc = filterFeatures(data, filters)
 
   return (
-    <Source id={layer.id} type="geojson" data={data}>
+    <Source id={layer.id} type="geojson" data={fc}>
       <Layer
         {...({
-          id: `${layer.id}-points`,
+          id: renderLayerId(layer),
           type: "circle",
           paint: layer.style.paint ?? {},
         } as unknown as LayerProps)}
       />
+      {highlightLayer(layer.id, selectedFeatureId)}
     </Source>
   )
 }
 
-/** Vector / integrated features from OGC API Features as a GeoJSON source. */
-function FeaturesSource({ layer }: { layer: FeaturesLayer }) {
+function FeaturesSource({ layer, filters, selectedFeatureId }: { layer: FeaturesLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useFeaturesLayer(layer)
   if (!data) return null
+  const fc = filterFeatures(data, filters)
 
   return (
-    <Source id={layer.id} type="geojson" data={data}>
+    <Source id={layer.id} type="geojson" data={fc}>
       <Layer
         {...({
-          id: `${layer.id}-render`,
+          id: renderLayerId(layer),
           type: layer.style.type,
           paint: layer.style.paint ?? {},
           layout: layer.style.layout ?? {},
         } as unknown as LayerProps)}
       />
+      {highlightLayer(layer.id, selectedFeatureId)}
     </Source>
   )
 }
 
 /** Render a single catalog layer, dispatching on its source. */
-export function CatalogLayer({ layer }: { layer: LayerConfig }) {
+export function CatalogLayer({ layer, filters, selectedFeatureId }: LayerProps2) {
   return layer.source === "sta" ? (
-    <StaSource layer={layer} />
+    <StaSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
   ) : (
-    <FeaturesSource layer={layer} />
+    <FeaturesSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
   )
 }

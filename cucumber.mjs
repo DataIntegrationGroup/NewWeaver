@@ -1,20 +1,26 @@
-// cucumber-js config.
+// cucumber-js config — two independent profiles with different Worlds:
 //
-// `default` runs the @client specs — the two data-adapter contracts, which
-// run headless against a mocked fetch. The @frontend specs drive the real UI
-// and need a browser harness (Playwright), wired in Phase 3; run them via the
-// `all` profile once that exists.
+//  default ("@client") — the two data-adapter contracts, headless against a
+//    mocked fetch. No browser. Runs anywhere Node runs (`pnpm test:bdd`).
+//
+//  "frontend" ("@frontend") — drives the real UI in Chromium via Playwright,
+//    with STA/Features network calls mocked from fixtures. Requires
+//    `playwright` + a browser (`pnpm exec playwright install chromium`).
+//    Run with `pnpm test:bdd:frontend`.
+//
+// The profiles import disjoint step/support dirs so the client run never loads
+// Playwright (and vice-versa) — each profile registers its own World.
 
-const common = {
-  paths: ["features/**/*.feature"],
-  import: ["features/steps/**/*.ts"],
-}
+const featurePaths = ["features/**/*.feature"]
 
 export default {
-  ...common,
+  paths: featurePaths,
+  import: ["features/steps/**/*.ts"],
   tags: "@client",
 }
 
-export const all = {
-  ...common,
+export const frontend = {
+  paths: featurePaths,
+  import: ["features/steps-frontend/**/*.ts"],
+  tags: "@frontend and not @skip",
 }

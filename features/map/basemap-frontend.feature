@@ -27,15 +27,9 @@ Feature: Interactive basemap
     When the user zooms in
     Then the scale bar updates to a smaller distance
 
-  Scenario: Dense monitoring points cluster at low zoom
+  # Clustering is disabled for now (points render individually). The MapLibre
+  # cluster behaviour can be re-introduced with its own scenarios later.
+  Scenario: Monitoring points render individually
     Given the monitoring-locations layer is visible
-    When the map is zoomed out to the full New Mexico extent
-    Then nearby monitoring points are grouped into clusters
-    And each cluster shows the count of points it contains
-
-  Scenario: Clusters expand when zooming in
-    Given the monitoring-locations layer is visible
-    And monitoring points are clustered
-    When the user clicks a cluster
-    Then the map zooms toward the cluster
-    And the cluster breaks into smaller clusters or individual points
+    Then each monitoring point renders as its own marker
+    And no cluster counts are shown

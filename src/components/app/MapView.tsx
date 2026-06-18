@@ -1,29 +1,111 @@
-import { Map } from "@/components/ui/map"
-import { LAYER_CATALOG } from "@/catalog/layers"
-import { CatalogLayer } from "./MapLayers"
+import { useRef } from "react"
+import {
+  Map,
+  type MapRef,
+  type MapLayerMouseEvent,
+} from "@/components/ui/map"
+
+import type { LayerConfig } from "@/catalog/layers"
+import type { FeatureFilters } from "@/lib/filterFeatures"
+import type { Selection } from "@/lib/urlState"
+import { CatalogLayer, renderLayerId } from "./MapLayers"
 
 interface MapViewProps {
-  /** Ids of catalog layers to render. */
-  visible: string[]
+  layers: LayerConfig[]
+  filters: FeatureFilters
+  selection?: Selection
+  initialView: { longitude: number; latitude: number; zoom: number }
+  onSelect: (sel: Selection) => void
+  onClearSelection: () => void
+  onMove: (lng: number, lat: number, z: number, bounds: [number, number, number, number]) => void
 }
 
 /**
- * MapView — the primary surface. Renders the design system Map primitive with
- * the currently-visible catalog layers (STA points + Features collections)
- * fetched via TanStack Query.
- *
- * Phase 2: one STA layer + one Features layer render end-to-end. Click-to-
- * inspect, attribute tables, charts, filtering, and URL state follow in
- * Phase 3 per the feature specs in /features.
+ * MapView — the primary surface. Renders visible catalog layers, routes map
+ * clicks to feature selection, and reports view changes (extent → URL).
  */
-export function MapView({ visible }: MapViewProps) {
-  const layers = LAYER_CATALOG.filter((l) => visible.includes(l.id))
+export function MapView({
+  layers,
+  filters,
+  selection,
+  initialView,
+  onSelect,
+  onClearSelection,
+  onMove,
+}: MapViewProps) {
+  const mapRef = useRef<MapRef | null>(null)
+  const interactiveLayerIds = layers.map(renderLayerId)
+
+  const handleClick = (e: MapLayerMouseEvent) => {
+    const hit = e.features?.[0]
+    if (!hit) {
+      onClearSelection()
+      return
+    }
+    const layer = layers.find((l) => renderLayerId(l) === hit.layer?.id)
+    if (!layer) return
+    const featureId = String(hit.id ?? hit.properties?.id ?? "")
+    onSelect({ layerId: layer.id, featureId })
+  }
+
+  const emitMove = () => {
+    const map = mapRef.current
+    if (!map) return
+    const c = map.getCenter()
+    const b = map.getBounds()
+    onMove(c.lng, c.lat, map.getZoom(), [
+      b.getWest(),
+      b.getSouth(),
+      b.getEast(),
+      b.getNorth(),
+    ])
+  }
+
+  // Test seam: deterministic map ops for the BDD harness (avoids driving the
+  // WebGL canvas directly). Harmless in production.
+  const handleLoad = () => {
+    const map = mapRef.current
+    if (!map) return
+    ;(window as unknown as { __weaverMap?: unknown }).__weaverMap = {
+      getCenter: () => map.getCenter(),
+      getZoom: () => map.getZoom(),
+      zoomIn: () => map.zoomTo(map.getZoom() + 1, { duration: 0 }),
+      jumpTo: (lng: number, lat: number, zoom: number) =>
+        map.jumpTo({ center: [lng, lat], zoom }),
+      panEast: () => {
+        const c = map.getCenter()
+        map.jumpTo({ center: [c.lng + 3, c.lat] })
+      },
+      queryRendered: (layerId: string) =>
+        map.getLayer(layerId)
+          ? map
+              .queryRenderedFeatures(undefined, { layers: [layerId] })
+              .map((f) => f.properties)
+          : [],
+      layerIds: () => map.getStyle().layers.map((l) => l.id),
+    }
+    emitMove()
+  }
 
   return (
-    <div className="h-full w-full">
-      <Map>
+    <div className="h-full w-full" data-testid="map">
+      <Map
+        ref={mapRef}
+        initialViewState={initialView}
+        interactiveLayerIds={interactiveLayerIds}
+        onClick={handleClick}
+        onLoad={handleLoad}
+        onMoveEnd={emitMove}
+      >
         {layers.map((layer) => (
-          <CatalogLayer key={layer.id} layer={layer} />
+          <CatalogLayer
+            key={layer.id}
+            layer={layer}
+            filters={filters}
+            selectedFeatureId={
+              selection?.layerId === layer.id ? selection.featureId : undefined
+            }
+          />
         ))}
       </Map>
     </div>

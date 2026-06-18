@@ -20,7 +20,14 @@ export function LayerList({ visible, onToggle }: LayerListProps) {
       </h2>
       <ul className="space-y-3">
         {LAYER_CATALOG.map((layer) => (
-          <li key={layer.id} className="flex items-start justify-between gap-3">
+          <li
+            key={layer.id}
+            data-testid={`layer-row-${layer.id}`}
+            data-layer-title={layer.title}
+            data-layer-source={layer.source}
+            data-visible={visible.includes(layer.id) || undefined}
+            className="flex items-start justify-between gap-3"
+          >
             <div className="space-y-0.5">
               <Label htmlFor={`layer-${layer.id}`} className="cursor-pointer">
                 {layer.title}
@@ -33,6 +40,7 @@ export function LayerList({ visible, onToggle }: LayerListProps) {
             </div>
             <Switch
               id={`layer-${layer.id}`}
+              data-testid={`layer-toggle-${layer.id}`}
               checked={visible.includes(layer.id)}
               onCheckedChange={() => onToggle(layer.id)}
             />

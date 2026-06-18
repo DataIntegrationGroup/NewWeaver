@@ -123,6 +123,19 @@ export class SensorThingsClient {
     )
   }
 
+  /**
+   * Datastreams available at a Location, flattened across its Things.
+   * (Locations(id)/Things expanded with their Datastreams.)
+   */
+  async datastreamsForLocation(
+    locationId: number | string
+  ): Promise<Datastream[]> {
+    const res = await this.get<StaCollection<Thing>>(
+      `/Locations(${locationId})/Things?$expand=Datastreams`
+    )
+    return res.value.flatMap((t) => t.Datastreams ?? [])
+  }
+
   /** Observations for a Datastream, default newest-first. */
   observationsForDatastream(datastreamId: number | string, query?: StaQuery) {
     return this.get<StaCollection<Observation>>(
