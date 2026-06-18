@@ -1,4 +1,4 @@
-import { Given, Then } from "@cucumber/cucumber"
+import { Given } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 
 import { LAYER_CATALOG } from "@/catalog/layers"
