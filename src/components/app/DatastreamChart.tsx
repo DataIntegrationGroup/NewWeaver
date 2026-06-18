@@ -40,7 +40,7 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
 
   const option = {
     animation: false,
-    grid: { left: 64, right: 16, top: 24, bottom: 48 },
+    grid: { left: 64, right: 16, top: 24, bottom: 86 },
     xAxis: {
       type: "time",
       name: "Date",
@@ -58,6 +58,11 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
       scale: true,
     },
     tooltip: { trigger: "axis" },
+    // Time-range selector: wheel/drag zoom on the plot + a brush slider.
+    dataZoom: [
+      { type: "inside" },
+      { type: "slider", height: 24, bottom: 8 },
+    ],
     series: [
       {
         type: "line",
@@ -76,7 +81,7 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
       data-y-inverse="true"
       data-y-scale="true"
     >
-      <ReactECharts option={option} style={{ height: 240 }} notMerge />
+      <ReactECharts option={option} style={{ height: 300 }} notMerge />
     </div>
   )
 }
