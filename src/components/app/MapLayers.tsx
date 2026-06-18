@@ -8,58 +8,22 @@ import {
 import { useStaLayer, useFeaturesLayer } from "@/hooks/useLayerData"
 
 /**
- * STA monitoring points as a clustered GeoJSON source. MapLibre's built-in
- * clustering covers point density (no deck.gl needed — plan §9.5).
+ * STA monitoring points as a GeoJSON source.
+ *
+ * Clustering is disabled for now — points render individually. MapLibre's
+ * built-in clustering (plan §9.5) can be re-enabled later by setting
+ * `cluster` on the Source and adding cluster/count layers.
  */
 function StaSource({ layer }: { layer: StaLayer }) {
   const { data } = useStaLayer(layer)
   if (!data) return null
 
-  const color =
-    (layer.style.paint?.["circle-color"] as string | undefined) ?? "#006E7B"
-
   return (
-    <Source
-      id={layer.id}
-      type="geojson"
-      data={data}
-      cluster
-      clusterRadius={50}
-      clusterMaxZoom={12}
-    >
-      <Layer
-        id={`${layer.id}-clusters`}
-        type="circle"
-        filter={["has", "point_count"]}
-        paint={{
-          "circle-color": color,
-          "circle-opacity": 0.7,
-          "circle-radius": [
-            "step",
-            ["get", "point_count"],
-            14,
-            50,
-            18,
-            200,
-            24,
-          ],
-        }}
-      />
-      <Layer
-        id={`${layer.id}-cluster-count`}
-        type="symbol"
-        filter={["has", "point_count"]}
-        layout={{
-          "text-field": ["get", "point_count_abbreviated"],
-          "text-size": 12,
-        }}
-        paint={{ "text-color": "#ffffff" }}
-      />
+    <Source id={layer.id} type="geojson" data={data}>
       <Layer
         {...({
           id: `${layer.id}-points`,
           type: "circle",
-          filter: ["!", ["has", "point_count"]],
           paint: layer.style.paint ?? {},
         } as unknown as LayerProps)}
       />
