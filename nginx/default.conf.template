@@ -1,0 +1,31 @@
+# nginx config for the NewWeaver static SPA on Cloud Run.
+# ${PORT} is substituted at container start (Cloud Run sets it; defaults 8080).
+# nginx runtime vars like $uri are left untouched — they aren't env vars.
+
+server {
+    listen       ${PORT};
+    server_name  _;
+    root         /usr/share/nginx/html;
+    index        index.html;
+
+    gzip              on;
+    gzip_min_length   1024;
+    gzip_types        text/css application/javascript application/json image/svg+xml;
+
+    # Fingerprinted build assets — safe to cache hard and forever.
+    location /assets/ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # The shell must never be stale, or clients pin to an old asset manifest.
+    location = /index.html {
+        add_header Cache-Control "no-cache";
+    }
+
+    # SPA client-side routing: unknown paths fall back to the app shell.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

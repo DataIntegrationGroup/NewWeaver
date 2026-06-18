@@ -1,0 +1,56 @@
+name: Deploy
+
+# Build the SPA into a container and ship it to Cloud Run on every push to
+# main. Auth uses Workload Identity Federation — no service-account key is
+# stored anywhere (see DEPLOY.md for the one-time GCP setup).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGION: us-central1
+  SERVICE: newweaver
+  REPOSITORY: newweaver
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for Workload Identity Federation
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Resolve image ref
+        id: img
+        run: |
+          echo "ref=${REGION}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${REPOSITORY}/${SERVICE}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        run: docker build -t "${{ steps.img.outputs.ref }}" .
+
+      - name: Push image
+        run: docker push "${{ steps.img.outputs.ref }}"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${SERVICE}" \
+            --image "${{ steps.img.outputs.ref }}" \
+            --region "${REGION}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --project "${{ vars.GCP_PROJECT_ID }}"

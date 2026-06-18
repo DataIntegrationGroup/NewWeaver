@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+.git
+.github
+.claude
+features
+*.local
+*.log
+.DS_Store
+.vite
+README.md
+DEPLOY.md
