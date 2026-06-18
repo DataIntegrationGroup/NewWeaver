@@ -1,10 +1,14 @@
-import { useRef } from "react"
+import { Fragment, useRef, useState } from "react"
 import { Layers } from "lucide-react"
+import type { Map as MaplibreMap } from "maplibre-gl"
+import type { Polygon } from "geojson"
 import {
   Map,
+  Popup,
   type MapRef,
   type MapLayerMouseEvent,
 } from "@/components/ui/map"
+import { DrawControls } from "./DrawControls"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -32,6 +36,7 @@ interface MapViewProps {
   onSelect: (sel: Selection) => void
   onClearSelection: () => void
   onMove: (lng: number, lat: number, z: number, bounds: [number, number, number, number]) => void
+  onShapesChange: (shapes: Polygon[]) => void
 }
 
 /**
@@ -49,9 +54,35 @@ export function MapView({
   onSelect,
   onClearSelection,
   onMove,
+  onShapesChange,
 }: MapViewProps) {
   const mapRef = useRef<MapRef | null>(null)
   const interactiveLayerIds = layers.map(renderLayerId)
+  const [drawMap, setDrawMap] = useState<MaplibreMap | null>(null)
+
+  const [hoverInfo, setHoverInfo] = useState<{
+    longitude: number
+    latitude: number
+    name?: string
+    properties: Record<string, unknown>
+  } | null>(null)
+
+  // Hit-test on move: a feature under the pointer drives the hover popup and
+  // the pointer cursor; empty space clears both.
+  const handleMouseMove = (e: MapLayerMouseEvent) => {
+    const hit = e.features?.[0]
+    if (!hit) {
+      setHoverInfo((prev) => (prev ? null : prev))
+      return
+    }
+    const properties = (hit.properties ?? {}) as Record<string, unknown>
+    setHoverInfo({
+      longitude: e.lngLat.lng,
+      latitude: e.lngLat.lat,
+      name: (properties.name as string) ?? undefined,
+      properties,
+    })
+  }
 
   const handleClick = (e: MapLayerMouseEvent) => {
     const hit = e.features?.[0]
@@ -83,6 +114,7 @@ export function MapView({
   const handleLoad = () => {
     const map = mapRef.current
     if (!map) return
+    setDrawMap(map.getMap() as unknown as MaplibreMap)
     ;(window as unknown as { __weaverMap?: unknown }).__weaverMap = {
       getCenter: () => map.getCenter(),
       getZoom: () => map.getZoom(),
@@ -116,7 +148,10 @@ export function MapView({
         mapStyle={basemap}
         initialViewState={initialView}
         interactiveLayerIds={interactiveLayerIds}
+        cursor={hoverInfo ? "pointer" : undefined}
         onClick={handleClick}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoverInfo(null)}
         onLoad={handleLoad}
         onMoveEnd={emitMove}
       >
@@ -130,9 +165,39 @@ export function MapView({
             }
           />
         ))}
+
+        {hoverInfo && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            anchor="bottom"
+            offset={12}
+            closeButton={false}
+            closeOnClick={false}
+            className="max-w-xs"
+          >
+            <div data-testid="feature-popup" className="text-foreground">
+              {hoverInfo.name && (
+                <p className="mb-1 text-sm font-semibold leading-tight">
+                  {hoverInfo.name}
+                </p>
+              )}
+              <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
+                {Object.entries(hoverInfo.properties)
+                  .filter(([k]) => k !== "name")
+                  .map(([k, v]) => (
+                    <Fragment key={k}>
+                      <dt className="font-medium text-muted-foreground">{k}</dt>
+                      <dd className="break-words">{String(v ?? "")}</dd>
+                    </Fragment>
+                  ))}
+              </dl>
+            </div>
+          </Popup>
+        )}
       </Map>
 
-      <div className="absolute left-2 top-2 z-10">
+      <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -155,6 +220,8 @@ export function MapView({
             />
           </PopoverContent>
         </Popover>
+
+        <DrawControls map={drawMap} onShapesChange={onShapesChange} />
       </div>
     </div>
   )

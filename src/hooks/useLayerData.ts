@@ -7,6 +7,15 @@ import type { FeaturesLayer, StaLayer } from "@/catalog/layers"
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] }
 
+/** Query keys, exported so non-hook code (e.g. export selection) can read the
+ *  same cached FeatureCollections the map renders. */
+export function staLayerKey(layer: StaLayer) {
+  return ["sta", layer.staBaseUrl ?? "default", "locations", layer.query ?? null] as const
+}
+export function featuresLayerKey(layer: FeaturesLayer) {
+  return ["features", layer.collectionId, layer.query ?? null] as const
+}
+
 /** Turn STA Locations into a GeoJSON FeatureCollection for MapLibre. */
 function locationsToGeoJSON(locations: Location[]): FeatureCollection {
   return {
@@ -28,7 +37,7 @@ function locationsToGeoJSON(locations: Location[]): FeatureCollection {
 /** Monitoring locations from STA, as GeoJSON points. */
 export function useStaLayer(layer: StaLayer) {
   return useQuery({
-    queryKey: ["sta", layer.staBaseUrl ?? "default", "locations", layer.query ?? null],
+    queryKey: staLayerKey(layer),
     queryFn: async () => {
       const res = await staClient(layer.staBaseUrl).listLocations(layer.query)
       return locationsToGeoJSON(res.value)
@@ -40,7 +49,7 @@ export function useStaLayer(layer: StaLayer) {
 /** Vector items from an OGC API Features collection, as GeoJSON. */
 export function useFeaturesLayer(layer: FeaturesLayer) {
   return useQuery({
-    queryKey: ["features", layer.collectionId, layer.query ?? null],
+    queryKey: featuresLayerKey(layer),
     queryFn: async () => {
       const fc = await features.getItems(layer.collectionId, layer.query)
       return fc as FeatureCollection

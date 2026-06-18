@@ -145,6 +145,36 @@ export class SensorThingsClient {
       })}`
     )
   }
+
+  /**
+   * All observations for a Datastream, following @iot.nextLink until the
+   * series is exhausted or `cap` is reached. Used by exports, which need the
+   * full range rather than a single page.
+   */
+  async observationsPaged(
+    datastreamId: number | string,
+    query?: StaQuery,
+    cap = 50_000
+  ): Promise<Observation[]> {
+    let page = await this.observationsForDatastream(datastreamId, query)
+    const out: Observation[] = [...page.value]
+    while (page["@iot.nextLink"] && out.length < cap) {
+      page = await this.nextPage<Observation>(page["@iot.nextLink"])
+      out.push(...page.value)
+    }
+    return out.length > cap ? out.slice(0, cap) : out
+  }
+
+  /** The single most-recent observation for a Datastream, if any. */
+  async latestObservation(
+    datastreamId: number | string
+  ): Promise<Observation | undefined> {
+    const res = await this.observationsForDatastream(datastreamId, {
+      $top: 1,
+      $orderby: "phenomenonTime desc",
+    })
+    return res.value[0]
+  }
 }
 
 /** Default client (primary FROST). */

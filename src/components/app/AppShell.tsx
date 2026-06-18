@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { Layers } from "lucide-react"
+import { Download, Layers } from "lucide-react"
+import type { Polygon } from "geojson"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,7 @@ import { MapView } from "./MapView"
 import { InspectPanel } from "./InspectPanel"
 import { AttributeTable } from "./AttributeTable"
 import { FilterControls } from "./FilterControls"
+import { ExportDialog } from "./ExportDialog"
 
 /**
  * AppShell — header + filters + layer sidebar + map + inspect panel + table.
@@ -43,6 +45,8 @@ export function AppShell() {
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>()
   const [tableOpen, setTableOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [shapes, setShapes] = useState<Polygon[]>([])
   const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
 
   const layerIds = search.layers ?? []
@@ -128,6 +132,15 @@ export function AppShell() {
           >
             {tableOpen ? "Hide table" : "Attribute table"}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid="open-export"
+            onClick={() => setExportOpen(true)}
+          >
+            <Download />
+            Download
+          </Button>
           <Badge variant="secondary">v0.1.0</Badge>
           <ModeToggle />
         </NavBarActions>
@@ -176,6 +189,7 @@ export function AppShell() {
                 setBounds(b)
                 setView(lng, lat, z)
               }}
+              onShapesChange={setShapes}
             />
           </div>
           {tableOpen && activeLayer && (
@@ -200,6 +214,14 @@ export function AppShell() {
           />
         )}
       </div>
+
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        layers={visibleLayers}
+        filters={filters}
+        shapes={shapes}
+      />
     </PageShell>
   )
 }
