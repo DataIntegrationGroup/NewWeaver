@@ -12,8 +12,8 @@
     "test:bdd:all": "NODE_OPTIONS='--import ./bdd-register.mjs' cucumber-js --profile all"
   },
   "dependencies": {
-    "@fontsource/open-sans": "^5.2.7",
-    "@fontsource/roboto-condensed": "^5.2.8",
+    "@fontsource-variable/outfit": "^5.2.8",
+    "@fontsource-variable/public-sans": "^5.2.7",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/react-query": "^5.66.0",
     "@tanstack/react-router": "^1.95.0",
