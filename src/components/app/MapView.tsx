@@ -1,9 +1,20 @@
 import { useRef } from "react"
+import { Layers } from "lucide-react"
 import {
   Map,
   type MapRef,
   type MapLayerMouseEvent,
 } from "@/components/ui/map"
+import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  BasemapSelector,
+  type BasemapOption,
+} from "@/components/ui/basemap-selector"
 
 import type { LayerConfig } from "@/catalog/layers"
 import type { FeatureFilters } from "@/lib/filterFeatures"
@@ -15,6 +26,9 @@ interface MapViewProps {
   filters: FeatureFilters
   selection?: Selection
   initialView: { longitude: number; latitude: number; zoom: number }
+  basemap: string
+  basemaps: BasemapOption[]
+  onBasemapChange: (id: string) => void
   onSelect: (sel: Selection) => void
   onClearSelection: () => void
   onMove: (lng: number, lat: number, z: number, bounds: [number, number, number, number]) => void
@@ -29,6 +43,9 @@ export function MapView({
   filters,
   selection,
   initialView,
+  basemap,
+  basemaps,
+  onBasemapChange,
   onSelect,
   onClearSelection,
   onMove,
@@ -88,9 +105,15 @@ export function MapView({
   }
 
   return (
-    <div className="h-full w-full" data-testid="map">
+    <div
+      className="relative h-full w-full"
+      data-testid="map"
+      role="region"
+      aria-label="Interactive water-data map"
+    >
       <Map
         ref={mapRef}
+        mapStyle={basemap}
         initialViewState={initialView}
         interactiveLayerIds={interactiveLayerIds}
         onClick={handleClick}
@@ -108,6 +131,31 @@ export function MapView({
           />
         ))}
       </Map>
+
+      <div className="absolute left-2 top-2 z-10">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label="Choose basemap"
+              data-testid="basemap-trigger"
+            >
+              <Layers />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Basemap
+            </p>
+            <BasemapSelector
+              options={basemaps}
+              value={basemap}
+              onValueChange={onBasemapChange}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
     </div>
   )
 }

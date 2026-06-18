@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react"
 import { Link } from "@tanstack/react-router"
+import { Layers } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/mode-toggle"
 import {
   NavBar,
@@ -13,6 +15,7 @@ import {
 import { PageShell } from "@/components/ui/page"
 import { NEW_MEXICO_VIEW } from "@/components/ui/map"
 import { LAYER_CATALOG, getLayer } from "@/catalog/layers"
+import { BASEMAPS, DEFAULT_BASEMAP } from "@/catalog/basemaps"
 import { useViewState } from "@/hooks/useViewState"
 import type { Selection } from "@/lib/urlState"
 import { LayerList } from "./LayerList"
@@ -39,6 +42,8 @@ export function AppShell() {
 
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>()
   const [tableOpen, setTableOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
 
   const layerIds = search.layers ?? []
   const visibleLayers = LAYER_CATALOG.filter((l) => layerIds.includes(l.id))
@@ -67,10 +72,37 @@ export function AppShell() {
     }
   }, [select, clearSelection])
 
+  const filterControls = (
+    <FilterControls
+      bbox={!!search.bbox}
+      q={search.q ?? ""}
+      onBboxChange={setBbox}
+      onQueryChange={setQuery}
+    />
+  )
+
   return (
     <PageShell>
+      <a
+        href="#main-content"
+        className="sr-only rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50"
+      >
+        Skip to map
+      </a>
       <NavBar fluid>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="lg:hidden"
+            aria-label="Toggle layers panel"
+            aria-controls="layer-sidebar"
+            aria-expanded={sidebarOpen}
+            data-testid="toggle-sidebar"
+            onClick={() => setSidebarOpen((v) => !v)}
+          >
+            <Layers />
+          </Button>
           <NavBarBrand asChild>
             <Link to="/">Weaver</Link>
           </NavBarBrand>
@@ -85,12 +117,7 @@ export function AppShell() {
             </NavBarLink>
           </NavBarNav>
         </div>
-        <FilterControls
-          bbox={!!search.bbox}
-          q={search.q ?? ""}
-          onBboxChange={setBbox}
-          onQueryChange={setQuery}
-        />
+        <div className="hidden lg:block">{filterControls}</div>
         <NavBarActions>
           <Button
             variant="outline"
@@ -106,18 +133,43 @@ export function AppShell() {
         </NavBarActions>
       </NavBar>
 
-      <div className="flex min-h-0 flex-1">
-        <aside className="w-72 shrink-0 overflow-y-auto border-r bg-card p-5">
+      <div className="relative flex min-h-0 flex-1">
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close layers panel"
+            className="absolute inset-0 z-30 bg-black/40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        <aside
+          id="layer-sidebar"
+          aria-label="Layers and filters"
+          className={cn(
+            "w-72 shrink-0 space-y-5 overflow-y-auto border-r bg-card p-5",
+            "absolute inset-y-0 left-0 z-40 max-w-[85%] transition-transform duration-200",
+            "lg:static lg:max-w-none lg:translate-x-0",
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <div className="lg:hidden">{filterControls}</div>
           <LayerList visible={layerIds} onToggle={toggleLayer} />
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main
+          id="main-content"
+          aria-label="Map and data"
+          className="flex min-w-0 flex-1 flex-col"
+        >
           <div className="min-h-0 flex-1">
             <MapView
               layers={visibleLayers}
               filters={filters}
               selection={selection}
               initialView={initialView}
+              basemap={basemap}
+              basemaps={BASEMAPS}
+              onBasemapChange={setBasemap}
               onSelect={select}
               onClearSelection={clearSelection}
               onMove={(lng, lat, z, b) => {

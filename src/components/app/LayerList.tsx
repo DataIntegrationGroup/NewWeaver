@@ -1,6 +1,9 @@
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { LAYER_CATALOG } from "@/catalog/layers"
+import { LAYER_CATALOG, type LayerConfig } from "@/catalog/layers"
+import {
+  LayerSelector,
+  type LayerOption,
+  type PointStyle,
+} from "@/components/ui/layer-selector"
 
 interface LayerListProps {
   /** Ids of currently-visible layers. */
@@ -8,9 +11,38 @@ interface LayerListProps {
   onToggle: (id: string) => void
 }
 
+/** Derive the legend swatch style from a catalog layer's MapLibre paint. */
+function pointStyle(layer: LayerConfig): PointStyle {
+  const paint = layer.style.paint ?? {}
+  const color =
+    (paint["circle-color"] as string) ??
+    (paint["fill-color"] as string) ??
+    (paint["line-color"] as string) ??
+    "currentColor"
+  const shape =
+    layer.style.type === "line"
+      ? "line"
+      : layer.style.type === "fill"
+        ? "square"
+        : "circle"
+  return {
+    color,
+    strokeColor: (paint["circle-stroke-color"] as string) ?? undefined,
+    shape,
+  }
+}
+
+const OPTIONS: LayerOption[] = LAYER_CATALOG.map((layer) => ({
+  id: layer.id,
+  title: layer.title,
+  description: layer.description,
+  style: pointStyle(layer),
+}))
+
 /**
- * LayerList — renders a toggle per catalog entry. Driven entirely by
- * LAYER_CATALOG, so a new dataset shows up here without UI changes.
+ * LayerList — the catalog of map layers, each with a legend swatch and a
+ * visibility toggle. Driven entirely by LAYER_CATALOG via the DSDS
+ * LayerSelector, so a new dataset shows up here without UI changes.
  */
 export function LayerList({ visible, onToggle }: LayerListProps) {
   return (
@@ -18,35 +50,7 @@ export function LayerList({ visible, onToggle }: LayerListProps) {
       <h2 className="!text-base !font-semibold uppercase tracking-wide text-muted-foreground">
         Layers
       </h2>
-      <ul className="space-y-3">
-        {LAYER_CATALOG.map((layer) => (
-          <li
-            key={layer.id}
-            data-testid={`layer-row-${layer.id}`}
-            data-layer-title={layer.title}
-            data-layer-source={layer.source}
-            data-visible={visible.includes(layer.id) || undefined}
-            className="flex items-start justify-between gap-3"
-          >
-            <div className="space-y-0.5">
-              <Label htmlFor={`layer-${layer.id}`} className="cursor-pointer">
-                {layer.title}
-              </Label>
-              {layer.description && (
-                <p className="text-xs text-muted-foreground">
-                  {layer.description}
-                </p>
-              )}
-            </div>
-            <Switch
-              id={`layer-${layer.id}`}
-              data-testid={`layer-toggle-${layer.id}`}
-              checked={visible.includes(layer.id)}
-              onCheckedChange={() => onToggle(layer.id)}
-            />
-          </li>
-        ))}
-      </ul>
+      <LayerSelector options={OPTIONS} value={visible} onToggle={onToggle} />
     </div>
   )
 }
