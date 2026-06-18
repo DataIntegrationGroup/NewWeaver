@@ -24,7 +24,10 @@ Feature: Monitoring points to time-series chart
     Given the user has clicked a monitoring point
     When the user selects a datastream
     Then a time-series chart plots its observations over time
-    And the chart axis is labeled with the datastream unit of measurement
+    And the x axis is titled with the date
+    And the y axis is titled with the unit of measurement
+    And the y axis is inverted so zero is at the top
+    And the y axis is scaled to the data
 
   Scenario: Long observation series loads progressively
     Given the user has selected a continuous water-level datastream with many observations

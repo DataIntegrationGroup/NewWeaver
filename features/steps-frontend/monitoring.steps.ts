@@ -65,9 +65,25 @@ Then("a time-series chart plots its observations over time", async function (thi
   await this.page.getByTestId("datastream-chart").waitFor()
 })
 
-Then("the chart axis is labeled with the datastream unit of measurement", async function (this: BrowserWorld) {
-  const trigger = await this.page.getByTestId("datastream-select").textContent()
-  assert.ok(trigger?.includes("ft"), `expected unit in "${trigger}"`)
+Then("the x axis is titled with the date", async function (this: BrowserWorld) {
+  const chart = this.page.getByTestId("datastream-chart")
+  assert.equal(await chart.getAttribute("data-x-title"), "Date")
+})
+
+Then("the y axis is titled with the unit of measurement", async function (this: BrowserWorld) {
+  const chart = this.page.getByTestId("datastream-chart")
+  const title = await chart.getAttribute("data-y-title")
+  assert.ok(title?.includes("ft"), `expected unit in y title "${title}"`)
+})
+
+Then("the y axis is inverted so zero is at the top", async function (this: BrowserWorld) {
+  const chart = this.page.getByTestId("datastream-chart")
+  assert.equal(await chart.getAttribute("data-y-inverse"), "true")
+})
+
+Then("the y axis is scaled to the data", async function (this: BrowserWorld) {
+  const chart = this.page.getByTestId("datastream-chart")
+  assert.equal(await chart.getAttribute("data-y-scale"), "true")
 })
 
 Then("the chart shows a loading indicator while observations are fetched", async function (this: BrowserWorld) {
