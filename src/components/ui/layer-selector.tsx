@@ -2,6 +2,12 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 /** How a layer's points are drawn — mirrors the map's circle paint so the
  *  swatch in the list matches what's on the map. */
@@ -95,49 +101,56 @@ function LayerSelector({
   ...props
 }: LayerSelectorProps) {
   return (
-    <ul
-      data-slot="layer-selector"
-      role="group"
-      aria-label="Map layers"
-      className={cn("space-y-3", className)}
-      {...props}
-    >
-      {options.map((option) => {
-        const checked = value.includes(option.id)
-        return (
-          <li
-            key={option.id}
-            data-testid={`layer-row-${option.id}`}
-            data-layer-title={option.title}
-            data-visible={checked || undefined}
-            className="flex items-start justify-between gap-3"
-          >
+    <TooltipProvider delayDuration={200}>
+      <ul
+        data-slot="layer-selector"
+        role="group"
+        aria-label="Map layers"
+        className={cn("space-y-2", className)}
+        {...props}
+      >
+        {options.map((option) => {
+          const checked = value.includes(option.id)
+          const label = (
             <label
               htmlFor={`layer-${option.id}`}
-              className="flex min-w-0 cursor-pointer items-start gap-2.5"
+              className="flex min-w-0 cursor-pointer items-center gap-2.5"
             >
-              <PointSwatch point={option.style} className="mt-0.5" />
-              <span className="min-w-0 space-y-0.5">
-                <span className="block text-sm font-medium leading-tight">
-                  {option.title}
-                </span>
-                {option.description && (
-                  <span className="block text-xs text-muted-foreground">
-                    {option.description}
-                  </span>
-                )}
+              <PointSwatch point={option.style} />
+              <span className="truncate text-sm font-medium leading-tight">
+                {option.title}
               </span>
             </label>
-            <Switch
-              id={`layer-${option.id}`}
-              data-testid={`layer-toggle-${option.id}`}
-              checked={checked}
-              onCheckedChange={() => onToggle(option.id)}
-            />
-          </li>
-        )
-      })}
-    </ul>
+          )
+          return (
+            <li
+              key={option.id}
+              data-testid={`layer-row-${option.id}`}
+              data-layer-title={option.title}
+              data-visible={checked || undefined}
+              className="flex items-center justify-between gap-3"
+            >
+              {option.description ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>{label}</TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-56">
+                    {option.description}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                label
+              )}
+              <Switch
+                id={`layer-${option.id}`}
+                data-testid={`layer-toggle-${option.id}`}
+                checked={checked}
+                onCheckedChange={() => onToggle(option.id)}
+              />
+            </li>
+          )
+        })}
+      </ul>
+    </TooltipProvider>
   )
 }
 
