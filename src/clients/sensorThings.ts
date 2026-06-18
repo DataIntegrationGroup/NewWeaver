@@ -134,4 +134,19 @@ export class SensorThingsClient {
   }
 }
 
+/** Default client (primary FROST). */
 export const sta = new SensorThingsClient()
+
+// STA is one protocol but data may live on more than one FROST server
+// (e.g. CABQ on st2). Cache one client per base URL so layers can target the
+// right server without growing source-specific code.
+const clientCache = new Map<string, SensorThingsClient>([[STA_BASE_URL, sta]])
+
+export function staClient(baseUrl: string = STA_BASE_URL): SensorThingsClient {
+  let client = clientCache.get(baseUrl)
+  if (!client) {
+    client = new SensorThingsClient(baseUrl)
+    clientCache.set(baseUrl, client)
+  }
+  return client
+}

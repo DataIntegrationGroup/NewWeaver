@@ -9,6 +9,7 @@
  */
 import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
+import { STA_CABQ_BASE_URL } from "@/config"
 
 /** MapLibre paint/layout for a vector layer, kept loose at the catalog level. */
 export interface LayerStyle {
@@ -37,6 +38,8 @@ export interface FeaturesLayer extends BaseLayer {
 /** Monitoring-point layer read from STA Locations. */
 export interface StaLayer extends BaseLayer {
   source: "sta"
+  /** STA server base URL. Defaults to the primary FROST when omitted. */
+  staBaseUrl?: string
   /** STA query selecting the locations/things for this layer. */
   query?: StaQuery
 }
@@ -60,7 +63,18 @@ export const LAYER_CATALOG: LayerConfig[] = [
     source: "sta",
     defaultVisible: true,
     query: { $top: 1000 },
-    style: { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": "#006E7B" } },
+    style: { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": "#1d4ed8" } },
+  },
+  {
+    id: "cabq-wells",
+    title: "CABQ groundwater wells",
+    description:
+      "City of Albuquerque monitoring wells (groundwater levels/elevations), from the st2 FROST server.",
+    source: "sta",
+    staBaseUrl: STA_CABQ_BASE_URL,
+    defaultVisible: true,
+    query: { $filter: "properties/agency eq 'CABQ'", $top: 1000 },
+    style: { ...pointStyle, paint: { ...pointStyle.paint, "circle-color": "#d97706" } },
   },
   {
     id: "water-levels-summary",

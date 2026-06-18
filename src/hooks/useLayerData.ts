@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import type { FeatureCollection } from "geojson"
 
-import { sta, type Location } from "@/clients/sensorThings"
+import { staClient, type Location } from "@/clients/sensorThings"
 import { features } from "@/clients/ogcFeatures"
 import type { FeaturesLayer, StaLayer } from "@/catalog/layers"
 
@@ -28,9 +28,9 @@ function locationsToGeoJSON(locations: Location[]): FeatureCollection {
 /** Monitoring locations from STA, as GeoJSON points. */
 export function useStaLayer(layer: StaLayer) {
   return useQuery({
-    queryKey: ["sta", "locations", layer.query ?? null],
+    queryKey: ["sta", layer.staBaseUrl ?? "default", "locations", layer.query ?? null],
     queryFn: async () => {
-      const res = await sta.listLocations(layer.query)
+      const res = await staClient(layer.staBaseUrl).listLocations(layer.query)
       return locationsToGeoJSON(res.value)
     },
     placeholderData: EMPTY,

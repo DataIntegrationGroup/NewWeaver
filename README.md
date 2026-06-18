@@ -32,7 +32,9 @@ Two data adapters, one map, a config-driven layer catalog, detail/inspect views.
 - `src/clients/sensorThings.ts` — `SensorThingsClient` (FROST STA)
 - `src/catalog/layers.ts` — the layer registry; adding a dataset = a new entry
 - `src/components/app/` — app shell, map view, layer list, panels
-- `src/config.ts` — upstream endpoints (override via `VITE_*` env vars)
+- `src/config.ts` — upstream endpoints (override via `VITE_*` env vars). STA
+  is one protocol but may span multiple FROST servers (primary FROST + the
+  `st2` server hosting CABQ); a catalog layer targets one via `staBaseUrl`.
 
 No backend of its own: static hosting + the two upstream APIs (both must have
 CORS enabled for the public origin).
