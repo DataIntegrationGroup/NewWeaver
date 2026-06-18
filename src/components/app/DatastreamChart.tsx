@@ -43,9 +43,6 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
     grid: { left: 64, right: 16, top: 24, bottom: 86 },
     xAxis: {
       type: "time",
-      name: "Date",
-      nameLocation: "middle",
-      nameGap: 28,
     },
     yAxis: {
       type: "value",
@@ -76,7 +73,6 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
   return (
     <div
       data-testid="datastream-chart"
-      data-x-title="Date"
       data-y-title={yTitle}
       data-y-inverse="true"
       data-y-scale="true"

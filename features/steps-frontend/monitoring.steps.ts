@@ -65,11 +65,6 @@ Then("a time-series chart plots its observations over time", async function (thi
   await this.page.getByTestId("datastream-chart").waitFor()
 })
 
-Then("the x axis is titled with the date", async function (this: BrowserWorld) {
-  const chart = this.page.getByTestId("datastream-chart")
-  assert.equal(await chart.getAttribute("data-x-title"), "Date")
-})
-
 Then("the y axis is titled with the unit of measurement", async function (this: BrowserWorld) {
   const chart = this.page.getByTestId("datastream-chart")
   const title = await chart.getAttribute("data-y-title")
