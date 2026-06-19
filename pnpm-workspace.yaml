@@ -6,3 +6,8 @@ minimumReleaseAgeExclude:
   - posthog-js@1.391.2
   - "@posthog/core@1.35.3"
   - "@posthog/types@1.390.2"
+
+# core-js (transitive via posthog-js) only runs a donation-banner postinstall.
+# false = skip it, which keeps pnpm 11's strict ignored-builds check happy.
+allowBuilds:
+  core-js: false
