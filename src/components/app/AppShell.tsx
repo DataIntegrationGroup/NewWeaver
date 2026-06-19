@@ -179,7 +179,11 @@ export function AppShell() {
             visible={layerIds}
             onToggle={(id) => {
               const nowVisible = !layerIds.includes(id)
-              posthog.capture("layer_toggled", { layer_id: id, visible: nowVisible })
+              posthog.capture("layer_toggled", {
+                layer_id: id,
+                layer_title: getLayer(id)?.title,
+                visible: nowVisible,
+              })
               toggleLayer(id)
             }}
           />
