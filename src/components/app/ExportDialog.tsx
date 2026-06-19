@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import type { Polygon } from "geojson"
+import { usePostHog } from "posthog-js/react"
 
 import type { LayerConfig } from "@/catalog/layers"
 import type { FeatureFilters } from "@/lib/filterFeatures"
@@ -55,6 +56,7 @@ export function ExportDialog({
   filters,
   shapes,
 }: ExportDialogProps) {
+  const posthog = usePostHog()
   const queryClient = useQueryClient()
   const [kind, setKind] = useState<ExportKind>("timeseries")
   const [range, setRange] = useState<TimeRange>({})
@@ -90,6 +92,14 @@ export function ExportDialog({
     setError(null)
     setPhase("running")
     setProgress({ done: 0, total: selection.locations.length })
+
+    posthog.capture("export_started", {
+      export_kind: kind,
+      location_count: selection.locations.length,
+      feature_count: selection.features.length,
+      has_date_range: !!(range.from || range.to),
+    })
+
     try {
       if (kind === "timeseries") {
         const rows = await gatherTimeSeriesRows(selection.locations, {
@@ -115,13 +125,24 @@ export function ExportDialog({
           "application/geo+json"
         )
       }
+
+      posthog.capture("export_completed", {
+        export_kind: kind,
+        location_count: selection.locations.length,
+      })
+
       setPhase("idle")
       onOpenChange(false)
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") {
         setPhase("idle")
       } else {
-        setError(e instanceof Error ? e.message : "Export failed")
+        const message = e instanceof Error ? e.message : "Export failed"
+        posthog.capture("export_failed", {
+          export_kind: kind,
+          error_message: message,
+        })
+        setError(message)
         setPhase("error")
       }
     } finally {

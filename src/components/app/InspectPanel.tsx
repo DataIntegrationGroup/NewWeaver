@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { X } from "lucide-react"
+import { usePostHog } from "posthog-js/react"
 
 import type { LayerConfig, FeaturesLayer, StaLayer } from "@/catalog/layers"
 import { Button } from "@/components/ui/button"
@@ -81,6 +82,7 @@ function FeatureInspect({ layer, featureId, onClose }: { layer: FeaturesLayer } 
 
 /** Monitoring location → datastreams → time-series chart. */
 function StaInspect({ layer, featureId, onClose }: { layer: StaLayer } & Omit<InspectPanelProps, "layer">) {
+  const posthog = usePostHog()
   const { data: fc } = useStaLayer(layer)
   const location = fc?.features.find((f) => String(f.properties?.id) === featureId)
   const name = (location?.properties?.name as string) ?? `Location ${featureId}`
@@ -111,7 +113,19 @@ function StaInspect({ layer, featureId, onClose }: { layer: StaLayer } & Omit<In
               No datastreams for this location.
             </p>
           ) : (
-            <Select value={dsId} onValueChange={setDsId}>
+            <Select
+              value={dsId}
+              onValueChange={(id) => {
+                const ds = datastreams.find((d) => String(d["@iot.id"]) === id)
+                posthog.capture("datastream_selected", {
+                  datastream_id: id,
+                  datastream_name: ds?.name,
+                  location_id: featureId,
+                  layer_id: layer.id,
+                })
+                setDsId(id)
+              }}
+            >
               <SelectTrigger data-testid="datastream-select">
                 <SelectValue placeholder="Select a datastream" />
               </SelectTrigger>

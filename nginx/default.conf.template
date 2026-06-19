@@ -24,6 +24,25 @@ server {
         add_header Cache-Control "no-cache";
     }
 
+    # PostHog reverse proxy — events POST to /ingest so ad-blockers and the
+    # upstream host stay out of the client. Mirrors the dev proxy in
+    # vite.config.ts; the /ingest prefix is stripped before forwarding.
+    location ^~ /ingest/static/ {
+        proxy_pass https://us-assets.i.posthog.com/static/;
+        proxy_set_header Host us-assets.i.posthog.com;
+        proxy_ssl_server_name on;
+    }
+    location ^~ /ingest/array/ {
+        proxy_pass https://us-assets.i.posthog.com/array/;
+        proxy_set_header Host us-assets.i.posthog.com;
+        proxy_ssl_server_name on;
+    }
+    location ^~ /ingest/ {
+        proxy_pass https://us.i.posthog.com/;
+        proxy_set_header Host us.i.posthog.com;
+        proxy_ssl_server_name on;
+    }
+
     # SPA client-side routing: unknown paths fall back to the app shell.
     location / {
         try_files $uri $uri/ /index.html;

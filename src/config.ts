@@ -27,3 +27,13 @@ export const STA_ST2_BASE_URL =
 export const FEATURES_BASE_URL =
   env.VITE_FEATURES_BASE_URL ??
   "https://features.newmexicowaterdata.org"
+
+/**
+ * PostHog product analytics. Disabled unless VITE_POSTHOG_KEY is set, so dev
+ * builds and CI emit nothing by default. Host defaults to US cloud; set
+ * VITE_POSTHOG_HOST to eu.i.posthog.com (or a reverse proxy) to override.
+ */
+export const POSTHOG_KEY = env.VITE_POSTHOG_KEY ?? ""
+
+export const POSTHOG_HOST =
+  env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com"

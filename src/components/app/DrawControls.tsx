@@ -9,6 +9,7 @@ import {
 import { TerraDrawMapLibreGLAdapter } from "terra-draw-maplibre-gl-adapter"
 import type { Map as MaplibreMap } from "maplibre-gl"
 import type { Polygon } from "geojson"
+import { usePostHog } from "posthog-js/react"
 
 import { Button } from "@/components/ui/button"
 
@@ -27,6 +28,7 @@ interface DrawControlsProps {
  * include the points inside them. See features/export/design.md.
  */
 export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
+  const posthog = usePostHog()
   const drawRef = useRef<TerraDraw | null>(null)
   const [mode, setMode] = useState<DrawMode | null>(null)
 
@@ -50,14 +52,22 @@ export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
         .filter((g): g is Polygon => g.type === "Polygon")
       onShapesChange(polys)
     }
-    draw.on("finish", emit)
+    const onFinish = () => {
+      const polys = draw
+        .getSnapshot()
+        .map((f) => f.geometry)
+        .filter((g): g is Polygon => g.type === "Polygon")
+      posthog.capture("draw_shape_completed", { shape_count: polys.length })
+      onShapesChange(polys)
+    }
+    draw.on("finish", onFinish)
     draw.on("change", emit)
 
     return () => {
       draw.stop()
       drawRef.current = null
     }
-  }, [map, onShapesChange])
+  }, [map, onShapesChange, posthog])
 
   const toggle = (m: DrawMode) => {
     const draw = drawRef.current

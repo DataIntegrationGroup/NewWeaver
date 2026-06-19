@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { Download, Layers } from "lucide-react"
 import type { Polygon } from "geojson"
+import { usePostHog } from "posthog-js/react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -31,6 +32,7 @@ import { ExportDialog } from "./ExportDialog"
  * All view state lives in the URL via useViewState, so any view is shareable.
  */
 export function AppShell() {
+  const posthog = usePostHog()
   const {
     search,
     selection,
@@ -80,7 +82,10 @@ export function AppShell() {
     <FilterControls
       bbox={!!search.bbox}
       q={search.q ?? ""}
-      onBboxChange={setBbox}
+      onBboxChange={(v) => {
+        posthog.capture("filter_to_extent_toggled", { enabled: v })
+        setBbox(v)
+      }}
       onQueryChange={setQuery}
     />
   )
@@ -128,7 +133,11 @@ export function AppShell() {
             size="sm"
             data-testid="toggle-table"
             aria-pressed={tableOpen}
-            onClick={() => setTableOpen((v) => !v)}
+            onClick={() => {
+              const next = !tableOpen
+              if (next) posthog.capture("attribute_table_opened")
+              setTableOpen(next)
+            }}
           >
             {tableOpen ? "Hide table" : "Attribute table"}
           </Button>
@@ -166,7 +175,14 @@ export function AppShell() {
           )}
         >
           <div className="lg:hidden">{filterControls}</div>
-          <LayerList visible={layerIds} onToggle={toggleLayer} />
+          <LayerList
+            visible={layerIds}
+            onToggle={(id) => {
+              const nowVisible = !layerIds.includes(id)
+              posthog.capture("layer_toggled", { layer_id: id, visible: nowVisible })
+              toggleLayer(id)
+            }}
+          />
         </aside>
 
         <main
@@ -183,7 +199,13 @@ export function AppShell() {
               basemap={basemap}
               basemaps={BASEMAPS}
               onBasemapChange={setBasemap}
-              onSelect={select}
+              onSelect={(sel) => {
+                posthog.capture("feature_selected", {
+                  layer_id: sel.layerId,
+                  feature_id: sel.featureId,
+                })
+                select(sel)
+              }}
               onClearSelection={clearSelection}
               onMove={(lng, lat, z, b) => {
                 setBounds(b)
