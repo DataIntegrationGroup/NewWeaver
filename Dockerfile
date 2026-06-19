@@ -5,7 +5,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 RUN corepack enable
 # Install deps against the committed lockfile first for layer caching.
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
