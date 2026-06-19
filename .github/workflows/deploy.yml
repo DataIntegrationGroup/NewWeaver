@@ -40,7 +40,11 @@ jobs:
           echo "ref=${REGION}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${REPOSITORY}/${SERVICE}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Build image
-        run: docker build -t "${{ steps.img.outputs.ref }}" .
+        run: |
+          docker build \
+            --build-arg VITE_POSTHOG_KEY="${{ vars.VITE_POSTHOG_KEY }}" \
+            --build-arg VITE_POSTHOG_HOST="${{ vars.VITE_POSTHOG_HOST }}" \
+            -t "${{ steps.img.outputs.ref }}" .
 
       - name: Push image
         run: docker push "${{ steps.img.outputs.ref }}"
