@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { SLACK_URL } from "./SiteHeader"
 import { SitePage as Page } from "./SitePage"
-import heroImage from "@/assets/weaver-hero.jpg"
 import nmwdiIcon from "@/assets/nmwdi-icon.png"
 
 function Hero() {
@@ -51,20 +50,15 @@ function Hero() {
 
       <div className="overflow-hidden rounded-xl md:[clip-path:polygon(14%_0,100%_0,100%_100%,0_100%)]">
         <img
-          src={heroImage}
-          alt="Aerial view of a river winding through New Mexico bosque"
+          src="/weaver-home-hero.jpg"
+          alt="Aerial view of a New Mexico river winding through autumn cottonwood bosque"
+          data-testid="home-hero-image"
+          loading="lazy"
+          width={2048}
+          height={1151}
           className="h-64 w-full object-cover md:h-[28rem]"
         />
       </div>
-      <img
-        src="/weaver-home-hero.jpg"
-        alt="Aerial view of a New Mexico river winding through autumn cottonwood bosque"
-        data-testid="home-hero-image"
-        loading="lazy"
-        width={2048}
-        height={1151}
-        className="mx-auto mt-10 aspect-[16/9] w-full max-w-4xl rounded-xl object-cover shadow-md"
-      />
     </section>
   )
 }
