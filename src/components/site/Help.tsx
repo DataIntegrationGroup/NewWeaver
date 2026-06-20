@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useLocation } from "@tanstack/react-router"
 import { Check, Copy } from "lucide-react"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -87,7 +88,14 @@ function ConnectCard({
   )
 }
 
+const TAB_VALUES = ["using", "sources", "gis", "disclaimer"]
+
 export function Help() {
+  // Allow deep-linking a tab via the URL hash (e.g. /help#gis from the export
+  // dialog's Desktop GIS banner).
+  const { hash } = useLocation()
+  const tab = hash.replace(/^#/, "")
+  const defaultTab = TAB_VALUES.includes(tab) ? tab : "using"
   return (
     <SitePage>
       <div className="space-y-6" data-testid="help-page">
@@ -97,7 +105,7 @@ export function Help() {
           it is provided.
         </p>
 
-        <Tabs defaultValue="using" className="mt-2">
+        <Tabs defaultValue={defaultTab} className="mt-2">
           <TabsList>
             <TabsTrigger value="using">Using the map</TabsTrigger>
             <TabsTrigger value="sources">Data sources</TabsTrigger>
