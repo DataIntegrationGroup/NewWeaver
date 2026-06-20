@@ -18,6 +18,12 @@ Then("the user sees the Weaver hero", async function (this: BrowserWorld) {
   assert.ok(text?.includes("Weaver"))
 })
 
+Then("the hero shows the Weaver image", async function (this: BrowserWorld) {
+  const img = this.page.getByTestId("home-hero-image")
+  await img.waitFor()
+  assert.match((await img.getAttribute("src")) ?? "", /weaver-home-hero/)
+})
+
 Then("the user sees a link to the map", async function (this: BrowserWorld) {
   await this.page.getByTestId("nav-map").waitFor()
 })

@@ -29,6 +29,15 @@ function Hero() {
           <Link to="/about">About Weaver</Link>
         </Button>
       </div>
+      <img
+        src="/weaver-home-hero.jpg"
+        alt="Aerial view of a New Mexico river winding through autumn cottonwood bosque"
+        data-testid="home-hero-image"
+        loading="lazy"
+        width={2048}
+        height={1151}
+        className="mx-auto mt-10 aspect-[16/9] w-full max-w-4xl rounded-xl object-cover shadow-md"
+      />
     </section>
   )
 }
