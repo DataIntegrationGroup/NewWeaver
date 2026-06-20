@@ -53,6 +53,18 @@ Then("the catalog shows a {string} layer group", async function (this: BrowserWo
   await this.page.getByRole("button", { name, exact: true }).waitFor()
 })
 
+When("the user hovers over the {string} layer group", async function (this: BrowserWorld, name: string) {
+  // Move away first so re-hovering a second group reliably re-opens the tooltip.
+  await this.page.mouse.move(0, 0)
+  await this.page.getByRole("button", { name, exact: true }).hover()
+})
+
+Then("a tooltip explains the {string} group", async function (this: BrowserWorld, name: string) {
+  const tip = this.page.getByTestId(`layer-group-tooltip-${name}`).first()
+  await tip.waitFor()
+  assert.ok(((await tip.textContent()) ?? "").length > 20, "expected descriptive tooltip text")
+})
+
 When("the user collapses the {string} layer group", async function (this: BrowserWorld, name: string) {
   const trigger = this.page.getByRole("button", { name, exact: true })
   if ((await trigger.getAttribute("aria-expanded")) === "true") await trigger.click()

@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
+import { MonitorCog } from "lucide-react"
 import type { Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
@@ -163,6 +165,28 @@ export function ExportDialog({
             points both feed the selection.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Steer recurring / large workflows to the live OGC API instead of
+            repeated file downloads. */}
+        <div
+          data-testid="export-gis-banner"
+          className="flex items-start gap-2.5 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"
+        >
+          <MonitorCog className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-muted-foreground">
+            Working with this data regularly? Connect QGIS or ArcGIS Pro straight
+            to the live OGC API instead of downloading files.{" "}
+            <Link
+              to="/help"
+              hash="gis"
+              data-testid="export-gis-link"
+              className="font-medium text-primary underline underline-offset-2"
+            >
+              Set up the Desktop GIS integration
+            </Link>
+            .
+          </p>
+        </div>
 
         {/* Export kind */}
         <div role="radiogroup" aria-label="Export type" className="grid grid-cols-3 gap-2">

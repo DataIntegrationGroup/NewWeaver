@@ -27,6 +27,21 @@ Then("a download modal opens", async function (this: BrowserWorld) {
   await this.page.getByTestId("export-dialog").waitFor()
 })
 
+Then("the modal suggests the Desktop GIS integration", async function (this: BrowserWorld) {
+  await this.page.getByTestId("export-gis-banner").waitFor()
+  await this.page.getByTestId("export-gis-link").waitFor()
+})
+
+When("the user follows the Desktop GIS link", async function (this: BrowserWorld) {
+  await this.page.getByTestId("export-gis-link").click()
+  await this.page.waitForURL(/\/help/)
+})
+
+Then("the Desktop GIS help section is shown", async function (this: BrowserWorld) {
+  const text = (await this.page.getByTestId("help-gis").textContent()) ?? ""
+  assert.match(text, /\/ogcapi/)
+})
+
 Then(
   "it offers time series, latest observation, and features exports",
   async function (this: BrowserWorld) {

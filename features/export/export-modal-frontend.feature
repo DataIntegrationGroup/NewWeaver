@@ -15,6 +15,12 @@ Feature: Download modal
     And it offers time series, latest observation, and features exports
     And it shows how many locations are selected
 
+  Scenario: The download modal points to the Desktop GIS integration
+    When the user opens the download modal
+    Then the modal suggests the Desktop GIS integration
+    When the user follows the Desktop GIS link
+    Then the Desktop GIS help section is shown
+
   Scenario: The selection summary reflects filters
     Given "filter to map view" is enabled
     When the user pans to a smaller area

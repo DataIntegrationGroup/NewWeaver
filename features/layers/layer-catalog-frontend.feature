@@ -33,6 +33,15 @@ Feature: Layer catalog and toggles
     When the user toggles the "City of Albuquerque (CABQ)" layer off
     Then no monitoring-location points render on the map
 
+  Scenario Outline: Layer groups describe themselves on hover
+    When the user hovers over the "<group>" layer group
+    Then a tooltip explains the "<group>" group
+
+    Examples:
+      | group    |
+      | STA      |
+      | Ocotillo |
+
   Scenario: Layer groups collapse and expand
     When the user collapses the "STA" layer group
     Then the "City of Albuquerque (CABQ)" layer toggle is hidden
