@@ -1,4 +1,5 @@
 import * as React from "react"
+import { Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
@@ -85,6 +86,8 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   options: LayerOption[]
   /** Ids of currently-visible layers. */
   value: string[]
+  /** Ids whose data is loading; shows a spinner beside the toggle. */
+  loadingIds?: string[]
   onToggle: (id: string) => void
 }
 
@@ -96,6 +99,7 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
 function LayerSelector({
   options,
   value,
+  loadingIds,
   onToggle,
   className,
   ...props
@@ -111,6 +115,7 @@ function LayerSelector({
       >
         {options.map((option) => {
           const checked = value.includes(option.id)
+          const loading = loadingIds?.includes(option.id) ?? false
           const label = (
             <label
               htmlFor={`layer-${option.id}`}
@@ -140,12 +145,21 @@ function LayerSelector({
               ) : (
                 label
               )}
-              <Switch
-                id={`layer-${option.id}`}
-                data-testid={`layer-toggle-${option.id}`}
-                checked={checked}
-                onCheckedChange={() => onToggle(option.id)}
-              />
+              <div className="flex items-center gap-2">
+                {loading && (
+                  <Loader2
+                    data-testid={`layer-loading-${option.id}`}
+                    className="size-4 shrink-0 animate-spin text-muted-foreground"
+                    aria-label="Loading layer data"
+                  />
+                )}
+                <Switch
+                  id={`layer-${option.id}`}
+                  data-testid={`layer-toggle-${option.id}`}
+                  checked={checked}
+                  onCheckedChange={() => onToggle(option.id)}
+                />
+              </div>
             </li>
           )
         })}

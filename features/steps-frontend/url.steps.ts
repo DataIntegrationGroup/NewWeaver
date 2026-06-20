@@ -14,8 +14,8 @@ async function switchOn(world: BrowserWorld, id: string): Promise<boolean> {
   )
 }
 
-Then('the URL records "Water-levels summary" as a visible layer', async function (this: BrowserWorld) {
-  assert.ok(this.page.url().includes("water-levels-summary"))
+Then('the URL records "Springs" as a visible layer', async function (this: BrowserWorld) {
+  assert.ok(this.page.url().includes("ocotillo-springs"))
 })
 
 When("the user pans and zooms the map", async function (this: BrowserWorld) {
@@ -36,7 +36,7 @@ Given(
   "a URL that encodes visible layers, a map extent, and a selected feature",
   function (this: BrowserWorld) {
     ;(this as unknown as { shared: string }).shared =
-      "?layers=monitoring-locations,water-levels-summary&lng=-105&lat=34&z=7&sel=water-levels-summary~wl-1"
+      "?layers=st2-cabq,ocotillo-springs&lng=-105&lat=34&z=7&sel=ocotillo-springs~wl-1"
   }
 )
 
@@ -45,8 +45,8 @@ When("the user opens that URL", async function (this: BrowserWorld) {
 })
 
 Then("the recorded layers are visible", async function (this: BrowserWorld) {
-  assert.ok(await switchOn(this, "monitoring-locations"))
-  assert.ok(await switchOn(this, "water-levels-summary"))
+  assert.ok(await switchOn(this, "st2-cabq"))
+  assert.ok(await switchOn(this, "ocotillo-springs"))
 })
 
 Then("the map opens at the recorded extent", async function (this: BrowserWorld) {
@@ -62,8 +62,10 @@ Then("the recorded feature is selected with its detail shown", async function (t
 })
 
 Given("the user has changed layers and extent", async function (this: BrowserWorld) {
-  await this.page.getByTestId("layer-toggle-latest-tds").click()
-  await this.page.waitForFunction(() => /latest-tds/.test(window.location.search))
+  await this.page.getByTestId("layer-toggle-ocotillo-latest-tds-wells").click()
+  await this.page.waitForFunction(() =>
+    /ocotillo-latest-tds-wells/.test(window.location.search)
+  )
 })
 
 When("the user navigates back", async function (this: BrowserWorld) {
@@ -74,7 +76,7 @@ Then("the previous view is restored from the URL", async function (this: Browser
   await this.page.waitForFunction(
     () =>
       document
-        .querySelector('[data-testid="layer-toggle-latest-tds"]')
+        .querySelector('[data-testid="layer-toggle-ocotillo-latest-tds-wells"]')
         ?.getAttribute("data-state") !== "checked"
   )
 })

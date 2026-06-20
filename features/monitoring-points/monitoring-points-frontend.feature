@@ -6,7 +6,7 @@ Feature: Monitoring points to time-series chart
 
   Background:
     Given the user has opened the app
-    And the "Monitoring locations" layer is toggled on
+    And the "City of Albuquerque (CABQ)" layer is toggled on
 
   @smoke
   Scenario: Clicking a monitoring point opens its detail

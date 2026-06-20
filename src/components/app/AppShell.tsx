@@ -75,6 +75,9 @@ export function AppShell() {
     ;(window as unknown as { __weaver?: unknown }).__weaver = {
       select: (sel: Selection) => select(sel),
       clearSelection,
+      // Inject drawn shapes deterministically (the BDD harness can't drive the
+      // terra-draw canvas). Mirrors what DrawControls' onShapesChange does.
+      setShapes: (polys: Polygon[]) => setShapes(polys),
     }
   }, [select, clearSelection])
 

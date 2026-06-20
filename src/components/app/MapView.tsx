@@ -145,7 +145,9 @@ export function MapView({
     >
       <Map
         ref={mapRef}
-        mapStyle={basemap}
+        mapStyle={
+          basemaps.find((b) => b.id === basemap)?.style ?? basemap
+        }
         initialViewState={initialView}
         interactiveLayerIds={interactiveLayerIds}
         cursor={hoverInfo ? "pointer" : undefined}

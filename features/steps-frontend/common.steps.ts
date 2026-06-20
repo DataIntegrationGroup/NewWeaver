@@ -37,5 +37,5 @@ Given("the {string} layer is toggled off", async function (this: BrowserWorld, t
 })
 
 Given("the monitoring-locations layer is visible", async function (this: BrowserWorld) {
-  await setLayer(this, "monitoring-locations", true)
+  await setLayer(this, "st2-cabq", true)
 })

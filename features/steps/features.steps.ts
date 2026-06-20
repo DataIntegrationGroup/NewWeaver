@@ -81,3 +81,37 @@ Then("the client throws an error describing the failed Features request", functi
   assert.ok(this.error, "expected an error")
   assert.match(this.error!.message, /Features request failed/)
 })
+
+function fc(ids: string[]) {
+  return {
+    type: "FeatureCollection",
+    numberMatched: 3,
+    numberReturned: ids.length,
+    features: ids.map((id) => ({ type: "Feature", id, geometry: null, properties: { id } })),
+  }
+}
+
+Given(
+  "the endpoint returns a full page of 2 then a short final page of 1",
+  function (this: ClientWorld) {
+    this.responseQueue = [fc(["a", "b"]), fc(["c"])]
+  }
+)
+
+When(
+  "the client requests all items for collection {string} with a page size of {int}",
+  async function (this: ClientWorld, collectionId: string, pageSize: number) {
+    this.result = await this.features.getAllItems(collectionId, undefined, pageSize)
+  }
+)
+
+Then("all {int} items across the pages are returned", function (this: ClientWorld, n: number) {
+  const res = this.result as { features: unknown[] }
+  assert.equal(res.features.length, n)
+})
+
+Then("the requests advance the offset from {int} to {int}", function (this: ClientWorld, a: number, b: number) {
+  const offsets = this.requestedUrls.map((u) => new URL(u).searchParams.get("offset"))
+  assert.ok(offsets.includes(String(a)), `expected an offset=${a} request`)
+  assert.ok(offsets.includes(String(b)), `expected an offset=${b} request`)
+})

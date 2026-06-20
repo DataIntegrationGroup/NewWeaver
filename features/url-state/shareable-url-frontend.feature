@@ -9,15 +9,15 @@ Feature: Shareable URL state
 
   @smoke
   Scenario: Layer toggles are reflected in the URL
-    When the user toggles the "Water-levels summary" layer on
-    Then the URL records "Water-levels summary" as a visible layer
+    When the user toggles the "Springs" layer on
+    Then the URL records "Springs" as a visible layer
 
   Scenario: Map extent is reflected in the URL
     When the user pans and zooms the map
     Then the URL records the current map extent
 
   Scenario: Selecting a feature is reflected in the URL
-    Given the "Monitoring locations" layer is toggled on
+    Given the "City of Albuquerque (CABQ)" layer is toggled on
     When the user clicks a monitoring point
     Then the URL records the selected feature
 

@@ -28,6 +28,12 @@ Feature: OGC API Features client contract
     Then the request URL includes "limit=100"
     And the request URL includes "offset=200"
 
+  Scenario: Fetch every item across pages
+    Given the endpoint returns a full page of 2 then a short final page of 1
+    When the client requests all items for collection "springs" with a page size of 2
+    Then all 3 items across the pages are returned
+    And the requests advance the offset from 0 to 2
+
   Scenario: Fetch a single feature by id
     When the client requests feature "abc123" from collection "latest_tds"
     Then the request targets "collections/latest_tds/items/abc123"

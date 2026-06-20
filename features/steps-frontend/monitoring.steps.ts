@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
 
-const POINT = { layerId: "monitoring-locations", featureId: "1" }
+const POINT = { layerId: "st2-cabq", featureId: "1" }
 
 async function clickPoint(world: BrowserWorld) {
   await world.selectFeature(POINT.layerId, POINT.featureId)
@@ -20,9 +20,15 @@ async function selectDatastream(world: BrowserWorld, name: string | RegExp) {
   await world.page.getByRole("option", { name }).click()
 }
 
-When("the user clicks a monitoring point", clickPoint)
-When("the user clicks a monitoring point with water-level data", clickPoint)
-Given("the user has clicked a monitoring point", clickPoint)
+When("the user clicks a monitoring point", async function (this: BrowserWorld) {
+  await clickPoint(this)
+})
+When("the user clicks a monitoring point with water-level data", async function (this: BrowserWorld) {
+  await clickPoint(this)
+})
+Given("the user has clicked a monitoring point", async function (this: BrowserWorld) {
+  await clickPoint(this)
+})
 
 Then("a panel opens showing the location name", async function (this: BrowserWorld) {
   await this.page.getByTestId("inspect-panel").waitFor()

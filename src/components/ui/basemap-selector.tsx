@@ -1,14 +1,18 @@
 import * as React from "react"
 import { Check } from "lucide-react"
+import type { StyleSpecification } from "maplibre-gl"
 
 import { cn } from "@/lib/utils"
 
 export interface BasemapOption {
-  /** Stable id — typically the map style URL. */
+  /** Stable id — the map style URL, or an arbitrary key when `style` is set. */
   id: string
   title: string
   /** Optional preview image URL; a gradient placeholder is shown otherwise. */
   preview?: string
+  /** Inline MapLibre style. When set, applied instead of treating `id` as a
+   *  style URL — used for token-free raster basemaps (e.g. satellite). */
+  style?: StyleSpecification
 }
 
 interface BasemapSelectorProps extends React.ComponentProps<"div"> {

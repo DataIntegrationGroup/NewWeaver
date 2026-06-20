@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
 
-const LAYER = "water-levels-summary"
+const LAYER = "ocotillo-springs"
 
 async function clickFeature(world: BrowserWorld, id: string) {
   await world.selectFeature(LAYER, id)
