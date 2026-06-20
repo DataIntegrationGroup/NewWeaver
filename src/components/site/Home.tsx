@@ -6,28 +6,55 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { SLACK_URL } from "./SiteHeader"
 import { SitePage as Page } from "./SitePage"
+import heroImage from "@/assets/weaver-hero.jpg"
+import nmwdiIcon from "@/assets/nmwdi-icon.png"
 
 function Hero() {
   return (
-    <section className="text-center" data-testid="home-hero">
-      <h1 className="!text-5xl !leading-tight text-primary">Weaver</h1>
-      <p className="mt-2 text-2xl font-semibold text-secondary">
-        Weaving Together New Mexico Water Data
-      </p>
-      <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-        The New Mexico Water Data Initiative (NMWDI) is a collaborative effort to
-        improve the availability and accessibility of water data in New Mexico.
-        Weaver displays public, integrated water data on an interactive map.
-      </p>
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <Button asChild size="lg">
-          <Link to="/map">
-            Explore the map <ArrowRight />
-          </Link>
-        </Button>
-        <Button asChild variant="outline" size="lg">
-          <Link to="/about">About Weaver</Link>
-        </Button>
+    <section
+      className="grid items-center gap-8 md:grid-cols-2 md:gap-12"
+      data-testid="home-hero"
+    >
+      <div className="text-left">
+        <img
+          src={nmwdiIcon}
+          alt=""
+          aria-hidden
+          className="mb-4 h-20 w-auto"
+        />
+        <h1 className="!text-6xl !leading-none font-bold text-primary">
+          Weaver
+        </h1>
+        <p className="mt-3 text-3xl font-bold tracking-tight text-secondary">
+          Explore • Connect • Interact
+        </p>
+        <p className="mt-3 text-2xl font-semibold leading-tight text-secondary">
+          Weaving Together New Mexico Water Data
+        </p>
+        <p className="mt-4 max-w-md text-muted-foreground">
+          The New Mexico Water Data Initiative (NMWDI) is a collaborative effort
+          to improve the availability and accessibility of water data in New
+          Mexico. Weaver displays public, integrated water data on an
+          interactive map.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Button asChild size="lg">
+            <Link to="/map">
+              Explore the map <ArrowRight />
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link to="/about">About Weaver</Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl md:[clip-path:polygon(14%_0,100%_0,100%_100%,0_100%)]">
+        <img
+          src={heroImage}
+          alt="Aerial view of a river winding through New Mexico bosque"
+          className="h-64 w-full object-cover md:h-[28rem]"
+        />
       </div>
       <img
         src="/weaver-home-hero.jpg"
