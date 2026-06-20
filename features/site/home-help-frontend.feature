@@ -7,6 +7,7 @@ Feature: Home and help pages
   Scenario: Home page introduces the project and links to the map
     Given the user opens the home page
     Then the user sees the Weaver hero
+    And the hero shows the Weaver image
     And the user sees a link to the map
 
   Scenario: Navigate from the home page to the map
