@@ -9,7 +9,7 @@
  */
 import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
-import { STA_ST2_BASE_URL } from "@/config"
+import { OCOTILLO_FEATURES_BASE_URL, STA_ST2_BASE_URL } from "@/config"
 
 /** MapLibre paint/layout for a vector layer, kept loose at the catalog level. */
 export interface LayerStyle {
@@ -24,14 +24,18 @@ interface BaseLayer {
   description?: string
   /** Shown in the catalog/toggle list; off by default unless true. */
   defaultVisible?: boolean
+  /** Group heading in the layer list. Layers without a section list first. */
+  section?: string
   style: LayerStyle
 }
 
 /** Vector / integrated layer read from DIE's OGC API Features. */
 export interface FeaturesLayer extends BaseLayer {
   source: "features"
-  /** DIE pygeoapi collection id. */
+  /** pygeoapi collection id. */
   collectionId: string
+  /** OGC API Features base URL. Defaults to the primary DIE pygeoapi. */
+  featuresBaseUrl?: string
   query?: ItemsQuery
 }
 
@@ -84,36 +88,76 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
   staBaseUrl: STA_ST2_BASE_URL,
   defaultVisible: a.code === "CABQ",
   query: { $filter: `properties/agency eq '${a.code}'`, $top: 2000 },
+  section: "STA",
   style: staPoint(a.color),
 }))
 
+/**
+ * Ocotillo — New Mexico water-data collections served from a second pygeoapi
+ * (OCOTILLO_FEATURES_BASE_URL). Each entry maps 1:1 to an OGC API Features
+ * collection. All start hidden to avoid clutter; users toggle them on from the
+ * "New Mexico Water Data (Ocotillo)" section of the layer list.
+ */
+const OCOTILLO_SECTION = "Ocotillo"
+
+const OCOTILLO_COLLECTIONS: {
+  id: string
+  title: string
+  description?: string
+  color: string
+  /** Geometry kind; defaults to point. Polygon collections draw as fill. */
+  geom?: "point" | "polygon"
+}[] = [
+  { id: "locations", title: "Locations", color: "#2563eb", description: "All monitoring locations." },
+  { id: "actively_monitored_wells", title: "Actively Monitored Wells", color: "#1d4ed8" },
+  { id: "water_wells", title: "Water Wells", color: "#0ea5e9" },
+  { id: "water_well_summary", title: "Water Well Summary", color: "#0891b2" },
+  { id: "latest_depth_to_water_wells", title: "Latest Depth to Water (Wells)", color: "#0e7490" },
+  { id: "depth_to_water_trend_wells", title: "Depth to Water Trend (Wells)", color: "#155e75" },
+  { id: "water_elevation_wells", title: "Water Elevation (Wells)", color: "#0d9488" },
+  { id: "latest_tds_wells", title: "Latest TDS (Wells)", color: "#dc2626" },
+  { id: "avg_tds_wells", title: "Average TDS (Wells)", color: "#ea580c" },
+  { id: "major_chemistry_results", title: "Major Chemistry (Wells)", color: "#db2777" },
+  { id: "minor_chemistry_wells", title: "Minor Chemistry (Wells)", color: "#c026d3" },
+  { id: "springs", title: "Springs", color: "#16a34a" },
+  { id: "diversions_surface_water", title: "Surface Water Diversions", color: "#65a30d" },
+  { id: "perennial_streams", title: "Perennial Streams", color: "#0284c7" },
+  { id: "ephemeral_streams", title: "Ephemeral Streams", color: "#38bdf8" },
+  { id: "lakes_ponds_reservoirs", title: "Lakes, Ponds, and Reservoirs", color: "#2dd4bf" },
+  { id: "outfalls_wastewater_return_flow", title: "Outfalls and Return Flow", color: "#a16207" },
+  { id: "meteorological_stations", title: "Meteorological Stations", color: "#7c3aed" },
+  { id: "rock_sample_locations", title: "Rock Sample Locations", color: "#92400e" },
+  { id: "soil_gas_sample_locations", title: "Soil Gas Sample Locations", color: "#9333ea" },
+  { id: "other_things", title: "Other Thing Types", color: "#6b7280" },
+  {
+    id: "project_areas",
+    title: "Project Areas",
+    color: "#7c3aed",
+    geom: "polygon",
+  },
+]
+
+const polygonStyle = (color: string): LayerStyle => ({
+  type: "fill",
+  paint: { "fill-color": color, "fill-opacity": 0.25, "fill-outline-color": color },
+})
+
+const ocotilloLayers: FeaturesLayer[] = OCOTILLO_COLLECTIONS.map((c) => ({
+  id: `ocotillo-${c.id.replace(/_/g, "-")}`,
+  title: c.title,
+  description:
+    c.description ??
+    `${c.title} from the Ocotillo OGC API Features service (collection ${c.id}).`,
+  source: "features",
+  featuresBaseUrl: OCOTILLO_FEATURES_BASE_URL,
+  collectionId: c.id,
+  section: OCOTILLO_SECTION,
+  style: c.geom === "polygon" ? polygonStyle(c.color) : staPoint(c.color),
+}))
+
 export const LAYER_CATALOG: LayerConfig[] = [
-  {
-    id: "monitoring-locations",
-    title: "Monitoring locations",
-    description: "Water-level monitoring points from FROST (SensorThings).",
-    source: "sta",
-    defaultVisible: true,
-    query: { $top: 1000 },
-    style: staPoint("#1d4ed8"),
-  },
   ...st2AgencyLayers,
-  {
-    id: "water-levels-summary",
-    title: "Water-levels summary",
-    description: "Integrated water-level statistics computed by DIE.",
-    source: "features",
-    collectionId: "water_levels_summary",
-    style: staPoint("#047857"),
-  },
-  {
-    id: "latest-tds",
-    title: "Latest TDS",
-    description: "Latest total dissolved solids, computed by DIE.",
-    source: "features",
-    collectionId: "latest_tds",
-    style: staPoint("#dc2626"),
-  },
+  ...ocotilloLayers,
 ]
 
 export function getLayer(id: string): LayerConfig | undefined {

@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query"
+import { useIsFetching, useQuery } from "@tanstack/react-query"
 import type { FeatureCollection } from "geojson"
 
 import { staClient, type Location } from "@/clients/sensorThings"
-import { features } from "@/clients/ogcFeatures"
-import type { FeaturesLayer, StaLayer } from "@/catalog/layers"
+import { featuresClient } from "@/clients/ogcFeatures"
+import { LAYER_CATALOG, type FeaturesLayer, type StaLayer } from "@/catalog/layers"
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] }
 
@@ -13,7 +13,29 @@ export function staLayerKey(layer: StaLayer) {
   return ["sta", layer.staBaseUrl ?? "default", "locations", layer.query ?? null] as const
 }
 export function featuresLayerKey(layer: FeaturesLayer) {
-  return ["features", layer.collectionId, layer.query ?? null] as const
+  return [
+    "features",
+    layer.featuresBaseUrl ?? "default",
+    layer.collectionId,
+    layer.query ?? null,
+  ] as const
+}
+
+/**
+ * Ids of catalog layers whose data query is currently fetching — used to show
+ * a per-layer loading spinner while a freshly-toggled layer pulls its data.
+ * Iterates the static LAYER_CATALOG so the hook count stays constant across
+ * renders (safe despite the loop).
+ */
+export function useLayerLoading(): Set<string> {
+  const loading = new Set<string>()
+  for (const layer of LAYER_CATALOG) {
+    const queryKey =
+      layer.source === "sta" ? staLayerKey(layer) : featuresLayerKey(layer)
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- constant-length loop over a static catalog
+    if (useIsFetching({ queryKey }) > 0) loading.add(layer.id)
+  }
+  return loading
 }
 
 /** Turn STA Locations into a GeoJSON FeatureCollection for MapLibre. */
@@ -51,7 +73,10 @@ export function useFeaturesLayer(layer: FeaturesLayer) {
   return useQuery({
     queryKey: featuresLayerKey(layer),
     queryFn: async () => {
-      const fc = await features.getItems(layer.collectionId, layer.query)
+      const fc = await featuresClient(layer.featuresBaseUrl).getAllItems(
+        layer.collectionId,
+        layer.query
+      )
       return fc as FeatureCollection
     },
     placeholderData: EMPTY,

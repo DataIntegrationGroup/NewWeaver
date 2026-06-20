@@ -28,6 +28,13 @@ export const FEATURES_BASE_URL =
   env.VITE_FEATURES_BASE_URL ??
   "https://features.newmexicowaterdata.org"
 
+// Ocotillo pygeoapi — a second OGC API Features deployment hosting New Mexico
+// water-data collections (wells, springs, surface water, chemistry). Same
+// protocol as FEATURES_BASE_URL, different host/path.
+export const OCOTILLO_FEATURES_BASE_URL =
+  env.VITE_OCOTILLO_FEATURES_BASE_URL ??
+  "https://ocotillo-api.newmexicowaterdata.org/ogcapi"
+
 /**
  * PostHog product analytics. Disabled unless VITE_POSTHOG_KEY is set, so dev
  * builds and CI emit nothing by default. Host defaults to US cloud; set

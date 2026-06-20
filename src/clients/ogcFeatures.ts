@@ -89,7 +89,7 @@ export class OgcFeaturesClient {
     return this.get<Collection>(`/collections/${collectionId}`)
   }
 
-  /** Fetch GeoJSON items for a collection. */
+  /** Fetch a single page of GeoJSON items for a collection. */
   getItems(
     collectionId: string,
     query?: ItemsQuery
@@ -97,6 +97,54 @@ export class OgcFeaturesClient {
     return this.get<FeatureCollection>(
       `/collections/${collectionId}/items${buildQuery(query)}`
     )
+  }
+
+  /**
+   * Fetch every item in a collection, following offset paging until the server
+   * has nothing left. OGC API Features caps a page (pygeoapi defaults to 10,
+   * hard-caps at 10000), so a single getItems only ever returns a slice — this
+   * loops to assemble the full FeatureCollection the map/table expect.
+   *
+   * `pageSize` is the per-request limit; `maxPages` bounds the loop so a
+   * mis-set offset can't spin forever. Any caller-supplied limit/offset in
+   * `query` is overridden by the pager.
+   */
+  async getAllItems(
+    collectionId: string,
+    query?: ItemsQuery,
+    pageSize = 10000,
+    maxPages = 100
+  ): Promise<FeatureCollection> {
+    const all: Feature[] = []
+    let offset = 0
+    let numberMatched: number | undefined
+    let last: FeatureCollection | undefined
+
+    for (let page = 0; page < maxPages; page++) {
+      const fc = await this.getItems(collectionId, {
+        ...query,
+        limit: pageSize,
+        offset,
+      })
+      last = fc
+      numberMatched = fc.numberMatched ?? numberMatched
+      const batch = fc.features ?? []
+      all.push(...batch)
+
+      const done =
+        batch.length < pageSize ||
+        (numberMatched !== undefined && all.length >= numberMatched)
+      if (done) break
+      offset += pageSize
+    }
+
+    return {
+      type: "FeatureCollection",
+      features: all,
+      numberMatched,
+      numberReturned: all.length,
+      links: last?.links,
+    }
   }
 
   /** Fetch a single feature by id. */
@@ -108,3 +156,21 @@ export class OgcFeaturesClient {
 }
 
 export const features = new OgcFeaturesClient()
+
+// Features is one protocol but collections may live on more than one pygeoapi
+// deployment (e.g. Ocotillo). Cache one client per base URL so layers can
+// target the right server without growing source-specific code.
+const clientCache = new Map<string, OgcFeaturesClient>([
+  [FEATURES_BASE_URL, features],
+])
+
+export function featuresClient(
+  baseUrl: string = FEATURES_BASE_URL
+): OgcFeaturesClient {
+  let client = clientCache.get(baseUrl)
+  if (!client) {
+    client = new OgcFeaturesClient(baseUrl)
+    clientCache.set(baseUrl, client)
+  }
+  return client
+}
