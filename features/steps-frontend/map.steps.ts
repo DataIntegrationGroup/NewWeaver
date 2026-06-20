@@ -101,7 +101,7 @@ Then("the scale bar updates to a smaller distance", async function (this: Browse
 Then("each monitoring point renders as its own marker", async function (this: BrowserWorld) {
   const props = await this.page.evaluate(() =>
     (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-      "monitoring-locations-points"
+      "st2-cabq-points"
     )
   )
   assert.ok(props.length > 0, "expected rendered points")
@@ -110,11 +110,33 @@ Then("each monitoring point renders as its own marker", async function (this: Br
 Then("no cluster counts are shown", async function (this: BrowserWorld) {
   const props = await this.page.evaluate(() =>
     (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-      "monitoring-locations-points"
+      "st2-cabq-points"
     )
   )
   assert.ok(
     props.every((p) => !p || !("point_count" in p)),
     "no feature should carry point_count"
   )
+})
+
+When("the user opens the basemap picker", async function (this: BrowserWorld) {
+  await this.page.getByTestId("basemap-trigger").click()
+})
+
+When("the user selects the {string} basemap", async function (this: BrowserWorld, name: string) {
+  await this.page.getByRole("radio", { name }).click()
+})
+
+Then("the {string} basemap is active", async function (this: BrowserWorld, name: string) {
+  const opt = this.page.getByRole("radio", { name })
+  await opt.waitFor()
+  assert.equal(await opt.getAttribute("aria-checked"), "true")
+})
+
+Then("satellite imagery tiles are requested", async function (this: BrowserWorld) {
+  for (let i = 0; i < 50; i++) {
+    if (this.requestedUrls.some((u) => /arcgisonline\.com/.test(u))) return
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  assert.fail("no Esri satellite tile request observed")
 })

@@ -6,7 +6,7 @@ Feature: Spatial and text filtering
 
   Background:
     Given the user has opened the app
-    And the "Monitoring locations" layer is toggled on
+    And the "City of Albuquerque (CABQ)" layer is toggled on
 
   @smoke
   Scenario: Filter data to the current map extent
@@ -21,7 +21,7 @@ Feature: Spatial and text filtering
     Then data outside the current extent is shown again
 
   Scenario: Filter features by attribute text
-    Given the "Water-levels summary" layer is toggled on
+    Given the "Springs" layer is toggled on
     When the user types a search term into the feature filter
     Then only features whose attributes match the term remain visible
 

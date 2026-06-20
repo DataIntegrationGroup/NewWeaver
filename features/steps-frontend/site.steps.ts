@@ -42,6 +42,9 @@ Then("the help page includes a data disclaimer", async function (this: BrowserWo
 })
 
 When("the user opens the help link", async function (this: BrowserWorld) {
-  await this.page.getByTestId("nav-help").click()
+  const link = this.page.getByTestId("nav-help")
+  await link.scrollIntoViewIfNeeded()
+  await link.click()
+  await this.page.waitForURL(/\/help/)
   await this.page.getByTestId("help-page").waitFor()
 })

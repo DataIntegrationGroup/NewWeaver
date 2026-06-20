@@ -14,8 +14,12 @@ async function firstRowId(world: BrowserWorld): Promise<string | null> {
   return world.page.getByTestId("table-row").first().getAttribute("data-feature-id")
 }
 
-When("the user opens the attribute table", openTable)
-Given("the attribute table is open", openTable)
+When("the user opens the attribute table", async function (this: BrowserWorld) {
+  await openTable(this)
+})
+Given("the attribute table is open", async function (this: BrowserWorld) {
+  await openTable(this)
+})
 
 Given("the active layer has more features than one page", async function () {
   // Fixture has 15 features (> pageSize 10); nothing to set up.
@@ -67,8 +71,8 @@ When("the user clicks a table row", async function (this: BrowserWorld) {
 
 Then("the corresponding feature is highlighted on the map", async function (this: BrowserWorld) {
   const id = (this as unknown as { clickedRow: string | null }).clickedRow
-  assert.ok(this.page.url().includes("sel="))
-  assert.ok(this.page.url().includes(encodeURIComponent("water-levels-summary~")) || this.page.url().includes(`water-levels-summary~${id}`))
+  await this.page.waitForFunction((fid) => /[?&]sel=/.test(window.location.search) && window.location.href.includes(String(fid)), id)
+  assert.ok(this.page.url().includes("ocotillo-springs"))
 })
 
 Then("the inspect panel shows that feature's attributes", async function (this: BrowserWorld) {
@@ -77,7 +81,7 @@ Then("the inspect panel shows that feature's attributes", async function (this: 
 })
 
 When("the user clicks a feature on the map", async function (this: BrowserWorld) {
-  await this.selectFeature("water-levels-summary", "wl-3")
+  await this.selectFeature("ocotillo-springs", "wl-3")
 })
 
 Then("the matching row is highlighted in the table", async function (this: BrowserWorld) {

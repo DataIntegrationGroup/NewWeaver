@@ -16,7 +16,7 @@ const featurePaths = ["features/**/*.feature"]
 export default {
   paths: featurePaths,
   import: ["features/steps/**/*.ts"],
-  tags: "@client",
+  tags: "@client and not @skip",
 }
 
 export const frontend = {

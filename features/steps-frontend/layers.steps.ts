@@ -44,10 +44,45 @@ Then("the {string} features render on the map", async function (this: BrowserWor
 
 Then("no monitoring-location points render on the map", async function (this: BrowserWorld) {
   const props = await this.page.evaluate(() =>
-    (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered("monitoring-locations-points")
+    (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered("st2-cabq-points")
   )
   assert.equal(props.length, 0)
 })
+
+Then("the catalog shows a {string} layer group", async function (this: BrowserWorld, name: string) {
+  await this.page.getByRole("button", { name, exact: true }).waitFor()
+})
+
+When("the user collapses the {string} layer group", async function (this: BrowserWorld, name: string) {
+  const trigger = this.page.getByRole("button", { name, exact: true })
+  if ((await trigger.getAttribute("aria-expanded")) === "true") await trigger.click()
+})
+
+When("the user expands the {string} layer group", async function (this: BrowserWorld, name: string) {
+  const trigger = this.page.getByRole("button", { name, exact: true })
+  if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click()
+})
+
+Then("the {string} layer toggle is hidden", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`layer-toggle-${layerIdByTitle(title)}`).waitFor({ state: "hidden" })
+})
+
+Then("the {string} layer toggle is visible", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`layer-toggle-${layerIdByTitle(title)}`).waitFor({ state: "visible" })
+})
+
+Then("the {string} layer shows a loading indicator", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`layer-loading-${layerIdByTitle(title)}`).waitFor()
+})
+
+Then(
+  "the {string} loading indicator clears once data has loaded",
+  async function (this: BrowserWorld, title: string) {
+    await this.page
+      .getByTestId(`layer-loading-${layerIdByTitle(title)}`)
+      .waitFor({ state: "detached" })
+  }
+)
 
 Then(
   "the catalog contains a {string} layer sourced from {string}",

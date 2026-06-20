@@ -21,6 +21,18 @@ export const LOCATIONS = {
   ],
 }
 
+/** 30 locations (> the 25 large-export threshold) for the Bernalillo agency. */
+export const LOCATIONS_MANY = {
+  value: Array.from({ length: 30 }, (_, i) => ({
+    "@iot.id": 100 + i,
+    name: `BERN-${i + 1}`,
+    description: `Bernalillo well ${i + 1}`,
+    encodingType: "application/vnd.geo+json",
+    location: { type: "Point", coordinates: [-106.6 + i * 0.01, 35.1] },
+    properties: { agency: "BernCo" },
+  })),
+}
+
 /** Locations(:id)/Things?$expand=Datastreams */
 export const THINGS_WITH_DATASTREAMS = {
   value: [
@@ -63,6 +75,18 @@ export const COLLECTIONS = {
     {
       id: "water_levels_summary",
       title: "Water-levels summary",
+      links: [{ href: "x", rel: "self" }],
+    },
+  ],
+  links: [],
+}
+
+export const OCOTILLO_COLLECTIONS = {
+  collections: [
+    { id: "springs", title: "Springs", links: [{ href: "x", rel: "self" }] },
+    {
+      id: "latest_tds_wells",
+      title: "Latest TDS (Wells)",
       links: [{ href: "x", rel: "self" }],
     },
   ],

@@ -6,7 +6,7 @@ Feature: Vector feature inspection
 
   Background:
     Given the user has opened the app
-    And the "Water-levels summary" layer is toggled on
+    And the "Springs" layer is toggled on
 
   @smoke
   Scenario: Clicking a vector feature shows its attributes

@@ -20,8 +20,10 @@ async function tableCount(world: BrowserWorld): Promise<number> {
   return Number(text.match(/(\d+)/)?.[1] ?? "-1")
 }
 
+// Filter controls render twice (header at lg+, sidebar below lg); target the
+// visible instance so the locator is unambiguous.
 async function setSwitch(world: BrowserWorld, on: boolean) {
-  const sw = world.page.getByTestId("filter-bbox")
+  const sw = world.page.locator('[data-testid="filter-bbox"]:visible')
   if (((await sw.getAttribute("data-state")) === "checked") !== on) await sw.click()
 }
 
@@ -47,7 +49,7 @@ Then("only data within the current map extent is shown", async function (this: B
   await this.page.waitForFunction(
     () =>
       (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-        "monitoring-locations-points"
+        "st2-cabq-points"
       ).length === 1
   )
 })
@@ -73,7 +75,7 @@ Then("data outside the current extent is shown again", async function (this: Bro
 When("the user types a search term into the feature filter", async function (this: BrowserWorld) {
   await ensureTableOpen(this)
   ;(this as unknown as { totalBefore: number }).totalBefore = await tableCount(this)
-  await this.page.getByTestId("filter-text").fill("Summary 1")
+  await this.page.locator('[data-testid="filter-text"]:visible').fill("Summary 1")
 })
 
 Then("only features whose attributes match the term remain visible", async function (this: BrowserWorld) {
@@ -90,7 +92,7 @@ Then("only features whose attributes match the term remain visible", async funct
 
 When("the user types a search term that matches no features", async function (this: BrowserWorld) {
   await ensureTableOpen(this)
-  await this.page.getByTestId("filter-text").fill("zzzzzznomatch")
+  await this.page.locator('[data-testid="filter-text"]:visible').fill("zzzzzznomatch")
 })
 
 Then('the user sees a "no results" message', async function (this: BrowserWorld) {
@@ -101,7 +103,7 @@ Then("the map shows no features for that layer", async function (this: BrowserWo
   await this.page.waitForFunction(
     () =>
       (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-        "monitoring-locations-points"
+        "st2-cabq-points"
       ).length === 0
   )
 })

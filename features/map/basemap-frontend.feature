@@ -27,6 +27,12 @@ Feature: Interactive basemap
     When the user zooms in
     Then the scale bar updates to a smaller distance
 
+  Scenario: User switches to the satellite basemap
+    When the user opens the basemap picker
+    And the user selects the "Satellite" basemap
+    Then the "Satellite" basemap is active
+    And satellite imagery tiles are requested
+
   # Clustering is disabled for now (points render individually). The MapLibre
   # cluster behaviour can be re-introduced with its own scenarios later.
   Scenario: Monitoring points render individually

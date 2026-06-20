@@ -64,7 +64,14 @@ export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
     draw.on("change", emit)
 
     return () => {
-      draw.stop()
+      // On route change the MapLibre map may be torn down before this cleanup
+      // runs; terra-draw's stop() then throws calling getSource/removeLayer on
+      // a dead map. Swallow it so unmount can't blank the app (e.g. map→/help).
+      try {
+        draw.stop()
+      } catch {
+        // map already destroyed — nothing to tear down
+      }
       drawRef.current = null
     }
   }, [map, onShapesChange, posthog])
