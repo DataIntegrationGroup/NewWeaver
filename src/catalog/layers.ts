@@ -160,6 +160,16 @@ export const LAYER_CATALOG: LayerConfig[] = [
   ...ocotilloLayers,
 ]
 
+/**
+ * Help text for each layer-group heading, shown as a tooltip on hover. Keyed by
+ * the `section` value used on the layers above.
+ */
+export const SECTION_DESCRIPTIONS: Record<string, string> = {
+  STA: "Live monitoring locations from the SensorThings API (FROST), grouped by operating agency. Turn an agency on to map its wells, then click a point to browse its datastreams and chart the measured time series.",
+  Ocotillo:
+    "New Mexico water datasets from the Ocotillo OGC API Features service — water wells, springs, surface water, chemistry, and project areas. Each layer is a published collection; turn one on to load its features onto the map.",
+}
+
 export function getLayer(id: string): LayerConfig | undefined {
   return LAYER_CATALOG.find((l) => l.id === id)
 }

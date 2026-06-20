@@ -1,4 +1,8 @@
-import { LAYER_CATALOG, type LayerConfig } from "@/catalog/layers"
+import {
+  LAYER_CATALOG,
+  SECTION_DESCRIPTIONS,
+  type LayerConfig,
+} from "@/catalog/layers"
 import {
   LayerSelector,
   type LayerOption,
@@ -10,6 +14,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useLayerLoading } from "@/hooks/useLayerData"
 
 interface LayerListProps {
@@ -78,12 +88,31 @@ export function LayerList({ visible, onToggle }: LayerListProps) {
       <h2 className="!text-base !font-semibold uppercase tracking-wide text-muted-foreground">
         Layers
       </h2>
+      <TooltipProvider delayDuration={200}>
       <Accordion type="multiple" defaultValue={DEFAULT_OPEN}>
-        {SECTIONS.map(({ section, options }) => (
-          <AccordionItem key={section} value={section}>
+        {SECTIONS.map(({ section, options }) => {
+          const help = SECTION_DESCRIPTIONS[section]
+          const trigger = (
             <AccordionTrigger className="!text-xs !font-semibold uppercase tracking-wide text-muted-foreground/80">
               {section}
             </AccordionTrigger>
+          )
+          return (
+          <AccordionItem key={section} value={section}>
+            {help ? (
+              <Tooltip>
+                <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  className="max-w-72"
+                  data-testid={`layer-group-tooltip-${section}`}
+                >
+                  {help}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              trigger
+            )}
             <AccordionContent>
               <LayerSelector
                 options={options}
@@ -93,8 +122,10 @@ export function LayerList({ visible, onToggle }: LayerListProps) {
               />
             </AccordionContent>
           </AccordionItem>
-        ))}
+          )
+        })}
       </Accordion>
+      </TooltipProvider>
     </div>
   )
 }
