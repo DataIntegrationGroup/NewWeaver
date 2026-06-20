@@ -24,3 +24,9 @@ Feature: Home and help pages
     Given the user has opened the app
     When the user opens the help link
     Then the user sees the documentation and help page
+
+  Scenario: Help documents connecting a desktop GIS to the OGC API
+    Given the user opens the help page
+    When the user opens the "Desktop GIS" help section
+    Then the help page shows the OGC API landing page URL
+    And it explains connecting ArcGIS Pro and QGIS

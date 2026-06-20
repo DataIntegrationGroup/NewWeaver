@@ -41,6 +41,21 @@ Then("the help page includes a data disclaimer", async function (this: BrowserWo
   await this.page.getByText(/No warranty expressed or implied/).waitFor()
 })
 
+When("the user opens the {string} help section", async function (this: BrowserWorld, name: string) {
+  await this.page.getByRole("tab", { name }).click()
+})
+
+Then("the help page shows the OGC API landing page URL", async function (this: BrowserWorld) {
+  const text = (await this.page.getByTestId("help-gis").textContent()) ?? ""
+  assert.match(text, /\/ogcapi/)
+})
+
+Then("it explains connecting ArcGIS Pro and QGIS", async function (this: BrowserWorld) {
+  const text = (await this.page.getByTestId("help-gis").textContent()) ?? ""
+  assert.match(text, /ArcGIS Pro/)
+  assert.match(text, /QGIS/)
+})
+
 When("the user opens the help link", async function (this: BrowserWorld) {
   const link = this.page.getByTestId("nav-help")
   await link.scrollIntoViewIfNeeded()
