@@ -28,3 +28,25 @@ Feature: OSE GIS layers in the catalog
   Scenario: The OSE GIS group describes itself on hover
     When the user hovers over the "OSE GIS" layer group
     Then a tooltip explains the "OSE GIS" group
+
+  Scenario: The OSE attribute table shows the configured fields, not raw ones
+    Given the "City of Albuquerque (CABQ)" layer is toggled off
+    And the "OSE Aquifer Test Wells" layer is toggled on
+    When the user opens the attribute table
+    Then the attribute table columns include "PLSS"
+    And the attribute table columns include "OSE_POD_ID"
+    And the attribute table columns exclude "TWS"
+    And the attribute table columns exclude "id"
+
+  Scenario: The single-record inspect panel follows the same field rules
+    Given the "OSE Aquifer Test Wells" layer is toggled on
+    When the user selects OSE aquifer feature "501"
+    Then the inspect panel lists the field "PLSS"
+    And the inspect panel shows the value "T. 11 S., R. 5 W., Sec. 26, NW¼NE¼"
+    And the inspect panel does not list the field "TWS"
+    And the inspect panel does not list the field "id"
+
+  Scenario: URL fields render as clickable links
+    Given the "OSE Aquifer Test Wells" layer is toggled on
+    When the user selects OSE aquifer feature "501"
+    Then the inspect panel has a link to "https://example.org/report.pdf"

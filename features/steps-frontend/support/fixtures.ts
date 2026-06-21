@@ -93,6 +93,57 @@ export const OCOTILLO_COLLECTIONS = {
   links: [],
 }
 
+/**
+ * OSE Aquifer Test Wells — ArcGIS REST f=geojson page. Carries a few display
+ * columns plus the raw PLSS pieces, so the layer's mapProperties can combine
+ * them into a single `PLSS` field.
+ */
+export const OSE_AQUIFER_FC = {
+  type: "FeatureCollection",
+  exceededTransferLimit: false,
+  features: [
+    {
+      type: "Feature",
+      id: 501,
+      geometry: { type: "Point", coordinates: [-106.6, 35.1] },
+      properties: {
+        objectid: 501,
+        OSE_POD_ID: "OSE-501",
+        COUNTY: "SIERRA",
+        BASIN: "RG",
+        WELL_DEPTH_FT_BGL: 120,
+        URL_REFERENCE: "https://example.org/report.pdf",
+        TWS: "11S",
+        RNG: "05W",
+        SEC: 26,
+        qtr_4th: "NW (1)",
+        qtr_16th: "NE (2)",
+        qtr_64th: null,
+        qtr_256th: null,
+      },
+    },
+    {
+      type: "Feature",
+      id: 502,
+      geometry: { type: "Point", coordinates: [-104.5, 33.4] },
+      properties: {
+        objectid: 502,
+        OSE_POD_ID: "OSE-502",
+        COUNTY: "LINCOLN",
+        BASIN: "RG",
+        WELL_DEPTH_FT_BGL: 80,
+        TWS: "14S",
+        RNG: "04W",
+        SEC: 19,
+        qtr_4th: "SW (3)",
+        qtr_16th: "SE (4)",
+        qtr_64th: "SW (3)",
+        qtr_256th: null,
+      },
+    },
+  ],
+}
+
 // 15 features so pagination (pageSize 10) has a second page. Coordinates put
 // wl-1 near Albuquerque and the rest near Roswell, so a tight extent around
 // wl-1 isolates a single feature for the spatial-filter test.

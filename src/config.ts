@@ -42,6 +42,13 @@ export const OSE_ARCGIS_BASE_URL =
   env.VITE_OSE_ARCGIS_BASE_URL ??
   "https://services2.arcgis.com/qXZbWTdPDbTjl7Dy/arcgis/rest/services"
 
+// USGS Water Data for the Nation — the modern NWIS replacement, served as an
+// OGC API Features endpoint (same protocol as the DIE/Ocotillo pygeoapi). The
+// `monitoring-locations` collection carries NWIS sites; we read it through the
+// shared OgcFeaturesClient.
+export const USGS_OGC_BASE_URL =
+  env.VITE_USGS_OGC_BASE_URL ?? "https://api.waterdata.usgs.gov/ogcapi/v0"
+
 /**
  * PostHog product analytics. Disabled unless VITE_POSTHOG_KEY is set, so dev
  * builds and CI emit nothing by default. Host defaults to US cloud; set

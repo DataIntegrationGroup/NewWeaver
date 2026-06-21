@@ -24,6 +24,7 @@ export function featuresLayerKey(layer: FeaturesLayer) {
     layer.featuresBaseUrl ?? "default",
     layer.collectionId,
     layer.query ?? null,
+    layer.maxFeatures ?? null,
   ] as const
 }
 export function arcgisLayerKey(layer: ArcGisLayer) {
@@ -88,9 +89,15 @@ export function useFeaturesLayer(layer: FeaturesLayer) {
   return useQuery({
     queryKey: featuresLayerKey(layer),
     queryFn: async () => {
+      const pageSize = 10000
+      const maxPages = layer.maxFeatures
+        ? Math.max(1, Math.ceil(layer.maxFeatures / pageSize))
+        : 100
       const fc = await featuresClient(layer.featuresBaseUrl).getAllItems(
         layer.collectionId,
-        layer.query
+        layer.query,
+        pageSize,
+        maxPages
       )
       return fc as FeatureCollection
     },
@@ -127,7 +134,16 @@ export function useArcGisLayer(layer: ArcGisLayer) {
       const fc = await arcgisClient(layer.serviceUrl).getAllFeaturesParallel(
         layer.query
       )
-      return arcgisToGeoJSON(fc, layer.idField ?? "objectid")
+      const geo = arcgisToGeoJSON(fc, layer.idField ?? "objectid")
+      const map = layer.mapProperties
+      if (!map) return geo
+      return {
+        type: "FeatureCollection" as const,
+        features: geo.features.map((f) => ({
+          ...f,
+          properties: map((f.properties ?? {}) as Record<string, unknown>),
+        })),
+      }
     },
     placeholderData: EMPTY,
   })

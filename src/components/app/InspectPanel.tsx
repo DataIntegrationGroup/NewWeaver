@@ -18,7 +18,9 @@ import {
   useArcGisLayer,
   useDatastreams,
 } from "@/hooks/useLayerData"
+import { selectFields, type FieldDisplay } from "@/lib/fields"
 import { DatastreamChart } from "./DatastreamChart"
+import { FieldValue } from "./FieldValue"
 
 interface InspectPanelProps {
   layer: LayerConfig
@@ -64,17 +66,23 @@ function AttributeInspect({
   title,
   fc,
   featureId,
+  fields,
+  format = (_k, v) => String(v ?? ""),
   onClose,
 }: {
   title: string
   fc: { features: { id?: string | number; properties: Record<string, unknown> | null }[] } | undefined
   featureId: string
+  fields?: FieldDisplay
+  format?: (key: string, value: unknown) => string
   onClose: () => void
 }) {
   const feature = fc?.features.find(
     (f) => String(f.id ?? f.properties?.id) === featureId
   )
   const props = feature?.properties ?? {}
+  // Same field rules as the hover popup and the multi-record attribute table.
+  const keys = selectFields(Object.keys(props), fields)
 
   return (
     <PanelShell title={title} onClose={onClose}>
@@ -82,10 +90,12 @@ function AttributeInspect({
         <p className="text-sm text-muted-foreground">Feature not found.</p>
       ) : (
         <dl data-testid="attribute-list" className="grid grid-cols-1 gap-2 text-sm">
-          {Object.entries(props).map(([k, v]) => (
+          {keys.map((k) => (
             <div key={k} className="grid grid-cols-[40%_60%] gap-2 border-b py-1">
               <dt className="font-medium text-muted-foreground">{k}</dt>
-              <dd className="break-words">{String(v ?? "")}</dd>
+              <dd className="break-words">
+                <FieldValue value={format(k, props[k])} />
+              </dd>
             </div>
           ))}
         </dl>
@@ -97,13 +107,13 @@ function AttributeInspect({
 /** Attribute list for a vector feature from OGC API Features. */
 function FeatureInspect({ layer, featureId, onClose }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useFeaturesLayer(layer)
-  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} onClose={onClose} />
+  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} />
 }
 
 /** Attribute list for an OSE GIS feature from ArcGIS REST. */
 function ArcGisInspect({ layer, featureId, onClose }: { layer: ArcGisLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useArcGisLayer(layer)
-  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} onClose={onClose} />
+  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} />
 }
 
 /** Monitoring location → datastreams → time-series chart. */

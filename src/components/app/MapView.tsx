@@ -22,13 +22,19 @@ import {
 
 import type { LayerConfig } from "@/catalog/layers"
 import type { FeatureFilters } from "@/lib/filterFeatures"
+import { selectFields, type FieldDisplay } from "@/lib/fields"
+
+/** Plain string cast used when a layer declares no value formatter. */
+const defaultFormat = (_key: string, value: unknown) => String(value ?? "")
 import type { Selection } from "@/lib/urlState"
 import {
   CatalogLayer,
   renderLayerId,
   clusterLayerId,
   interactiveLayerIdsFor,
+  isClustered,
 } from "./MapLayers"
+import { FieldValue } from "./FieldValue"
 
 interface MapViewProps {
   layers: LayerConfig[]
@@ -64,7 +70,7 @@ export function MapView({
   const mapRef = useRef<MapRef | null>(null)
   const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
   const clusterLayerIds = new Set(
-    layers.filter((l) => l.source === "arcgis").map(clusterLayerId)
+    layers.filter(isClustered).map(clusterLayerId)
   )
   const [drawMap, setDrawMap] = useState<MaplibreMap | null>(null)
 
@@ -73,6 +79,8 @@ export function MapView({
     latitude: number
     name?: string
     properties: Record<string, unknown>
+    fields?: FieldDisplay
+    format?: (key: string, value: unknown) => string
   } | null>(null)
 
   // Hit-test on move: a feature under the pointer drives the hover popup and
@@ -85,11 +93,14 @@ export function MapView({
       return
     }
     const properties = (hit.properties ?? {}) as Record<string, unknown>
+    const layer = layers.find((l) => renderLayerId(l) === hit.layer?.id)
     setHoverInfo({
       longitude: e.lngLat.lng,
       latitude: e.lngLat.lat,
       name: (properties.name as string) ?? undefined,
       properties,
+      fields: layer?.fields,
+      format: layer?.formatValue,
     })
   }
 
@@ -107,7 +118,10 @@ export function MapView({
     }
     const layer = layers.find((l) => renderLayerId(l) === hitLayerId)
     if (!layer) return
-    const featureId = String(hit.id ?? hit.properties?.id ?? "")
+    // Prefer the feature's own `id` property: a clustered source reassigns the
+    // MapLibre feature id to a supercluster id, so `hit.id` would not match the
+    // real feature in the data (breaking the inspect panel and highlight).
+    const featureId = String(hit.properties?.id ?? hit.id ?? "")
     onSelect({ layerId: layer.id, featureId })
   }
 
@@ -207,25 +221,35 @@ export function MapView({
           <Popup
             longitude={hoverInfo.longitude}
             latitude={hoverInfo.latitude}
-            anchor="bottom"
             offset={12}
             closeButton={false}
             closeOnClick={false}
-            className="max-w-xs"
+            maxWidth="440px"
           >
-            <div data-testid="feature-popup" className="text-foreground">
+            {/* No fixed anchor: MapLibre flips the popup to whichever side keeps
+                it on-screen. A tall field list scrolls within a capped height. */}
+            <div
+              data-testid="feature-popup"
+              className="max-h-[min(60vh,20rem)] overflow-y-auto pr-1 text-foreground"
+            >
               {hoverInfo.name && (
                 <p className="mb-1 text-sm font-semibold leading-tight">
                   {hoverInfo.name}
                 </p>
               )}
-              <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
-                {Object.entries(hoverInfo.properties)
-                  .filter(([k]) => k !== "name")
-                  .map(([k, v]) => (
+              <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5 text-xs">
+                {selectFields(Object.keys(hoverInfo.properties), hoverInfo.fields)
+                  .filter((k) => k !== "name")
+                  .map((k) => (
                     <Fragment key={k}>
-                      <dt className="font-medium text-muted-foreground">{k}</dt>
-                      <dd className="break-words">{String(v ?? "")}</dd>
+                      <dt className="whitespace-nowrap font-medium text-muted-foreground">
+                        {k}
+                      </dt>
+                      <dd className="break-words">
+                        <FieldValue
+                          value={(hoverInfo.format ?? defaultFormat)(k, hoverInfo.properties[k])}
+                        />
+                      </dd>
                     </Fragment>
                   ))}
               </dl>

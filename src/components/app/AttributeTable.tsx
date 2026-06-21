@@ -13,6 +13,8 @@ import type { Feature, FeatureCollection } from "geojson"
 import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer } from "@/catalog/layers"
 import { useFeaturesLayer, useStaLayer, useArcGisLayer } from "@/hooks/useLayerData"
 import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
+import { selectFields, type FieldDisplay } from "@/lib/fields"
+import { FieldValue } from "./FieldValue"
 import {
   Table,
   TableBody,
@@ -36,10 +38,16 @@ function featureId(f: Feature): string {
 
 function TableView({
   fc,
+  fields,
+  format = (_k, v) => String(v ?? ""),
   filters,
   selectedFeatureId,
   onSelect,
-}: { fc: FeatureCollection } & Omit<AttributeTableProps, "layer">) {
+}: {
+  fc: FeatureCollection
+  fields?: FieldDisplay
+  format?: (key: string, value: unknown) => string
+} & Omit<AttributeTableProps, "layer">) {
   const [sorting, setSorting] = useState<SortingState>([])
 
   const rows = useMemo(
@@ -52,13 +60,13 @@ function TableView({
     for (const f of rows.slice(0, 50)) {
       Object.keys(f.properties ?? {}).forEach((k) => keys.add(k))
     }
-    return [...keys].map((key) => ({
+    return selectFields([...keys], fields).map((key) => ({
       id: key,
       accessorFn: (f: Feature) => f.properties?.[key],
       header: key,
-      cell: (ctx) => String(ctx.getValue() ?? ""),
+      cell: (ctx) => <FieldValue value={format(key, ctx.getValue())} />,
     }))
-  }, [rows])
+  }, [rows, fields, format])
 
   const table = useReactTable({
     data: rows,
@@ -165,17 +173,17 @@ function TableView({
 
 function FeaturesTable({ layer, ...rest }: { layer: FeaturesLayer } & Omit<AttributeTableProps, "layer">) {
   const { data } = useFeaturesLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} {...rest} />
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} {...rest} />
 }
 
 function StaTable({ layer, ...rest }: { layer: StaLayer } & Omit<AttributeTableProps, "layer">) {
   const { data } = useStaLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} {...rest} />
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} {...rest} />
 }
 
 function ArcGisTable({ layer, ...rest }: { layer: ArcGisLayer } & Omit<AttributeTableProps, "layer">) {
   const { data } = useArcGisLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} {...rest} />
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} {...rest} />
 }
 
 export function AttributeTable({ layer, ...rest }: AttributeTableProps) {

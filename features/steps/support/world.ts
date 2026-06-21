@@ -27,6 +27,9 @@ export class ClientWorld extends World {
   osePod: Record<string, unknown> = {}
   oseFilter: unknown
 
+  // Scratch slot for the field-display spec.
+  fieldKeys: string[] = []
+
   get lastUrl(): string {
     return this.requestedUrls[this.requestedUrls.length - 1] ?? ""
   }

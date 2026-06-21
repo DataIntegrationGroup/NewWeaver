@@ -87,6 +87,13 @@ async function mockApi(route: Route): Promise<boolean> {
     return json({}).then(() => true)
   }
 
+  // OSE GIS — ArcGIS REST FeatureServer. Answer the count probe, then serve
+  // the aquifer-test fixture page for the actual feature query.
+  if (/services2\.arcgis\.com/.test(url)) {
+    if (/returnCountOnly=true/.test(url)) return json({ count: 2 }).then(() => true)
+    return json(fx.OSE_AQUIFER_FC).then(() => true)
+  }
+
   // Esri satellite raster tiles — stub so the satellite basemap renders without
   // a real network call.
   if (/arcgisonline\.com/.test(url)) {

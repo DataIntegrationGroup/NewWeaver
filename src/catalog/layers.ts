@@ -10,10 +10,13 @@
 import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
 import type { ArcGisQuery } from "@/clients/arcGisRest"
+import type { FieldDisplay } from "@/lib/fields"
+import { formatOseValue } from "@/lib/oseCodes"
 import {
   OCOTILLO_FEATURES_BASE_URL,
   OSE_ARCGIS_BASE_URL,
   STA_ST2_BASE_URL,
+  USGS_OGC_BASE_URL,
 } from "@/config"
 
 /** MapLibre paint/layout for a vector layer, kept loose at the catalog level. */
@@ -31,6 +34,23 @@ interface BaseLayer {
   defaultVisible?: boolean
   /** Group heading in the layer list. Layers without a section list first. */
   section?: string
+  /**
+   * Which feature properties to show in the attribute table and hover popup.
+   * Omit for all fields; otherwise provide an `include` or `exclude` list.
+   */
+  fields?: FieldDisplay
+  /**
+   * Display formatter for a property value (e.g. expand coded fields to a
+   * human-readable label). Applied in the table, popup, and inspect panel;
+   * the underlying data is unchanged. Defaults to a plain string cast.
+   */
+  formatValue?: (key: string, value: unknown) => string
+  /** Cluster dense points on the map. ArcGIS layers cluster by default. */
+  cluster?: boolean
+  /** Cluster merge radius in px (default 4, matching Weaver). Smaller = looser. */
+  clusterRadius?: number
+  /** Stop clustering above this zoom (default 18, matching Weaver). */
+  clusterMaxZoom?: number
   style: LayerStyle
 }
 
@@ -42,6 +62,12 @@ export interface FeaturesLayer extends BaseLayer {
   /** OGC API Features base URL. Defaults to the primary DIE pygeoapi. */
   featuresBaseUrl?: string
   query?: ItemsQuery
+  /**
+   * Cap how many features the pager loads. Bounds open-ended time-series
+   * collections (e.g. USGS continuous/daily values) so a layer can't pull
+   * millions of rows. Omit to load every matching feature.
+   */
+  maxFeatures?: number
 }
 
 /** Monitoring-point layer read from STA Locations. */
@@ -65,12 +91,12 @@ export interface ArcGisLayer extends BaseLayer {
   query?: ArcGisQuery
   /** Field carrying the stable feature id (default "objectid"). */
   idField?: string
-  /** Cluster dense points on the map (default true). */
-  cluster?: boolean
-  /** Cluster merge radius in px (default 4, matching Weaver). Smaller = looser. */
-  clusterRadius?: number
-  /** Stop clustering above this zoom (default 18, matching Weaver). */
-  clusterMaxZoom?: number
+  /**
+   * Optional per-feature property transform applied after GeoJSON conversion —
+   * derive computed fields (e.g. a combined PLSS string) or drop raw columns.
+   * Must preserve `id`.
+   */
+  mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
 }
 
 export type LayerConfig = FeaturesLayer | StaLayer | ArcGisLayer
@@ -194,7 +220,7 @@ const ocotilloLayers: FeaturesLayer[] = OCOTILLO_COLLECTIONS.map((c) => ({
 const OSE_GIS_SECTION = "OSE GIS"
 
 const POD_OUT_FIELDS =
-  "pod_file,pod_status,status,use_,depth_well,depth_wate,log_file_d"
+  "pod_file,pod_status,status,use_,depth_well,depth_wate,log_file_d,nmwrrs_wrs"
 
 function arcgisPoint(color: string): LayerStyle {
   return {
@@ -208,6 +234,79 @@ function arcgisPoint(color: string): LayerStyle {
   }
 }
 
+/**
+ * OSE Aquifer Test Wells store the public land survey location across seven raw
+ * columns (township, range, section, and four nested quarter calls). The map
+ * surfaces them as one BLM-standard legal description instead, e.g.
+ * "T. 15 N., R. 19 W., Sec. 4, NW¼SW¼SE¼" — township, range, section, then the
+ * aliquot parts largest-to-smallest. Quarter values arrive as "NW (1)"; the
+ * parenthetical code is stripped.
+ */
+const AQUIFER_PLSS_FIELDS = [
+  "TWS", "RNG", "SEC", "qtr_4th", "qtr_16th", "qtr_64th", "qtr_256th",
+] as const
+
+function quarterDir(v: unknown): string {
+  return String(v ?? "").replace(/\s*\(\d+\)\s*$/, "").trim()
+}
+
+/** Split a township/range like "05W" into its number ("5") and direction ("W"). */
+function splitTownRange(v: unknown): { num: string; dir: string } | null {
+  const m = String(v ?? "").trim().match(/^0*(\d+)\s*([NSEW]?)$/i)
+  return m ? { num: m[1], dir: m[2].toUpperCase() } : null
+}
+
+/** Build a BLM-standard legal description, e.g. "T. 15 N., R. 19 W., Sec. 4, NW¼SW¼SE¼". */
+function aquiferPlss(p: Record<string, unknown>): string {
+  const parts: string[] = []
+  const t = splitTownRange(p.TWS)
+  if (t) parts.push(`T. ${t.num}${t.dir ? ` ${t.dir}` : ""}.`)
+  const r = splitTownRange(p.RNG)
+  if (r) parts.push(`R. ${r.num}${r.dir ? ` ${r.dir}` : ""}.`)
+  const sec = String(p.SEC ?? "").trim()
+  if (sec) parts.push(`Sec. ${sec}`)
+  // Aliquot parts largest-to-smallest, concatenated with no separators.
+  const aliquot = ["qtr_4th", "qtr_16th", "qtr_64th", "qtr_256th"]
+    .map((k) => quarterDir(p[k]))
+    .filter(Boolean)
+    .map((d) => `${d}¼`)
+    .join("")
+  if (aliquot) parts.push(aliquot)
+  return parts.join(", ")
+}
+
+/** Collapse the raw PLSS columns into one `PLSS` field; drop the raw ones. */
+function aquiferProps(p: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...p }
+  for (const k of AQUIFER_PLSS_FIELDS) delete out[k]
+  const plss = aquiferPlss(p)
+  if (plss) out.PLSS = plss
+  return out
+}
+
+/** Fields shown for an aquifer-test well, in order (PLSS is computed). */
+const AQUIFER_DISPLAY_FIELDS = [
+  "OSE_POD_ID", "ALT_WELL_NAME", "COUNTY", "BASIN", "PLSS", "Latitude", "Longitude",
+  "GROUND_ELEV_FT_AMSL", "WELL_DEPTH_FT_BGL", "TOP_SCRN_FT_BGL", "BOTTOM_SCRN_FT_BGL",
+  "SCREEN_LENGTH_FT", "SCREEN_DIAM_INCHES", "FORMATION_NAME", "GEOLOGIC_DESCRIPTION",
+  "WELL_COMMENTS",
+  "TEST_DATE", "TEST_TYPE", "TEST_TYPE_2", "PUMPING_RATE_GPM",
+  "START_WATER_LEVEL_FT_BMP", "END_WATER_LEVEL_BMP", "TEST_DURATION_MINUTES",
+  "RECOV_TEST_DURATION_MINUTES",
+  "TRANS_DRAWDOWN_LOW_FT2PD", "TRANS_RECOVERY_LOW_FT2PD", "STORAGE_COEFF_LOW",
+  "SPECIFIC_YIELD_LOW", "SPECIFIC_CAPACITY_LOW_GPM_P_FT", "H_HYDRAULIC_CONDUCT_LOW_FTPD",
+  "V_HYDRAULIC_CONDUCT_LOW_FTPD", "PUMP_TEST_COMMENTS",
+  "REPORT_DATE", "REFERENCE", "URL_REFERENCE", "data_verification",
+]
+
+// Request the displayed server columns plus the raw PLSS pieces (needed to
+// build PLSS) and the object id (selection). PLSS itself is computed, not fetched.
+const AQUIFER_OUT_FIELDS = [
+  ...AQUIFER_DISPLAY_FIELDS.filter((f) => f !== "PLSS"),
+  ...AQUIFER_PLSS_FIELDS,
+  "objectid",
+].join(",")
+
 const oseGisLayers: ArcGisLayer[] = [
   {
     id: "ose-pods",
@@ -219,6 +318,12 @@ const oseGisLayers: ArcGisLayer[] = [
     idField: "pod_file",
     query: { outFields: POD_OUT_FIELDS },
     section: OSE_GIS_SECTION,
+    // Dense statewide layer — cluster 2x more aggressively than the default.
+    clusterRadius: 8,
+    // Hide the synthetic `id` (it duplicates pod_file) from the table/popup.
+    fields: { exclude: ["id"] },
+    // Expand coded fields (status, pod_status, use_) to "Label (CODE)".
+    formatValue: formatOseValue,
     style: arcgisPoint("#6b7280"),
   },
   {
@@ -229,16 +334,115 @@ const oseGisLayers: ArcGisLayer[] = [
     source: "arcgis",
     serviceUrl: `${OSE_ARCGIS_BASE_URL}/OSE_Aquifer_Test_Wells_view_pub/FeatureServer/0`,
     idField: "objectid",
-    query: { outFields: "objectid" },
+    query: { outFields: AQUIFER_OUT_FIELDS },
     section: OSE_GIS_SECTION,
+    mapProperties: aquiferProps,
+    fields: { include: AQUIFER_DISPLAY_FIELDS },
     style: arcgisPoint("#1a365d"),
   },
+]
+
+/**
+ * NWIS — USGS Water Data for the Nation, the modern NWIS replacement, served as
+ * OGC API Features (so it rides the same OgcFeaturesClient as Ocotillo). Starting
+ * with groundwater sites: the `monitoring-locations` collection filtered to
+ * `site_type_code=GW`, scoped to New Mexico (`state_code=35`). Dense, so it
+ * clusters and starts hidden.
+ */
+const NWIS_SECTION = "NWIS"
+
+const NWIS_DISPLAY_FIELDS = [
+  "monitoring_location_name",
+  "monitoring_location_number",
+  "agency_name",
+  "site_type",
+  "county_name",
+  "state_name",
+  "altitude",
+  "national_aquifer_code",
+  "aquifer_type_code",
+  "well_constructed_depth",
+  "construction_date",
+]
+
+// New Mexico extent — the value collections carry no state/site-type filter, so
+// they are scoped spatially. [minLon, minLat, maxLon, maxLat].
+const NM_BBOX: [number, number, number, number] = [-109, 31, -103, 37]
+
+// Shared field sets for the USGS observation collections.
+const NWIS_VALUE_FIELDS = [
+  "monitoring_location_id", "parameter_code", "statistic_id", "time", "value",
+  "unit_of_measure", "approval_status", "qualifier",
+]
+const NWIS_FIELD_MEAS_FIELDS = [
+  "monitoring_location_id", "parameter_code", "value", "unit_of_measure", "time",
+  "observing_procedure", "approval_status", "measuring_agency",
+]
+const NWIS_CHANNEL_FIELDS = [
+  "monitoring_location_id", "measurement_number", "time", "channel_name",
+  "channel_flow", "channel_flow_unit", "channel_width", "channel_width_unit",
+  "channel_velocity", "channel_velocity_unit",
+]
+
+// Cap for open-ended time-series collections so a layer can't pull millions of
+// rows; the "latest-*" snapshots are bounded and load in full.
+const NWIS_VALUE_CAP = 10000
+
+/** One USGS observation collection rendered as an NWIS map layer. */
+const NWIS_VALUE_LAYERS: {
+  id: string
+  collectionId: string
+  title: string
+  color: string
+  fields: string[]
+  /** Full time-series collections get capped; latest-* snapshots do not. */
+  capped?: boolean
+}[] = [
+  { id: "nwis-latest-continuous", collectionId: "latest-continuous", title: "Latest Continuous Values", color: "#2563eb", fields: NWIS_VALUE_FIELDS },
+  { id: "nwis-latest-daily", collectionId: "latest-daily", title: "Latest Daily Values", color: "#0891b2", fields: NWIS_VALUE_FIELDS },
+  { id: "nwis-latest-field-measurements", collectionId: "latest-field-measurements", title: "Latest Field Measurements", color: "#7c3aed", fields: NWIS_FIELD_MEAS_FIELDS, capped: true },
+  { id: "nwis-field-measurements", collectionId: "field-measurements", title: "Field Measurements", color: "#9333ea", fields: NWIS_FIELD_MEAS_FIELDS, capped: true },
+  { id: "nwis-channel-measurements", collectionId: "channel-measurements", title: "Channel Measurements", color: "#db2777", fields: NWIS_CHANNEL_FIELDS, capped: true },
+]
+
+const nwisLayers: FeaturesLayer[] = [
+  {
+    id: "nwis-groundwater",
+    title: "Groundwater Sites",
+    description:
+      "USGS NWIS groundwater monitoring locations (wells) in New Mexico, from the Water Data for the Nation OGC API (monitoring-locations, site_type_code=GW).",
+    source: "features",
+    featuresBaseUrl: USGS_OGC_BASE_URL,
+    collectionId: "monitoring-locations",
+    query: { site_type_code: "GW", state_code: "35" },
+    section: NWIS_SECTION,
+    cluster: true,
+    fields: { include: NWIS_DISPLAY_FIELDS },
+    style: staPoint("#15803d"),
+  },
+  ...NWIS_VALUE_LAYERS.map(
+    (v): FeaturesLayer => ({
+      id: v.id,
+      title: v.title,
+      description: `USGS ${v.title} for New Mexico, from the Water Data for the Nation OGC API (${v.collectionId}).${v.capped ? ` Open-ended time series — limited to the first ${NWIS_VALUE_CAP.toLocaleString()} features.` : ""}`,
+      source: "features",
+      featuresBaseUrl: USGS_OGC_BASE_URL,
+      collectionId: v.collectionId,
+      query: { bbox: NM_BBOX },
+      ...(v.capped ? { maxFeatures: NWIS_VALUE_CAP } : {}),
+      section: NWIS_SECTION,
+      cluster: true,
+      fields: { include: v.fields },
+      style: staPoint(v.color),
+    })
+  ),
 ]
 
 export const LAYER_CATALOG: LayerConfig[] = [
   ...st2AgencyLayers,
   ...ocotilloLayers,
   ...oseGisLayers,
+  ...nwisLayers,
 ]
 
 /**
@@ -251,6 +455,8 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
     "New Mexico water datasets from the Ocotillo OGC API Features service — water wells, springs, surface water, chemistry, and project areas. Each layer is a published collection; turn one on to load its features onto the map.",
   "OSE GIS":
     "Office of the State Engineer datasets served as ArcGIS REST Feature Services — statewide Points of Diversion and Aquifer Test Wells. These layers are dense, so the map clusters them; zoom or click a cluster to break it apart.",
+  NWIS:
+    "USGS sites and observations from the modern Water Data for the Nation OGC API, scoped to New Mexico — groundwater wells plus latest continuous and daily values, field measurements, and channel measurements. Layers are dense and cluster; zoom or click a cluster to break it apart.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {

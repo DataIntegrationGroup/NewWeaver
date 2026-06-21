@@ -1,3 +1,5 @@
+import type { FeatureCollection } from "geojson"
+
 import { Source, Layer } from "@/components/ui/map"
 import type { LayerProps } from "@/components/ui/map"
 import {
@@ -23,9 +25,12 @@ export function clusterLayerId(layer: LayerConfig): string {
   return `${layer.id}-clusters`
 }
 
-/** Whether a layer renders clustered (only ArcGIS layers do, on by default). */
+/**
+ * Whether a layer renders clustered. ArcGIS layers cluster by default; any
+ * other layer opts in with `cluster: true` (e.g. the dense NWIS sites).
+ */
 export function isClustered(layer: LayerConfig): boolean {
-  return layer.source === "arcgis" && layer.cluster !== false
+  return layer.source === "arcgis" ? layer.cluster !== false : layer.cluster === true
 }
 
 /**
@@ -64,45 +69,6 @@ function highlightLayer(id: string, selectedFeatureId?: string) {
   )
 }
 
-function StaSource({ layer, filters, selectedFeatureId }: { layer: StaLayer } & Omit<LayerProps2, "layer">) {
-  const { data } = useStaLayer(layer)
-  if (!data) return null
-  const fc = filterFeatures(data, filters)
-
-  return (
-    <Source id={layer.id} type="geojson" data={fc}>
-      <Layer
-        {...({
-          id: renderLayerId(layer),
-          type: "circle",
-          paint: layer.style.paint ?? {},
-        } as unknown as LayerProps)}
-      />
-      {highlightLayer(layer.id, selectedFeatureId)}
-    </Source>
-  )
-}
-
-function FeaturesSource({ layer, filters, selectedFeatureId }: { layer: FeaturesLayer } & Omit<LayerProps2, "layer">) {
-  const { data } = useFeaturesLayer(layer)
-  if (!data) return null
-  const fc = filterFeatures(data, filters)
-
-  return (
-    <Source id={layer.id} type="geojson" data={fc}>
-      <Layer
-        {...({
-          id: renderLayerId(layer),
-          type: layer.style.type,
-          paint: layer.style.paint ?? {},
-          layout: layer.style.layout ?? {},
-        } as unknown as LayerProps)}
-      />
-      {highlightLayer(layer.id, selectedFeatureId)}
-    </Source>
-  )
-}
-
 /** Step-sized cluster bubbles, tinted with the layer color and dark-bordered. */
 function clusterPaint(color: string) {
   return {
@@ -129,17 +95,32 @@ function clusterPaint(color: string) {
   }
 }
 
-function ArcGisSource({ layer, filters, selectedFeatureId }: { layer: ArcGisLayer } & Omit<LayerProps2, "layer">) {
-  const { data } = useArcGisLayer(layer)
-  if (!data) return null
-  const fc = filterFeatures(data, filters)
+/**
+ * Render a GeoJSON FeatureCollection for a catalog layer — clustered (bubbles +
+ * unclustered interactive points) or plain — plus the selection highlight.
+ * Shared by every source so clustering is a per-layer flag, not per-source code.
+ */
+function GeoSource({
+  layer,
+  fc,
+  selectedFeatureId,
+}: {
+  layer: LayerConfig
+  fc: FeatureCollection
+  selectedFeatureId?: string
+}) {
   const paint = layer.style.paint ?? {}
 
   if (!isClustered(layer)) {
     return (
       <Source id={layer.id} type="geojson" data={fc}>
         <Layer
-          {...({ id: renderLayerId(layer), type: "circle", paint } as unknown as LayerProps)}
+          {...({
+            id: renderLayerId(layer),
+            type: layer.style.type,
+            paint,
+            layout: layer.style.layout ?? {},
+          } as unknown as LayerProps)}
         />
         {highlightLayer(layer.id, selectedFeatureId)}
       </Source>
@@ -179,6 +160,24 @@ function ArcGisSource({ layer, filters, selectedFeatureId }: { layer: ArcGisLaye
       {highlightLayer(layer.id, selectedFeatureId)}
     </Source>
   )
+}
+
+function StaSource({ layer, filters, selectedFeatureId }: { layer: StaLayer } & Omit<LayerProps2, "layer">) {
+  const { data } = useStaLayer(layer)
+  if (!data) return null
+  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} selectedFeatureId={selectedFeatureId} />
+}
+
+function FeaturesSource({ layer, filters, selectedFeatureId }: { layer: FeaturesLayer } & Omit<LayerProps2, "layer">) {
+  const { data } = useFeaturesLayer(layer)
+  if (!data) return null
+  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} selectedFeatureId={selectedFeatureId} />
+}
+
+function ArcGisSource({ layer, filters, selectedFeatureId }: { layer: ArcGisLayer } & Omit<LayerProps2, "layer">) {
+  const { data } = useArcGisLayer(layer)
+  if (!data) return null
+  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} selectedFeatureId={selectedFeatureId} />
 }
 
 /** Render a single catalog layer, dispatching on its source. */

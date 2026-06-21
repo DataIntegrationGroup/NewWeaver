@@ -38,6 +38,20 @@ Then("the columns match the layer's attribute fields", async function (this: Bro
   }
 })
 
+async function columnHeaders(world: BrowserWorld): Promise<string[]> {
+  return world.page.locator('[data-testid="attribute-table"] th').allTextContents()
+}
+
+Then("the attribute table columns include {string}", async function (this: BrowserWorld, field: string) {
+  const headers = await columnHeaders(this)
+  assert.ok(headers.some((h) => h.includes(field)), `expected a "${field}" column in ${headers.join(", ")}`)
+})
+
+Then("the attribute table columns exclude {string}", async function (this: BrowserWorld, field: string) {
+  const headers = await columnHeaders(this)
+  assert.ok(!headers.some((h) => h.trim() === field), `did not expect a "${field}" column in ${headers.join(", ")}`)
+})
+
 Then("the table shows the first page of rows", async function (this: BrowserWorld) {
   assert.equal(await this.page.getByTestId("table-row").count(), 10)
 })
