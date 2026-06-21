@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { X } from "lucide-react"
 import { usePostHog } from "posthog-js/react"
 
-import type { LayerConfig, FeaturesLayer, StaLayer } from "@/catalog/layers"
+import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer } from "@/catalog/layers"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -12,7 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useFeaturesLayer, useStaLayer, useDatastreams } from "@/hooks/useLayerData"
+import {
+  useFeaturesLayer,
+  useStaLayer,
+  useArcGisLayer,
+  useDatastreams,
+} from "@/hooks/useLayerData"
 import { DatastreamChart } from "./DatastreamChart"
 
 interface InspectPanelProps {
@@ -54,16 +59,25 @@ function PanelShell({
   )
 }
 
-/** Attribute list for a vector feature from OGC API Features. */
-function FeatureInspect({ layer, featureId, onClose }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
-  const { data } = useFeaturesLayer(layer)
-  const feature = data?.features.find(
+/** Shared attribute-list panel for vector features (OGC Features + ArcGIS). */
+function AttributeInspect({
+  title,
+  fc,
+  featureId,
+  onClose,
+}: {
+  title: string
+  fc: { features: { id?: string | number; properties: Record<string, unknown> | null }[] } | undefined
+  featureId: string
+  onClose: () => void
+}) {
+  const feature = fc?.features.find(
     (f) => String(f.id ?? f.properties?.id) === featureId
   )
   const props = feature?.properties ?? {}
 
   return (
-    <PanelShell title={layer.title} onClose={onClose}>
+    <PanelShell title={title} onClose={onClose}>
       {!feature ? (
         <p className="text-sm text-muted-foreground">Feature not found.</p>
       ) : (
@@ -78,6 +92,18 @@ function FeatureInspect({ layer, featureId, onClose }: { layer: FeaturesLayer } 
       )}
     </PanelShell>
   )
+}
+
+/** Attribute list for a vector feature from OGC API Features. */
+function FeatureInspect({ layer, featureId, onClose }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
+  const { data } = useFeaturesLayer(layer)
+  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} onClose={onClose} />
+}
+
+/** Attribute list for an OSE GIS feature from ArcGIS REST. */
+function ArcGisInspect({ layer, featureId, onClose }: { layer: ArcGisLayer } & Omit<InspectPanelProps, "layer">) {
+  const { data } = useArcGisLayer(layer)
+  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} onClose={onClose} />
 }
 
 /** Monitoring location → datastreams → time-series chart. */
@@ -153,9 +179,9 @@ function StaInspect({ layer, featureId, onClose }: { layer: StaLayer } & Omit<In
 }
 
 export function InspectPanel({ layer, featureId, onClose }: InspectPanelProps) {
-  return layer.source === "sta" ? (
-    <StaInspect layer={layer} featureId={featureId} onClose={onClose} />
-  ) : (
-    <FeatureInspect layer={layer} featureId={featureId} onClose={onClose} />
-  )
+  if (layer.source === "sta")
+    return <StaInspect layer={layer} featureId={featureId} onClose={onClose} />
+  if (layer.source === "arcgis")
+    return <ArcGisInspect layer={layer} featureId={featureId} onClose={onClose} />
+  return <FeatureInspect layer={layer} featureId={featureId} onClose={onClose} />
 }

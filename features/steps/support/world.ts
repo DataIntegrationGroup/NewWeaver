@@ -2,6 +2,7 @@ import { setWorldConstructor, World, Before, After } from "@cucumber/cucumber"
 
 import { SensorThingsClient } from "@/clients/sensorThings"
 import { OgcFeaturesClient } from "@/clients/ogcFeatures"
+import { ArcGisRestClient } from "@/clients/arcGisRest"
 
 /**
  * Custom World for @client specs. Installs a fake `fetch` so the two data
@@ -11,6 +12,7 @@ import { OgcFeaturesClient } from "@/clients/ogcFeatures"
 export class ClientWorld extends World {
   sta!: SensorThingsClient
   features!: OgcFeaturesClient
+  arcgis!: ArcGisRestClient
 
   requestedUrls: string[] = []
   /** Queued JSON bodies, consumed FIFO; defaults used when empty. */
@@ -20,6 +22,10 @@ export class ClientWorld extends World {
 
   result: unknown
   error: Error | null = null
+
+  // Scratch slots for the OSE attribute-filter spec.
+  osePod: Record<string, unknown> = {}
+  oseFilter: unknown
 
   get lastUrl(): string {
     return this.requestedUrls[this.requestedUrls.length - 1] ?? ""

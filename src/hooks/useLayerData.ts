@@ -3,7 +3,13 @@ import type { FeatureCollection } from "geojson"
 
 import { staClient, type Location } from "@/clients/sensorThings"
 import { featuresClient } from "@/clients/ogcFeatures"
-import { LAYER_CATALOG, type FeaturesLayer, type StaLayer } from "@/catalog/layers"
+import { arcgisClient } from "@/clients/arcGisRest"
+import {
+  LAYER_CATALOG,
+  type ArcGisLayer,
+  type FeaturesLayer,
+  type StaLayer,
+} from "@/catalog/layers"
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] }
 
@@ -20,6 +26,16 @@ export function featuresLayerKey(layer: FeaturesLayer) {
     layer.query ?? null,
   ] as const
 }
+export function arcgisLayerKey(layer: ArcGisLayer) {
+  return ["arcgis", layer.serviceUrl, layer.query ?? null] as const
+}
+
+/** Query key for any catalog layer, dispatching on its source. */
+function layerKey(layer: (typeof LAYER_CATALOG)[number]) {
+  if (layer.source === "sta") return staLayerKey(layer)
+  if (layer.source === "arcgis") return arcgisLayerKey(layer)
+  return featuresLayerKey(layer)
+}
 
 /**
  * Ids of catalog layers whose data query is currently fetching — used to show
@@ -30,8 +46,7 @@ export function featuresLayerKey(layer: FeaturesLayer) {
 export function useLayerLoading(): Set<string> {
   const loading = new Set<string>()
   for (const layer of LAYER_CATALOG) {
-    const queryKey =
-      layer.source === "sta" ? staLayerKey(layer) : featuresLayerKey(layer)
+    const queryKey = layerKey(layer)
     // eslint-disable-next-line react-hooks/rules-of-hooks -- constant-length loop over a static catalog
     if (useIsFetching({ queryKey }) > 0) loading.add(layer.id)
   }
@@ -78,6 +93,41 @@ export function useFeaturesLayer(layer: FeaturesLayer) {
         layer.query
       )
       return fc as FeatureCollection
+    },
+    placeholderData: EMPTY,
+  })
+}
+
+/**
+ * Ensure every ArcGIS feature carries a stable `properties.id` (and matching
+ * top-level `id`) so map selection, highlighting, and the attribute table key
+ * features consistently — Esri's GeoJSON may omit `id`. Falls back through the
+ * layer's id field, common ObjectID spellings, then the row index.
+ */
+function arcgisToGeoJSON(fc: FeatureCollection, idField: string): FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: fc.features.map((f, i) => {
+      const p = (f.properties ?? {}) as Record<string, unknown>
+      const id = String(
+        f.id ?? p[idField] ?? p.OBJECTID ?? p.objectid ?? i
+      )
+      return { ...f, id, properties: { ...p, id } }
+    }),
+  }
+}
+
+/** OSE GIS points from an ArcGIS REST FeatureServer, as GeoJSON. */
+export function useArcGisLayer(layer: ArcGisLayer) {
+  return useQuery({
+    queryKey: arcgisLayerKey(layer),
+    queryFn: async () => {
+      // Parallel paging: a statewide layer is ~140 pages at the 2000-row cap,
+      // so concurrent pages cut load time over serial round trips.
+      const fc = await arcgisClient(layer.serviceUrl).getAllFeaturesParallel(
+        layer.query
+      )
+      return arcgisToGeoJSON(fc, layer.idField ?? "objectid")
     },
     placeholderData: EMPTY,
   })

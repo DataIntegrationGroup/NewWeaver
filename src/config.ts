@@ -35,6 +35,13 @@ export const OCOTILLO_FEATURES_BASE_URL =
   env.VITE_OCOTILLO_FEATURES_BASE_URL ??
   "https://ocotillo-api.newmexicowaterdata.org/ogcapi"
 
+// OSE GIS — New Mexico Office of the State Engineer ArcGIS REST services
+// (Points of Diversion, Aquifer Test Wells). A single Esri FeatureServer host;
+// each layer appends its own service path. Same protocol, different host.
+export const OSE_ARCGIS_BASE_URL =
+  env.VITE_OSE_ARCGIS_BASE_URL ??
+  "https://services2.arcgis.com/qXZbWTdPDbTjl7Dy/arcgis/rest/services"
+
 /**
  * PostHog product analytics. Disabled unless VITE_POSTHOG_KEY is set, so dev
  * builds and CI emit nothing by default. Host defaults to US cloud; set

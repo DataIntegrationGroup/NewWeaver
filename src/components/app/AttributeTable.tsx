@@ -10,8 +10,8 @@ import {
 } from "@tanstack/react-table"
 import type { Feature, FeatureCollection } from "geojson"
 
-import type { LayerConfig, FeaturesLayer, StaLayer } from "@/catalog/layers"
-import { useFeaturesLayer, useStaLayer } from "@/hooks/useLayerData"
+import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer } from "@/catalog/layers"
+import { useFeaturesLayer, useStaLayer, useArcGisLayer } from "@/hooks/useLayerData"
 import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
 import {
   Table,
@@ -173,10 +173,13 @@ function StaTable({ layer, ...rest }: { layer: StaLayer } & Omit<AttributeTableP
   return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} {...rest} />
 }
 
+function ArcGisTable({ layer, ...rest }: { layer: ArcGisLayer } & Omit<AttributeTableProps, "layer">) {
+  const { data } = useArcGisLayer(layer)
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} {...rest} />
+}
+
 export function AttributeTable({ layer, ...rest }: AttributeTableProps) {
-  return layer.source === "sta" ? (
-    <StaTable layer={layer} {...rest} />
-  ) : (
-    <FeaturesTable layer={layer} {...rest} />
-  )
+  if (layer.source === "sta") return <StaTable layer={layer} {...rest} />
+  if (layer.source === "arcgis") return <ArcGisTable layer={layer} {...rest} />
+  return <FeaturesTable layer={layer} {...rest} />
 }

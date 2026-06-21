@@ -4,13 +4,39 @@ import {
   type LayerConfig,
   type StaLayer,
   type FeaturesLayer,
+  type ArcGisLayer,
 } from "@/catalog/layers"
-import { useStaLayer, useFeaturesLayer } from "@/hooks/useLayerData"
+import {
+  useStaLayer,
+  useFeaturesLayer,
+  useArcGisLayer,
+} from "@/hooks/useLayerData"
 import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
 
-/** Render-layer id (the MapLibre layer that receives clicks) for a catalog layer. */
+/** Render-layer id (the MapLibre layer that receives feature clicks) for a layer. */
 export function renderLayerId(layer: LayerConfig): string {
   return layer.source === "sta" ? `${layer.id}-points` : `${layer.id}-render`
+}
+
+/** MapLibre cluster-circle layer id for a clustered layer. */
+export function clusterLayerId(layer: LayerConfig): string {
+  return `${layer.id}-clusters`
+}
+
+/** Whether a layer renders clustered (only ArcGIS layers do, on by default). */
+export function isClustered(layer: LayerConfig): boolean {
+  return layer.source === "arcgis" && layer.cluster !== false
+}
+
+/**
+ * MapLibre layer ids that should receive pointer interaction for a catalog
+ * layer: its feature layer, plus the cluster-circle layer when clustered (so a
+ * click can expand the cluster).
+ */
+export function interactiveLayerIdsFor(layer: LayerConfig): string[] {
+  return isClustered(layer)
+    ? [renderLayerId(layer), clusterLayerId(layer)]
+    : [renderLayerId(layer)]
 }
 
 interface LayerProps2 {
@@ -77,11 +103,89 @@ function FeaturesSource({ layer, filters, selectedFeatureId }: { layer: Features
   )
 }
 
+/** Step-sized cluster bubbles, tinted with the layer color and dark-bordered. */
+function clusterPaint(color: string) {
+  return {
+    "circle-color": color,
+    "circle-opacity": 0.9,
+    "circle-stroke-color": "#1f2937",
+    "circle-stroke-width": 1,
+    // Grow the bubble with the number of points it stands in for (Weaver steps).
+    "circle-radius": [
+      "step",
+      ["get", "point_count"],
+      3,
+      2, 4.25,
+      5, 4.75,
+      10, 5.75,
+      25, 7,
+      50, 8.75,
+      100, 12,
+      250, 15,
+      500, 20,
+      1000, 25,
+      10000, 35,
+    ],
+  }
+}
+
+function ArcGisSource({ layer, filters, selectedFeatureId }: { layer: ArcGisLayer } & Omit<LayerProps2, "layer">) {
+  const { data } = useArcGisLayer(layer)
+  if (!data) return null
+  const fc = filterFeatures(data, filters)
+  const paint = layer.style.paint ?? {}
+
+  if (!isClustered(layer)) {
+    return (
+      <Source id={layer.id} type="geojson" data={fc}>
+        <Layer
+          {...({ id: renderLayerId(layer), type: "circle", paint } as unknown as LayerProps)}
+        />
+        {highlightLayer(layer.id, selectedFeatureId)}
+      </Source>
+    )
+  }
+
+  const color = (paint["circle-color"] as string) ?? "#1f2937"
+  return (
+    <Source
+      {...({
+        id: layer.id,
+        type: "geojson",
+        data: fc,
+        cluster: true,
+        clusterMaxZoom: layer.clusterMaxZoom ?? 18,
+        clusterRadius: layer.clusterRadius ?? 4,
+      } as unknown as Parameters<typeof Source>[0])}
+    >
+      {/* Clustered bubbles (no count label). */}
+      <Layer
+        {...({
+          id: clusterLayerId(layer),
+          type: "circle",
+          filter: ["has", "point_count"],
+          paint: clusterPaint(color),
+        } as unknown as LayerProps)}
+      />
+      {/* Individual (unclustered) points — the interactive feature layer. */}
+      <Layer
+        {...({
+          id: renderLayerId(layer),
+          type: "circle",
+          filter: ["!", ["has", "point_count"]],
+          paint,
+        } as unknown as LayerProps)}
+      />
+      {highlightLayer(layer.id, selectedFeatureId)}
+    </Source>
+  )
+}
+
 /** Render a single catalog layer, dispatching on its source. */
 export function CatalogLayer({ layer, filters, selectedFeatureId }: LayerProps2) {
-  return layer.source === "sta" ? (
-    <StaSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
-  ) : (
-    <FeaturesSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
-  )
+  if (layer.source === "sta")
+    return <StaSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
+  if (layer.source === "arcgis")
+    return <ArcGisSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
+  return <FeaturesSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
 }

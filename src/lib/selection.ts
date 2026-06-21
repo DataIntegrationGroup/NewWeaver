@@ -9,7 +9,7 @@ import type { QueryClient } from "@tanstack/react-query"
 import type { Feature, FeatureCollection, Polygon, Position } from "geojson"
 
 import type { LayerConfig, StaLayer } from "@/catalog/layers"
-import { staLayerKey, featuresLayerKey } from "@/hooks/useLayerData"
+import { staLayerKey, featuresLayerKey, arcgisLayerKey } from "@/hooks/useLayerData"
 import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
 
 /** A monitoring location chosen for export (STA source). */
@@ -103,10 +103,13 @@ export function resolveSelection(
   let drawnOnlyCount = 0
 
   for (const layer of layers) {
-    const fc =
+    const key =
       layer.source === "sta"
-        ? queryClient.getQueryData<FeatureCollection>(staLayerKey(layer))
-        : queryClient.getQueryData<FeatureCollection>(featuresLayerKey(layer))
+        ? staLayerKey(layer)
+        : layer.source === "arcgis"
+          ? arcgisLayerKey(layer)
+          : featuresLayerKey(layer)
+    const fc = queryClient.getQueryData<FeatureCollection>(key)
     if (!fc) continue
 
     const filtered = filterFeatures(fc, filters).features

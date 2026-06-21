@@ -9,7 +9,12 @@
  */
 import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
-import { OCOTILLO_FEATURES_BASE_URL, STA_ST2_BASE_URL } from "@/config"
+import type { ArcGisQuery } from "@/clients/arcGisRest"
+import {
+  OCOTILLO_FEATURES_BASE_URL,
+  OSE_ARCGIS_BASE_URL,
+  STA_ST2_BASE_URL,
+} from "@/config"
 
 /** MapLibre paint/layout for a vector layer, kept loose at the catalog level. */
 export interface LayerStyle {
@@ -48,14 +53,38 @@ export interface StaLayer extends BaseLayer {
   query?: StaQuery
 }
 
-export type LayerConfig = FeaturesLayer | StaLayer
+/**
+ * OSE GIS layer read from an ArcGIS REST FeatureServer (Esri). Points of
+ * Diversion and Aquifer Test Wells. `serviceUrl` is the full FeatureServer
+ * layer URL (…/FeatureServer/0). Clusters by default — these layers are dense.
+ */
+export interface ArcGisLayer extends BaseLayer {
+  source: "arcgis"
+  /** Full FeatureServer layer URL, e.g. `…/OSE_…/FeatureServer/0`. */
+  serviceUrl: string
+  query?: ArcGisQuery
+  /** Field carrying the stable feature id (default "objectid"). */
+  idField?: string
+  /** Cluster dense points on the map (default true). */
+  cluster?: boolean
+  /** Cluster merge radius in px (default 4, matching Weaver). Smaller = looser. */
+  clusterRadius?: number
+  /** Stop clustering above this zoom (default 18, matching Weaver). */
+  clusterMaxZoom?: number
+}
+
+export type LayerConfig = FeaturesLayer | StaLayer | ArcGisLayer
+
+// Scatter markers carry a dark border so light-colored fills stay legible on
+// the pale basemap (matches the original Weaver black point stroke).
+const SCATTER_STROKE = "#1f2937"
 
 const pointStyle: LayerStyle = {
   type: "circle",
   paint: {
-    "circle-radius": 5,
+    "circle-radius": 3.75,
     "circle-stroke-width": 1,
-    "circle-stroke-color": "#ffffff",
+    "circle-stroke-color": SCATTER_STROKE,
   },
 }
 
@@ -155,9 +184,61 @@ const ocotilloLayers: FeaturesLayer[] = OCOTILLO_COLLECTIONS.map((c) => ({
   style: c.geom === "polygon" ? polygonStyle(c.color) : staPoint(c.color),
 }))
 
+/**
+ * OSE GIS — Office of the State Engineer datasets served as ArcGIS REST Feature
+ * Services. Dense statewide point layers, so both cluster and start hidden;
+ * toggling one on streams its features from the Esri endpoint. The POD layer
+ * requests the attributes the OSE filter operates on (status, pod_status, use_,
+ * depths, well-log date) plus its identifier.
+ */
+const OSE_GIS_SECTION = "OSE GIS"
+
+const POD_OUT_FIELDS =
+  "pod_file,pod_status,status,use_,depth_well,depth_wate,log_file_d"
+
+function arcgisPoint(color: string): LayerStyle {
+  return {
+    type: "circle",
+    paint: {
+      "circle-radius": 3.75,
+      "circle-color": color,
+      "circle-stroke-width": 1,
+      "circle-stroke-color": SCATTER_STROKE,
+    },
+  }
+}
+
+const oseGisLayers: ArcGisLayer[] = [
+  {
+    id: "ose-pods",
+    title: "OSE Points of Diversion",
+    description:
+      "Points of Diversion from the OSE WATERS database (ArcGIS REST). Carries water-right status, POD status, use, well depth, depth to water, and well-log date for filtering.",
+    source: "arcgis",
+    serviceUrl: `${OSE_ARCGIS_BASE_URL}/OSE_Points_of_Diversion/FeatureServer/0`,
+    idField: "pod_file",
+    query: { outFields: POD_OUT_FIELDS },
+    section: OSE_GIS_SECTION,
+    style: arcgisPoint("#6b7280"),
+  },
+  {
+    id: "ose-aquifer-tests",
+    title: "OSE Aquifer Test Wells",
+    description:
+      "Wells in the OSE Aquifer Test database (ArcGIS REST), where pump-test data is available.",
+    source: "arcgis",
+    serviceUrl: `${OSE_ARCGIS_BASE_URL}/OSE_Aquifer_Test_Wells_view_pub/FeatureServer/0`,
+    idField: "objectid",
+    query: { outFields: "objectid" },
+    section: OSE_GIS_SECTION,
+    style: arcgisPoint("#1a365d"),
+  },
+]
+
 export const LAYER_CATALOG: LayerConfig[] = [
   ...st2AgencyLayers,
   ...ocotilloLayers,
+  ...oseGisLayers,
 ]
 
 /**
@@ -168,6 +249,8 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
   STA: "Live monitoring locations from the SensorThings API (FROST), grouped by operating agency. Turn an agency on to map its wells, then click a point to browse its datastreams and chart the measured time series.",
   Ocotillo:
     "New Mexico water datasets from the Ocotillo OGC API Features service — water wells, springs, surface water, chemistry, and project areas. Each layer is a published collection; turn one on to load its features onto the map.",
+  "OSE GIS":
+    "Office of the State Engineer datasets served as ArcGIS REST Feature Services — statewide Points of Diversion and Aquifer Test Wells. These layers are dense, so the map clusters them; zoom or click a cluster to break it apart.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {

@@ -1,6 +1,6 @@
 import { Fragment, useRef, useState } from "react"
 import { Layers } from "lucide-react"
-import type { Map as MaplibreMap } from "maplibre-gl"
+import type { Map as MaplibreMap, GeoJSONSource } from "maplibre-gl"
 import type { Polygon } from "geojson"
 import {
   Map,
@@ -23,7 +23,12 @@ import {
 import type { LayerConfig } from "@/catalog/layers"
 import type { FeatureFilters } from "@/lib/filterFeatures"
 import type { Selection } from "@/lib/urlState"
-import { CatalogLayer, renderLayerId } from "./MapLayers"
+import {
+  CatalogLayer,
+  renderLayerId,
+  clusterLayerId,
+  interactiveLayerIdsFor,
+} from "./MapLayers"
 
 interface MapViewProps {
   layers: LayerConfig[]
@@ -57,7 +62,10 @@ export function MapView({
   onShapesChange,
 }: MapViewProps) {
   const mapRef = useRef<MapRef | null>(null)
-  const interactiveLayerIds = layers.map(renderLayerId)
+  const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
+  const clusterLayerIds = new Set(
+    layers.filter((l) => l.source === "arcgis").map(clusterLayerId)
+  )
   const [drawMap, setDrawMap] = useState<MaplibreMap | null>(null)
 
   const [hoverInfo, setHoverInfo] = useState<{
@@ -71,7 +79,8 @@ export function MapView({
   // the pointer cursor; empty space clears both.
   const handleMouseMove = (e: MapLayerMouseEvent) => {
     const hit = e.features?.[0]
-    if (!hit) {
+    // Clusters get a pointer cursor but no attribute popup.
+    if (!hit || hit.properties?.cluster) {
       setHoverInfo((prev) => (prev ? null : prev))
       return
     }
@@ -90,10 +99,36 @@ export function MapView({
       onClearSelection()
       return
     }
-    const layer = layers.find((l) => renderLayerId(l) === hit.layer?.id)
+    // A click on a cluster zooms in until it breaks apart, rather than selecting.
+    const hitLayerId = hit.layer?.id ?? ""
+    if (clusterLayerIds.has(hitLayerId)) {
+      expandCluster(hitLayerId, hit)
+      return
+    }
+    const layer = layers.find((l) => renderLayerId(l) === hitLayerId)
     if (!layer) return
     const featureId = String(hit.id ?? hit.properties?.id ?? "")
     onSelect({ layerId: layer.id, featureId })
+  }
+
+  // Zoom to the level at which a clicked cluster splits, centered on it.
+  const expandCluster = (
+    clusterLayer: string,
+    hit: NonNullable<MapLayerMouseEvent["features"]>[number]
+  ) => {
+    const map = mapRef.current?.getMap()
+    const sourceId = clusterLayer.replace(/-clusters$/, "")
+    const source = map?.getSource(sourceId) as GeoJSONSource | undefined
+    const clusterId = hit.properties?.cluster_id
+    if (!map || !source || clusterId == null) return
+    const geom = hit.geometry
+    const center =
+      geom?.type === "Point" ? (geom.coordinates as [number, number]) : undefined
+    Promise.resolve(source.getClusterExpansionZoom(clusterId))
+      .then((zoom) => {
+        if (center) map.easeTo({ center, zoom, duration: 400 })
+      })
+      .catch(() => {})
   }
 
   const emitMove = () => {
