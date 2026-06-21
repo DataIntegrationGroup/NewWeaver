@@ -43,12 +43,14 @@ Then("the user sees the documentation and help page", async function (this: Brow
 })
 
 Then("the help page includes a data disclaimer", async function (this: BrowserWorld) {
-  await this.page.getByRole("tab", { name: "Disclaimer" }).click()
+  await this.page
+    .getByRole("link", { name: "Disclaimer" })
+    .click()
   await this.page.getByText(/No warranty expressed or implied/).waitFor()
 })
 
 When("the user opens the {string} help section", async function (this: BrowserWorld, name: string) {
-  await this.page.getByRole("tab", { name }).click()
+  await this.page.getByRole("link", { name }).click()
 })
 
 Then("the help page shows the OGC API landing page URL", async function (this: BrowserWorld) {
