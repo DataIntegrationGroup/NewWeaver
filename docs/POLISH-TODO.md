@@ -23,6 +23,7 @@ Brainstormed UI/UX polish, grouped. ⚡ = quick win. Checked = shipped.
 
 ## Inspect panel / data
 
+- [x] STA Thing-properties table (well metadata) above the datastream chart
 - [ ] Number/date formatting (`940` → `940 ft`, epoch → readable, thousands separators)
 - [ ] Sparkline / latest value for the NWIS time-series layers
 
@@ -35,7 +36,8 @@ Brainstormed UI/UX polish, grouped. ⚡ = quick win. Checked = shipped.
 
 ## Visual / theme
 
-- [x] Dark-mode audit — verified OK; header/sidebar/panels all theme correctly. (Basemap stays light by design; use the basemap picker for a darker tile set.)
+- [x] Dark-mode audit — verified OK; header/sidebar/panels all theme correctly.
+- [x] Pair the basemap with the theme — dark mode → dark tiles, light → light; satellite is left as chosen.
 - [ ] Top loading bar during route/data transitions
 - [ ] Skeleton loaders for home cards / map first paint
 - [ ] Open Graph meta tags for link previews
