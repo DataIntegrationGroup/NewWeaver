@@ -28,6 +28,10 @@ interface InspectPanelProps {
   onClose: () => void
 }
 
+const PANEL_MIN = 300
+const PANEL_MAX = 680
+const PANEL_DEFAULT = 384
+
 function PanelShell({
   title,
   onClose,
@@ -37,11 +41,38 @@ function PanelShell({
   onClose: () => void
   children: React.ReactNode
 }) {
+  const [width, setWidth] = useState(PANEL_DEFAULT)
+
+  // Drag the left edge to resize. Moving left (smaller clientX) widens the panel.
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = width
+    const onMove = (ev: PointerEvent) =>
+      setWidth(Math.min(PANEL_MAX, Math.max(PANEL_MIN, startW + (startX - ev.clientX))))
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+    }
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
+  }
+
   return (
     <aside
       data-testid="inspect-panel"
-      className="flex h-full w-96 shrink-0 flex-col overflow-y-auto border-l bg-card"
+      style={{ width }}
+      className="relative flex h-full shrink-0 flex-col border-l bg-card"
     >
+      {/* Resize handle on the left edge. */}
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize panel"
+        data-testid="inspect-resize"
+        onPointerDown={startResize}
+        className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40"
+      />
       <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
         <h2 className="!text-lg !leading-tight" data-testid="inspect-title">
           {title}
@@ -56,7 +87,7 @@ function PanelShell({
           <X />
         </Button>
       </header>
-      <div className="flex-1 p-4">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
     </aside>
   )
 }
@@ -91,9 +122,9 @@ function AttributeInspect({
       ) : (
         <dl data-testid="attribute-list" className="grid grid-cols-1 gap-2 text-sm">
           {keys.map((k) => (
-            <div key={k} className="grid grid-cols-[40%_60%] gap-2 border-b py-1">
-              <dt className="font-medium text-muted-foreground">{k}</dt>
-              <dd className="break-words">
+            <div key={k} className="grid grid-cols-[40%_60%] gap-3 border-b py-1">
+              <dt className="min-w-0 break-words font-medium text-muted-foreground">{k}</dt>
+              <dd className="min-w-0 break-words">
                 <FieldValue value={format(k, props[k])} />
               </dd>
             </div>

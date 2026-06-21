@@ -4,11 +4,45 @@ import { Check, Copy } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { OCOTILLO_FEATURES_BASE_URL } from "@/config"
+import {
+  OCOTILLO_FEATURES_BASE_URL,
+  OSE_ARCGIS_BASE_URL,
+  STA_BASE_URL,
+  STA_ST2_BASE_URL,
+  USGS_OGC_BASE_URL,
+} from "@/config"
 import { SitePage } from "./SitePage"
 
 const OGC_LANDING_URL = OCOTILLO_FEATURES_BASE_URL.replace(/\/+$/, "")
 const OGC_COLLECTIONS_URL = `${OGC_LANDING_URL}/collections`
+
+const USGS_LANDING_URL = USGS_OGC_BASE_URL.replace(/\/+$/, "")
+const USGS_COLLECTIONS_URL = `${USGS_LANDING_URL}/collections`
+const OSE_POD_URL = `${OSE_ARCGIS_BASE_URL}/OSE_Points_of_Diversion/FeatureServer/0`
+const OSE_AQUIFER_URL = `${OSE_ARCGIS_BASE_URL}/OSE_Aquifer_Test_Wells_view_pub/FeatureServer/0`
+
+/** External link styled for the docs body. */
+function A({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="break-all text-primary underline underline-offset-2"
+    >
+      {children}
+    </a>
+  )
+}
+
+/** One API-endpoint row: a service label and its linked base URL. */
+function ApiRow({ label, url }: { label: string; url: string }) {
+  return (
+    <li>
+      <strong>{label}</strong> — <A href={url}>{url}</A>
+    </li>
+  )
+}
 
 const GIS_DOCS = {
   arcgis:
@@ -224,13 +258,14 @@ export function Help() {
             <section id="sources" className="scroll-mt-6 space-y-4">
               <h2 className="!text-2xl text-primary">Data sources</h2>
               <p className="text-muted-foreground">
-                Weaver reads public data through two open, standards-based
-                interfaces — no source-specific code:
+                Weaver reads public data through open, standards-based interfaces
+                — no source-specific code. Four services back the map today:
               </p>
               <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
                 <li>
                   <strong>OGC API Features</strong> — vector / integrated layers
-                  published by the Data Integration Engine.
+                  published by the Data Integration Engine (the Ocotillo
+                  pygeoapi: wells, springs, surface water, chemistry, and more).
                 </li>
                 <li>
                   <strong>OGC SensorThings API (STA)</strong> — monitoring
@@ -238,7 +273,35 @@ export function Help() {
                   multiple agency networks (e.g. City of Albuquerque, Bernalillo
                   County, NM Office of the State Engineer).
                 </li>
+                <li>
+                  <strong>ArcGIS REST (OSE GIS)</strong> — the Office of the State
+                  Engineer’s Esri Feature Services: statewide Points of Diversion
+                  and Aquifer Test Wells.
+                </li>
+                <li>
+                  <strong>USGS Water Data for the Nation (NWIS)</strong> — USGS’s
+                  modern OGC API, read for New Mexico groundwater sites and their
+                  continuous, daily, field, and channel measurements.
+                </li>
               </ul>
+
+              <div className="space-y-2 pt-1">
+                <h3 className="!text-lg font-semibold text-primary">
+                  API endpoints
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Every layer reads one of these public APIs directly — no
+                  Weaver-only backend. Use them in your own tools.
+                </p>
+                <ul className="list-disc space-y-1.5 pl-6 text-sm text-muted-foreground">
+                  <ApiRow label="OGC API Features (Ocotillo)" url={OGC_LANDING_URL} />
+                  <ApiRow label="SensorThings — FROST (primary)" url={STA_BASE_URL} />
+                  <ApiRow label="SensorThings — FROST (st2 / agencies)" url={STA_ST2_BASE_URL} />
+                  <ApiRow label="OSE ArcGIS REST — Points of Diversion" url={OSE_POD_URL} />
+                  <ApiRow label="OSE ArcGIS REST — Aquifer Test Wells" url={OSE_AQUIFER_URL} />
+                  <ApiRow label="USGS Water Data for the Nation" url={USGS_LANDING_URL} />
+                </ul>
+              </div>
             </section>
 
             <section
@@ -300,28 +363,31 @@ export function Help() {
                 </h3>
                 <ul className="space-y-1.5 text-sm text-muted-foreground">
                   <li>
-                    <strong>Landing page</strong> —{" "}
-                    <a
-                      href={OGC_LANDING_URL}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="break-all text-primary underline underline-offset-2"
-                    >
-                      {OGC_LANDING_URL}
-                    </a>{" "}
-                    (use as the server connection URL).
+                    <strong>Ocotillo landing page</strong> —{" "}
+                    <A href={OGC_LANDING_URL}>{OGC_LANDING_URL}</A> (use as the OGC
+                    API server connection URL).
                   </li>
                   <li>
-                    <strong>Collections</strong> —{" "}
-                    <a
-                      href={OGC_COLLECTIONS_URL}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="break-all text-primary underline underline-offset-2"
-                    >
-                      {OGC_COLLECTIONS_URL}
-                    </a>{" "}
-                    (review what’s published before connecting).
+                    <strong>Ocotillo collections</strong> —{" "}
+                    <A href={OGC_COLLECTIONS_URL}>{OGC_COLLECTIONS_URL}</A> (review
+                    what’s published before connecting).
+                  </li>
+                  <li>
+                    <strong>USGS Water Data for the Nation</strong> —{" "}
+                    <A href={USGS_LANDING_URL}>{USGS_LANDING_URL}</A> — another OGC
+                    API landing page; connect the same way (see its{" "}
+                    <A href={USGS_COLLECTIONS_URL}>collections</A>).
+                  </li>
+                  <li>
+                    <strong>OSE Points of Diversion</strong> —{" "}
+                    <A href={OSE_POD_URL}>{OSE_POD_URL}</A> — an ArcGIS REST Feature
+                    Service; add it as an <em>ArcGIS Server</em> connection rather
+                    than an OGC API one.
+                  </li>
+                  <li>
+                    <strong>OSE Aquifer Test Wells</strong> —{" "}
+                    <A href={OSE_AQUIFER_URL}>{OSE_AQUIFER_URL}</A> — ArcGIS REST
+                    Feature Service (same as above).
                   </li>
                 </ul>
               </div>

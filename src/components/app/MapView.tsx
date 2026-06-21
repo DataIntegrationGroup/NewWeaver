@@ -78,6 +78,8 @@ export function MapView({
     longitude: number
     latitude: number
     name?: string
+    title?: string
+    color?: string
     properties: Record<string, unknown>
     fields?: FieldDisplay
     format?: (key: string, value: unknown) => string
@@ -98,6 +100,8 @@ export function MapView({
       longitude: e.lngLat.lng,
       latitude: e.lngLat.lat,
       name: (properties.name as string) ?? undefined,
+      title: layer?.title,
+      color: (layer?.style.paint?.["circle-color"] as string) ?? undefined,
       properties,
       fields: layer?.fields,
       format: layer?.formatValue,
@@ -230,22 +234,37 @@ export function MapView({
                 it on-screen. A tall field list scrolls within a capped height. */}
             <div
               data-testid="feature-popup"
-              className="max-h-[min(60vh,20rem)] overflow-y-auto pr-1 text-foreground"
+              className="max-h-[min(60vh,20rem)] overflow-y-auto px-3 py-2.5 text-foreground"
             >
-              {hoverInfo.name && (
-                <p className="mb-1 text-sm font-semibold leading-tight">
-                  {hoverInfo.name}
-                </p>
+              {(hoverInfo.title || hoverInfo.name) && (
+                <div className="mb-2 border-b border-border pb-2">
+                  {hoverInfo.title && (
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                        style={{ background: hoverInfo.color ?? "var(--primary)" }}
+                      />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {hoverInfo.title}
+                      </span>
+                    </div>
+                  )}
+                  {hoverInfo.name && (
+                    <p className="mt-0.5 text-sm font-semibold leading-tight">
+                      {hoverInfo.name}
+                    </p>
+                  )}
+                </div>
               )}
-              <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5 text-xs">
+              <dl className="grid grid-cols-[max-content_1fr] text-xs [&>*:nth-last-child(-n+2)]:border-b-0">
                 {selectFields(Object.keys(hoverInfo.properties), hoverInfo.fields)
                   .filter((k) => k !== "name")
                   .map((k) => (
                     <Fragment key={k}>
-                      <dt className="whitespace-nowrap font-medium text-muted-foreground">
+                      <dt className="whitespace-nowrap border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
                         {k}
                       </dt>
-                      <dd className="break-words">
+                      <dd className="break-words border-b border-border/40 py-1 align-top tabular-nums">
                         <FieldValue
                           value={(hoverInfo.format ?? defaultFormat)(k, hoverInfo.properties[k])}
                         />

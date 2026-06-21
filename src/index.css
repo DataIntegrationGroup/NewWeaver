@@ -190,3 +190,53 @@
         body { font-size: 14px; }
     }
 }
+
+/* Hover popup — themed card chrome instead of MapLibre's default white bubble.
+   The inner [data-testid="feature-popup"] handles its own padding/scroll, so the
+   content box is padding-free and clips its children to the rounded corners. */
+.maplibregl-popup .maplibregl-popup-content {
+    background: var(--popover);
+    color: var(--popover-foreground);
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    padding: 0;
+    overflow: hidden;
+    box-shadow:
+        0 10px 15px -3px rgb(0 0 0 / 0.18),
+        0 4px 6px -4px rgb(0 0 0 / 0.18);
+}
+
+/* Recolor the little pointer triangle to match the popover background. */
+.maplibregl-popup-tip {
+    border-top-color: var(--popover) !important;
+    border-bottom-color: var(--popover) !important;
+    border-left-color: var(--popover) !important;
+    border-right-color: var(--popover) !important;
+}
+
+/* Slim, unobtrusive scrollbar for the popup's field list. */
+[data-testid="feature-popup"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+[data-testid="feature-popup"]::-webkit-scrollbar {
+    width: 6px;
+}
+[data-testid="feature-popup"]::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+/* Continuous "marquee" scroll for the home-page data-source carousel. The track
+   holds two copies of the list; translating it -50% loops seamlessly. */
+@keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+.animate-marquee {
+    animation: marquee 45s linear infinite;
+    will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+    .animate-marquee { animation: none; }
+}

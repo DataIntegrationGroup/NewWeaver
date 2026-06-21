@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { SLACK_URL } from "./SiteHeader"
 import { SitePage as Page } from "./SitePage"
+import { DataSourceCarousel } from "./DataSourceCarousel"
 import nmwdiIcon from "@/assets/nmwdi-icon.png"
 
 function Hero() {
@@ -77,7 +78,7 @@ const FEATURES = [
   {
     icon: Database,
     title: "Standards-based",
-    body: "Everything is read through two open interfaces — OGC API Features and OGC SensorThings — so the data is interoperable, not bespoke.",
+    body: "Everything is read through open interfaces — OGC API Features, OGC SensorThings, ArcGIS REST, and the USGS Water Data for the Nation API — so the data is interoperable, not bespoke.",
   },
 ]
 
@@ -98,6 +99,20 @@ export function Home() {
             </CardContent>
           </Card>
         ))}
+      </section>
+
+      <Separator className="my-10" />
+
+      <section data-testid="home-data-sources">
+        <div className="mb-5 text-center">
+          <h2 className="!text-3xl text-secondary">Our data partners</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+            Weaver weaves together public water data from agencies across New
+            Mexico and beyond, read live through open, standards-based services.
+            Explore each partner in the New Mexico Water Data catalog.
+          </p>
+        </div>
+        <DataSourceCarousel />
       </section>
 
       <Separator className="my-10" />

@@ -15,6 +15,11 @@ Feature: Home and help pages
     When the user clicks the link to the map
     Then the interactive map is shown
 
+  Scenario: Home page lists the data-source partners
+    Given the user opens the home page
+    Then the user sees the data partners carousel
+    And the carousel shows an agency logo for each partner
+
   @smoke
   Scenario: Help page documents usage and the data disclaimer
     Given the user opens the help page

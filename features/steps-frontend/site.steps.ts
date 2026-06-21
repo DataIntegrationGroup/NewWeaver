@@ -28,6 +28,19 @@ Then("the user sees a link to the map", async function (this: BrowserWorld) {
   await this.page.getByTestId("nav-map").waitFor()
 })
 
+Then("the user sees the data partners carousel", async function (this: BrowserWorld) {
+  await this.page.getByTestId("data-source-carousel").waitFor()
+})
+
+Then("the carousel shows an agency logo for each partner", async function (this: BrowserWorld) {
+  const { DATA_SOURCES } = await import("@/catalog/dataSources")
+  const imgs = this.page.locator('[data-testid="data-source-carousel"] img')
+  await imgs.first().waitFor()
+  // The track duplicates the list for the seamless loop, so at least one logo
+  // per partner is present.
+  assert.ok((await imgs.count()) >= DATA_SOURCES.length)
+})
+
 When("the user clicks the link to the map", async function (this: BrowserWorld) {
   await this.page.getByTestId("nav-map").click()
 })
