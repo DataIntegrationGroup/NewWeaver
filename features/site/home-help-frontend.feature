@@ -20,6 +20,14 @@ Feature: Home and help pages
     Then the user sees the data partners carousel
     And the carousel shows an agency logo for each partner
 
+  Scenario: Home page sets a descriptive browser title
+    Given the user opens the home page
+    Then the page title contains "New Mexico Water Data"
+
+  Scenario: Help page sets a descriptive browser title
+    Given the user opens the help page
+    Then the page title contains "Help"
+
   @smoke
   Scenario: Help page documents usage and the data disclaimer
     Given the user opens the help page

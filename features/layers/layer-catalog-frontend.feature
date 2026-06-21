@@ -33,6 +33,10 @@ Feature: Layer catalog and toggles
     When the user toggles the "City of Albuquerque (CABQ)" layer off
     Then no monitoring-location points render on the map
 
+  Scenario: A visible layer exposes an opacity control
+    Given the "City of Albuquerque (CABQ)" layer is toggled on
+    Then the "City of Albuquerque (CABQ)" layer has an opacity slider
+
   Scenario Outline: Layer groups describe themselves on hover
     When the user hovers over the "<group>" layer group
     Then a tooltip explains the "<group>" group

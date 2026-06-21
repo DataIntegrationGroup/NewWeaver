@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import type { FeatureCollection } from "geojson"
 
 import { Source, Layer } from "@/components/ui/map"
@@ -48,6 +49,28 @@ interface LayerProps2 {
   layer: LayerConfig
   filters: FeatureFilters
   selectedFeatureId?: string
+  /** Layer opacity 0–1 (default 1). */
+  opacity?: number
+  /** Reports the filtered feature count after rendering. */
+  onCount?: (id: string, count: number) => void
+}
+
+type Paint = Record<string, unknown>
+
+/** Scale a paint's opacity channels by `opacity` (no-op at 1). */
+function withOpacity(paint: Paint, type: string, opacity: number): Paint {
+  if (opacity >= 1) return paint
+  const num = (v: unknown) => (typeof v === "number" ? v : 1)
+  const p = { ...paint }
+  if (type === "fill") {
+    p["fill-opacity"] = num(paint["fill-opacity"]) * opacity
+  } else if (type === "line") {
+    p["line-opacity"] = num(paint["line-opacity"]) * opacity
+  } else {
+    p["circle-opacity"] = num(paint["circle-opacity"]) * opacity
+    p["circle-stroke-opacity"] = num(paint["circle-stroke-opacity"]) * opacity
+  }
+  return p
 }
 
 function highlightLayer(id: string, selectedFeatureId?: string) {
@@ -104,12 +127,21 @@ function GeoSource({
   layer,
   fc,
   selectedFeatureId,
+  opacity = 1,
+  onCount,
 }: {
   layer: LayerConfig
   fc: FeatureCollection
   selectedFeatureId?: string
+  opacity?: number
+  onCount?: (id: string, count: number) => void
 }) {
-  const paint = layer.style.paint ?? {}
+  const count = fc.features.length
+  useEffect(() => {
+    onCount?.(layer.id, count)
+  }, [onCount, layer.id, count])
+
+  const paint = withOpacity(layer.style.paint ?? {}, layer.style.type, opacity)
 
   if (!isClustered(layer)) {
     return (
@@ -135,6 +167,8 @@ function GeoSource({
         type: "geojson",
         data: fc,
         cluster: true,
+        // maxzoom must exceed clusterMaxZoom, or MapLibre warns on every tile.
+        maxzoom: (layer.clusterMaxZoom ?? 18) + 1,
         clusterMaxZoom: layer.clusterMaxZoom ?? 18,
         clusterRadius: layer.clusterRadius ?? 4,
       } as unknown as Parameters<typeof Source>[0])}
@@ -145,7 +179,7 @@ function GeoSource({
           id: clusterLayerId(layer),
           type: "circle",
           filter: ["has", "point_count"],
-          paint: clusterPaint(color),
+          paint: withOpacity(clusterPaint(color), "circle", opacity),
         } as unknown as LayerProps)}
       />
       {/* Individual (unclustered) points — the interactive feature layer. */}
@@ -162,29 +196,27 @@ function GeoSource({
   )
 }
 
-function StaSource({ layer, filters, selectedFeatureId }: { layer: StaLayer } & Omit<LayerProps2, "layer">) {
+function StaSource({ layer, filters, ...rest }: { layer: StaLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useStaLayer(layer)
   if (!data) return null
-  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} selectedFeatureId={selectedFeatureId} />
+  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
 }
 
-function FeaturesSource({ layer, filters, selectedFeatureId }: { layer: FeaturesLayer } & Omit<LayerProps2, "layer">) {
+function FeaturesSource({ layer, filters, ...rest }: { layer: FeaturesLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useFeaturesLayer(layer)
   if (!data) return null
-  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} selectedFeatureId={selectedFeatureId} />
+  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
 }
 
-function ArcGisSource({ layer, filters, selectedFeatureId }: { layer: ArcGisLayer } & Omit<LayerProps2, "layer">) {
+function ArcGisSource({ layer, filters, ...rest }: { layer: ArcGisLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useArcGisLayer(layer)
   if (!data) return null
-  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} selectedFeatureId={selectedFeatureId} />
+  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
 }
 
 /** Render a single catalog layer, dispatching on its source. */
-export function CatalogLayer({ layer, filters, selectedFeatureId }: LayerProps2) {
-  if (layer.source === "sta")
-    return <StaSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
-  if (layer.source === "arcgis")
-    return <ArcGisSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
-  return <FeaturesSource layer={layer} filters={filters} selectedFeatureId={selectedFeatureId} />
+export function CatalogLayer({ layer, ...rest }: LayerProps2) {
+  if (layer.source === "sta") return <StaSource layer={layer} {...rest} />
+  if (layer.source === "arcgis") return <ArcGisSource layer={layer} {...rest} />
+  return <FeaturesSource layer={layer} {...rest} />
 }

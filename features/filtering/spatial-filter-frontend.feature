@@ -29,3 +29,4 @@ Feature: Spatial and text filtering
     When the user types a search term that matches no features
     Then the user sees a "no results" message
     And the map shows no features for that layer
+    And the map shows an empty-filter message

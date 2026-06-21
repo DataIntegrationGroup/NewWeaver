@@ -107,3 +107,7 @@ Then("the map shows no features for that layer", async function (this: BrowserWo
       ).length === 0
   )
 })
+
+Then("the map shows an empty-filter message", async function (this: BrowserWorld) {
+  await this.page.getByTestId("empty-filter").waitFor()
+})

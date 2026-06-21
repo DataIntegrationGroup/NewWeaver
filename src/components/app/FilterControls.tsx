@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react"
+
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +13,21 @@ interface FilterControlsProps {
 
 /** Spatial (filter-to-extent) + text attribute filters. */
 export function FilterControls({ bbox, q, onBboxChange, onQueryChange }: FilterControlsProps) {
+  // Debounce typing so each keystroke doesn't re-filter every layer (and push a
+  // URL update). The input is locally controlled; the committed value lands
+  // ~250ms after the user stops.
+  const [text, setText] = useState(q)
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // Keep in sync when the query changes externally (URL navigation, share link).
+  useEffect(() => setText(q), [q])
+
+  const onType = (v: string) => {
+    setText(v)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => onQueryChange(v), 250)
+  }
+
   return (
     <div className="flex items-center gap-4">
       <div className="flex items-center gap-2">
@@ -28,8 +45,8 @@ export function FilterControls({ bbox, q, onBboxChange, onQueryChange }: FilterC
         data-testid="filter-text"
         placeholder="Filter features…"
         className="h-8 w-56"
-        value={q}
-        onChange={(e) => onQueryChange(e.target.value)}
+        value={text}
+        onChange={(e) => onType(e.target.value)}
       />
     </div>
   )

@@ -88,6 +88,11 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   value: string[]
   /** Ids whose data is loading; shows a spinner beside the toggle. */
   loadingIds?: string[]
+  /** Layer id → features loaded so far, shown while a big layer pages in. */
+  progressById?: Record<string, number>
+  /** Layer id → opacity (0–1). A visible layer gets an opacity slider. */
+  opacityById?: Record<string, number>
+  onOpacityChange?: (id: string, opacity: number) => void
   onToggle: (id: string) => void
 }
 
@@ -100,6 +105,9 @@ function LayerSelector({
   options,
   value,
   loadingIds,
+  progressById,
+  opacityById,
+  onOpacityChange,
   onToggle,
   className,
   ...props
@@ -116,6 +124,8 @@ function LayerSelector({
         {options.map((option) => {
           const checked = value.includes(option.id)
           const loading = loadingIds?.includes(option.id) ?? false
+          const loaded = progressById?.[option.id] ?? 0
+          const opacity = opacityById?.[option.id] ?? 1
           const label = (
             <label
               htmlFor={`layer-${option.id}`}
@@ -133,33 +143,57 @@ function LayerSelector({
               data-testid={`layer-row-${option.id}`}
               data-layer-title={option.title}
               data-visible={checked || undefined}
-              className="flex items-center justify-between gap-3"
+              className="space-y-1.5"
             >
-              {option.description ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>{label}</TooltipTrigger>
-                  <TooltipContent side="right" className="max-w-56">
-                    {option.description}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                label
-              )}
-              <div className="flex items-center gap-2">
-                {loading && (
-                  <Loader2
-                    data-testid={`layer-loading-${option.id}`}
-                    className="size-4 shrink-0 animate-spin text-muted-foreground"
-                    aria-label="Loading layer data"
-                  />
+              <div className="flex items-center justify-between gap-3">
+                {option.description ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>{label}</TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-56">
+                      {option.description}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  label
                 )}
-                <Switch
-                  id={`layer-${option.id}`}
-                  data-testid={`layer-toggle-${option.id}`}
-                  checked={checked}
-                  onCheckedChange={() => onToggle(option.id)}
-                />
+                <div className="flex items-center gap-2">
+                  {loading && (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      {loaded > 0 && (
+                        <span
+                          data-testid={`layer-progress-${option.id}`}
+                          className="text-xs tabular-nums"
+                        >
+                          {loaded.toLocaleString()}
+                        </span>
+                      )}
+                      <Loader2
+                        data-testid={`layer-loading-${option.id}`}
+                        className="size-4 shrink-0 animate-spin"
+                        aria-label="Loading layer data"
+                      />
+                    </span>
+                  )}
+                  <Switch
+                    id={`layer-${option.id}`}
+                    data-testid={`layer-toggle-${option.id}`}
+                    checked={checked}
+                    onCheckedChange={() => onToggle(option.id)}
+                  />
+                </div>
               </div>
+              {checked && onOpacityChange && (
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(opacity * 100)}
+                  data-testid={`layer-opacity-${option.id}`}
+                  aria-label={`${option.title} opacity`}
+                  onChange={(e) => onOpacityChange(option.id, Number(e.target.value) / 100)}
+                  className="h-1 w-full cursor-pointer accent-primary"
+                />
+              )}
             </li>
           )
         })}

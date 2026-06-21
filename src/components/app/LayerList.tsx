@@ -21,11 +21,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useLayerLoading } from "@/hooks/useLayerData"
+import { useLoadProgress } from "@/lib/loadProgress"
 
 interface LayerListProps {
   /** Ids of currently-visible layers. */
   visible: string[]
   onToggle: (id: string) => void
+  /** Layer id → opacity (0–1); a visible layer gets an opacity slider. */
+  opacityById?: Record<string, number>
+  onOpacityChange?: (id: string, opacity: number) => void
 }
 
 /** Derive the legend swatch style from a catalog layer's MapLibre paint. */
@@ -81,8 +85,9 @@ const DEFAULT_OPEN = SECTIONS.map((s) => s.section)
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
+  const progressById = useLoadProgress()
   return (
     <div className="space-y-4">
       <h2 className="!text-base !font-semibold uppercase tracking-wide text-muted-foreground">
@@ -118,6 +123,9 @@ export function LayerList({ visible, onToggle }: LayerListProps) {
                 options={options}
                 value={visible}
                 loadingIds={loadingIds}
+                progressById={progressById}
+                opacityById={opacityById}
+                onOpacityChange={onOpacityChange}
                 onToggle={onToggle}
               />
             </AccordionContent>

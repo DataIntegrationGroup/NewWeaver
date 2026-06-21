@@ -33,6 +33,18 @@ Feature: Interactive basemap
     Then the "Satellite" basemap is active
     And satellite imagery tiles are requested
 
+  Scenario: Dark mode pairs with the dark basemap
+    When the user switches to dark mode
+    And the user opens the basemap picker
+    Then the "Dark" basemap is active
+
+  Scenario: Satellite basemap survives a theme toggle
+    When the user opens the basemap picker
+    And the user selects the "Satellite" basemap
+    When the user switches to dark mode
+    And the user opens the basemap picker
+    Then the "Satellite" basemap is active
+
   # Clustering is disabled for now (points render individually). The MapLibre
   # cluster behaviour can be re-introduced with its own scenarios later.
   Scenario: Monitoring points render individually

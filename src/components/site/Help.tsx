@@ -4,6 +4,7 @@ import { Check, Copy } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import {
   OCOTILLO_FEATURES_BASE_URL,
   OSE_ARCGIS_BASE_URL,
@@ -164,6 +165,7 @@ function DocsSidebar({ active }: { active: string }) {
 export function Help() {
   // Allow deep-linking a section via the URL hash (e.g. /help#gis from the
   // export dialog's Desktop GIS banner).
+  useDocumentTitle("Weaver — Help")
   const { hash } = useLocation()
   const [active, setActive] = useState<string>(SECTIONS[0].id)
 

@@ -14,6 +14,11 @@ Feature: Monitoring points to time-series chart
     Then a panel opens showing the location name
     And the panel lists the datastreams available for that point
 
+  Scenario: The panel shows the monitoring point's properties
+    Given the user has clicked a monitoring point
+    Then the panel shows the point's properties
+    And the point properties include "aquifer"
+
   Scenario: A monitoring point exposes water-level datastreams
     When the user clicks a monitoring point with water-level data
     Then the datastream list includes manual water-level measurements

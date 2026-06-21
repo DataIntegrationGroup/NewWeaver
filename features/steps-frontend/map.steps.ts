@@ -123,6 +123,10 @@ When("the user opens the basemap picker", async function (this: BrowserWorld) {
   await this.page.getByTestId("basemap-trigger").click()
 })
 
+When("the user switches to dark mode", async function (this: BrowserWorld) {
+  await this.page.getByRole("button", { name: "Switch to dark mode" }).click()
+})
+
 When("the user selects the {string} basemap", async function (this: BrowserWorld, name: string) {
   await this.page.getByRole("radio", { name }).click()
 })

@@ -1,12 +1,16 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { Download, Layers } from "lucide-react"
+import { Download, Layers, Share2 } from "lucide-react"
 import type { Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ModeToggle } from "@/components/mode-toggle"
+import { useTheme } from "@/components/theme-provider"
+import { useDocumentTitle } from "@/hooks/useDocumentTitle"
+import type { MapRef } from "@/components/ui/map"
 import {
   NavBar,
   NavBarBrand,
@@ -17,7 +21,13 @@ import {
 import { PageShell } from "@/components/ui/page"
 import { NEW_MEXICO_VIEW } from "@/components/ui/map"
 import { LAYER_CATALOG, getLayer } from "@/catalog/layers"
-import { BASEMAPS, DEFAULT_BASEMAP } from "@/catalog/basemaps"
+import {
+  BASEMAPS,
+  DEFAULT_BASEMAP,
+  LIGHT_BASEMAP,
+  DARK_BASEMAP,
+  SATELLITE_BASEMAP,
+} from "@/catalog/basemaps"
 import { useViewState } from "@/hooks/useViewState"
 import type { Selection } from "@/lib/urlState"
 import { LayerList } from "./LayerList"
@@ -44,12 +54,23 @@ export function AppShell() {
     setQuery,
   } = useViewState()
 
+  useDocumentTitle("Weaver — Map")
+  const mapRef = useRef<MapRef | null>(null)
+  const { theme } = useTheme()
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches)
+
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>()
   const [tableOpen, setTableOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [shapes, setShapes] = useState<Polygon[]>([])
   const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
+  const [opacityById, setOpacityById] = useState<Record<string, number>>({})
+  // Per-layer filtered feature counts, reported by the map sources.
+  const [layerCounts, setLayerCounts] = useState<Record<string, number>>({})
 
   const layerIds = search.layers ?? []
   const visibleLayers = LAYER_CATALOG.filter((l) => layerIds.includes(l.id))
@@ -62,6 +83,15 @@ export function AppShell() {
     visibleLayers[0]
 
   const filters = { q: search.q, bbox: search.bbox, bounds }
+
+  // Empty state: a text filter is active, every visible layer has reported its
+  // filtered count, and they all came back empty.
+  const emptyFilterQuery =
+    search.q &&
+    visibleLayers.length > 0 &&
+    visibleLayers.every((l) => layerCounts[l.id] === 0)
+      ? search.q
+      : undefined
 
   const initialView = {
     longitude: search.lng ?? NEW_MEXICO_VIEW.longitude,
@@ -80,6 +110,43 @@ export function AppShell() {
       setShapes: (polys: Polygon[]) => setShapes(polys),
     }
   }, [select, clearSelection])
+
+  // Keep the basemap paired with the theme: dark mode → dark tiles, light →
+  // light. Satellite is theme-neutral, so leave it as the user chose.
+  useEffect(() => {
+    setBasemap((cur) =>
+      cur === SATELLITE_BASEMAP ? cur : isDark ? DARK_BASEMAP : LIGHT_BASEMAP
+    )
+  }, [isDark])
+
+  // Esc clears the current selection / closes the inspect panel.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selection) clearSelection()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [selection, clearSelection])
+
+  /** Center the map on a feature and zoom in if currently zoomed out. */
+  const flyTo = (lng: number, lat: number) => {
+    const map = mapRef.current
+    if (!map) return
+    map.easeTo({
+      center: [lng, lat],
+      zoom: Math.max(map.getZoom(), 13),
+      duration: 600,
+    })
+  }
+
+  const shareView = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      toast.success("Link copied", { description: "Shareable URL for this exact view." })
+    } catch {
+      toast.error("Couldn’t copy the link")
+    }
+  }
 
   const filterControls = (
     <FilterControls
@@ -147,6 +214,15 @@ export function AppShell() {
           <Button
             variant="outline"
             size="sm"
+            data-testid="share-view"
+            onClick={shareView}
+          >
+            <Share2 />
+            Share
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             data-testid="open-export"
             onClick={() => setExportOpen(true)}
           >
@@ -180,6 +256,10 @@ export function AppShell() {
           <div className="lg:hidden">{filterControls}</div>
           <LayerList
             visible={layerIds}
+            opacityById={opacityById}
+            onOpacityChange={(id, v) =>
+              setOpacityById((m) => ({ ...m, [id]: v }))
+            }
             onToggle={(id) => {
               const nowVisible = !layerIds.includes(id)
               posthog.capture("layer_toggled", {
@@ -199,8 +279,14 @@ export function AppShell() {
         >
           <div className="min-h-0 flex-1">
             <MapView
+              mapRef={mapRef}
               layers={visibleLayers}
               filters={filters}
+              opacityById={opacityById}
+              onLayerCount={(id, n) =>
+                setLayerCounts((m) => (m[id] === n ? m : { ...m, [id]: n }))
+              }
+              emptyFilterQuery={emptyFilterQuery}
               selection={selection}
               initialView={initialView}
               basemap={basemap}
@@ -240,6 +326,7 @@ export function AppShell() {
             layer={selectedLayer}
             featureId={selection.featureId}
             onClose={clearSelection}
+            onZoomTo={flyTo}
           />
         )}
       </div>

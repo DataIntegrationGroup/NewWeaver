@@ -53,6 +53,10 @@ Then("the catalog shows a {string} layer group", async function (this: BrowserWo
   await this.page.getByRole("button", { name, exact: true }).waitFor()
 })
 
+Then("the {string} layer has an opacity slider", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`layer-opacity-${layerIdByTitle(title)}`).waitFor()
+})
+
 When("the user hovers over the {string} layer group", async function (this: BrowserWorld, name: string) {
   // Move away first so re-hovering a second group reliably re-opens the tooltip.
   await this.page.mouse.move(0, 0)

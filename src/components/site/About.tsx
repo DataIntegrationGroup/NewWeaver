@@ -2,8 +2,10 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SitePage } from "./SitePage"
 import { SLACK_URL } from "./SiteHeader"
+import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 
 export function About() {
+  useDocumentTitle("Weaver — About")
   return (
     <SitePage>
       <article className="space-y-8" data-testid="about-page">

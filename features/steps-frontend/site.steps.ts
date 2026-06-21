@@ -32,6 +32,10 @@ Then("the user sees the data partners carousel", async function (this: BrowserWo
   await this.page.getByTestId("data-source-carousel").waitFor()
 })
 
+Then("the page title contains {string}", async function (this: BrowserWorld, text: string) {
+  await this.page.waitForFunction((t) => document.title.includes(t), text)
+})
+
 Then("the carousel shows an agency logo for each partner", async function (this: BrowserWorld) {
   const { DATA_SOURCES } = await import("@/catalog/dataSources")
   const imgs = this.page.locator('[data-testid="data-source-carousel"] img')

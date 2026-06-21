@@ -60,3 +60,10 @@ export const BASEMAPS: BasemapOption[] = [
 ]
 
 export const DEFAULT_BASEMAP = BASEMAPS[0].id
+
+const byTitle = (title: string) => BASEMAPS.find((b) => b.title === title)!.id
+
+/** The light/dark CARTO styles paired with the app theme, and satellite. */
+export const LIGHT_BASEMAP = byTitle("Light")
+export const DARK_BASEMAP = byTitle("Dark")
+export const SATELLITE_BASEMAP = byTitle("Satellite")

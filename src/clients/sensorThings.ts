@@ -124,16 +124,26 @@ export class SensorThingsClient {
   }
 
   /**
+   * Things at a Location, each expanded with its Datastreams. Carries Thing
+   * `properties` (well metadata) the inspect panel displays.
+   */
+  async thingsForLocation(locationId: number | string): Promise<Thing[]> {
+    const res = await this.get<StaCollection<Thing>>(
+      `/Locations(${locationId})/Things?$expand=Datastreams`
+    )
+    return res.value
+  }
+
+  /**
    * Datastreams available at a Location, flattened across its Things.
    * (Locations(id)/Things expanded with their Datastreams.)
    */
   async datastreamsForLocation(
     locationId: number | string
   ): Promise<Datastream[]> {
-    const res = await this.get<StaCollection<Thing>>(
-      `/Locations(${locationId})/Things?$expand=Datastreams`
+    return (await this.thingsForLocation(locationId)).flatMap(
+      (t) => t.Datastreams ?? []
     )
-    return res.value.flatMap((t) => t.Datastreams ?? [])
   }
 
   /** Observations for a Datastream, default newest-first. */

@@ -41,6 +41,15 @@ Then("the panel lists the datastreams available for that point", async function 
   assert.ok((await this.page.getByRole("option").count()) > 0)
 })
 
+Then("the panel shows the point's properties", async function (this: BrowserWorld) {
+  await this.page.getByTestId("attribute-list").waitFor()
+})
+
+Then("the point properties include {string}", async function (this: BrowserWorld, field: string) {
+  const text = (await this.page.getByTestId("attribute-list").textContent()) ?? ""
+  assert.ok(text.includes(field), `expected "${field}" in the properties table`)
+})
+
 Then("the datastream list includes manual water-level measurements", async function (this: BrowserWorld) {
   await openDatastreams(this)
   await this.page.getByRole("option", { name: /Manual Water Level/ }).waitFor()

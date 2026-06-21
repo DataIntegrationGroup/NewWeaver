@@ -4,6 +4,7 @@ import type { FeatureCollection } from "geojson"
 import { staClient, type Location } from "@/clients/sensorThings"
 import { featuresClient } from "@/clients/ogcFeatures"
 import { arcgisClient } from "@/clients/arcGisRest"
+import { setLoadProgress, clearLoadProgress } from "@/lib/loadProgress"
 import {
   LAYER_CATALOG,
   type ArcGisLayer,
@@ -93,13 +94,18 @@ export function useFeaturesLayer(layer: FeaturesLayer) {
       const maxPages = layer.maxFeatures
         ? Math.max(1, Math.ceil(layer.maxFeatures / pageSize))
         : 100
-      const fc = await featuresClient(layer.featuresBaseUrl).getAllItems(
-        layer.collectionId,
-        layer.query,
-        pageSize,
-        maxPages
-      )
-      return fc as FeatureCollection
+      try {
+        const fc = await featuresClient(layer.featuresBaseUrl).getAllItems(
+          layer.collectionId,
+          layer.query,
+          pageSize,
+          maxPages,
+          (n) => setLoadProgress(layer.id, n)
+        )
+        return fc as FeatureCollection
+      } finally {
+        clearLoadProgress(layer.id)
+      }
     },
     placeholderData: EMPTY,
   })
@@ -131,9 +137,18 @@ export function useArcGisLayer(layer: ArcGisLayer) {
     queryFn: async () => {
       // Parallel paging: a statewide layer is ~140 pages at the 2000-row cap,
       // so concurrent pages cut load time over serial round trips.
-      const fc = await arcgisClient(layer.serviceUrl).getAllFeaturesParallel(
-        layer.query
-      )
+      let fc
+      try {
+        fc = await arcgisClient(layer.serviceUrl).getAllFeaturesParallel(
+          layer.query,
+          undefined,
+          undefined,
+          undefined,
+          (n) => setLoadProgress(layer.id, n)
+        )
+      } finally {
+        clearLoadProgress(layer.id)
+      }
       const geo = arcgisToGeoJSON(fc, layer.idField ?? "objectid")
       const map = layer.mapProperties
       if (!map) return geo
@@ -158,6 +173,18 @@ export function useDatastreams(
     queryKey: ["sta", staBaseUrl ?? "default", "datastreams", locationId],
     enabled: !!locationId,
     queryFn: () => staClient(staBaseUrl).datastreamsForLocation(locationId!),
+  })
+}
+
+/** Things at an STA location, each expanded with its Datastreams + properties. */
+export function useStaThings(
+  locationId: string | undefined,
+  staBaseUrl?: string
+) {
+  return useQuery({
+    queryKey: ["sta", staBaseUrl ?? "default", "things", locationId],
+    enabled: !!locationId,
+    queryFn: () => staClient(staBaseUrl).thingsForLocation(locationId!),
   })
 }
 

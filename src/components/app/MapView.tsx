@@ -37,8 +37,16 @@ import {
 import { FieldValue } from "./FieldValue"
 
 interface MapViewProps {
+  /** Optional external ref so the parent can drive the map (e.g. fly-to). */
+  mapRef?: React.RefObject<MapRef | null>
   layers: LayerConfig[]
   filters: FeatureFilters
+  /** Layer id → opacity (0–1). */
+  opacityById?: Record<string, number>
+  /** Reports a layer's filtered feature count (for the empty-filter state). */
+  onLayerCount?: (id: string, count: number) => void
+  /** When set, the active text filter matched no features — show an empty card. */
+  emptyFilterQuery?: string
   selection?: Selection
   initialView: { longitude: number; latitude: number; zoom: number }
   basemap: string
@@ -55,8 +63,12 @@ interface MapViewProps {
  * clicks to feature selection, and reports view changes (extent → URL).
  */
 export function MapView({
+  mapRef: externalMapRef,
   layers,
   filters,
+  opacityById,
+  onLayerCount,
+  emptyFilterQuery,
   selection,
   initialView,
   basemap,
@@ -67,7 +79,8 @@ export function MapView({
   onMove,
   onShapesChange,
 }: MapViewProps) {
-  const mapRef = useRef<MapRef | null>(null)
+  const internalMapRef = useRef<MapRef | null>(null)
+  const mapRef = externalMapRef ?? internalMapRef
   const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
   const clusterLayerIds = new Set(
     layers.filter(isClustered).map(clusterLayerId)
@@ -215,6 +228,8 @@ export function MapView({
             key={layer.id}
             layer={layer}
             filters={filters}
+            opacity={opacityById?.[layer.id] ?? 1}
+            onCount={onLayerCount}
             selectedFeatureId={
               selection?.layerId === layer.id ? selection.featureId : undefined
             }
@@ -276,6 +291,20 @@ export function MapView({
           </Popup>
         )}
       </Map>
+
+      {emptyFilterQuery && (
+        <div
+          data-testid="empty-filter"
+          className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center"
+        >
+          <div className="pointer-events-auto max-w-sm rounded-lg border bg-card/95 px-4 py-3 text-center text-sm shadow-md backdrop-blur">
+            <p className="font-medium text-foreground">No features match your filter</p>
+            <p className="mt-0.5 text-muted-foreground">
+              Nothing in the visible layers matches “{emptyFilterQuery}”.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
         <Popover>

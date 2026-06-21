@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { SLACK_URL } from "./SiteHeader"
 import { SitePage as Page } from "./SitePage"
 import { DataSourceCarousel } from "./DataSourceCarousel"
+import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import nmwdiIcon from "@/assets/nmwdi-icon.png"
 
 function Hero() {
@@ -83,6 +84,7 @@ const FEATURES = [
 ]
 
 export function Home() {
+  useDocumentTitle("Weaver — New Mexico Water Data")
   return (
     <Page>
       <Hero />

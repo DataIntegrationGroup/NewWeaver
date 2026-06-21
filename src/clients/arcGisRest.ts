@@ -148,7 +148,8 @@ export class ArcGisRestClient {
     q?: ArcGisQuery,
     pageSize = 2000,
     concurrency = 6,
-    maxFeatures = 500_000
+    maxFeatures = 500_000,
+    onProgress?: (loaded: number) => void
   ): Promise<FeatureCollection> {
     const total = await this.getCount(q)
     if (total < 0) return this.getAllFeatures(q, pageSize)
@@ -160,6 +161,7 @@ export class ArcGisRestClient {
 
     const pages: Feature[][] = new Array(offsets.length)
     let next = 0
+    let loaded = 0
     const worker = async () => {
       for (let i = next++; i < offsets.length; i = next++) {
         const fc = await this.query({
@@ -168,6 +170,8 @@ export class ArcGisRestClient {
           resultRecordCount: pageSize,
         })
         pages[i] = fc.features ?? []
+        loaded += pages[i].length
+        onProgress?.(loaded)
       }
     }
     await Promise.all(

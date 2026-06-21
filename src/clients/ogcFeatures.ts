@@ -113,7 +113,8 @@ export class OgcFeaturesClient {
     collectionId: string,
     query?: ItemsQuery,
     pageSize = 10000,
-    maxPages = 100
+    maxPages = 100,
+    onProgress?: (loaded: number) => void
   ): Promise<FeatureCollection> {
     const all: Feature[] = []
     let offset = 0
@@ -130,6 +131,7 @@ export class OgcFeaturesClient {
       numberMatched = fc.numberMatched ?? numberMatched
       const batch = fc.features ?? []
       all.push(...batch)
+      onProgress?.(all.length)
 
       const done =
         batch.length < pageSize ||

@@ -39,6 +39,11 @@ export const THINGS_WITH_DATASTREAMS = {
     {
       "@iot.id": 11,
       name: "Water Well",
+      properties: {
+        well_depth_ft: 120,
+        aquifer: "Santa Fe Group",
+        agency: "CABQ",
+      },
       Datastreams: [
         {
           "@iot.id": 101,
