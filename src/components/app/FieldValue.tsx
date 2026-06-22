@@ -7,8 +7,24 @@
 const URL_RE = /^https?:\/\/\S+$/i
 const CODE_RE = /^([A-Z][A-Z0-9]{1,5}): (.+)$/
 
+// USGS observation approval states → a colored status chip.
+const APPROVAL: Record<string, string> = {
+  Approved: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+  Provisional: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+}
+
 export function FieldValue({ value }: { value: string }) {
   const v = value.trim()
+
+  if (APPROVAL[v]) {
+    return (
+      <span
+        className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${APPROVAL[v]}`}
+      >
+        {v}
+      </span>
+    )
+  }
 
   if (URL_RE.test(v)) {
     let host = v

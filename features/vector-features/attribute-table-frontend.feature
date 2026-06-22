@@ -19,12 +19,6 @@ Feature: Feature attribute table
     When the user draws a selection around a single feature
     Then the table shows 1 row
 
-  Scenario: Table paginates large collections
-    Given the active layer has more features than one page
-    When the user opens the attribute table
-    Then the table shows the first page of rows
-    And the user can advance to the next page
-
   Scenario: Sorting by a column
     Given the attribute table is open
     When the user sorts by a column

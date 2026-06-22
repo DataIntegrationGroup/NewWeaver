@@ -316,7 +316,7 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
             </p>
           ) : (
             <Select
-              value={dsId}
+              value={dsId ?? ""}
               onValueChange={(id) => {
                 const ds = datastreams.find((d) => String(d["@iot.id"]) === id)
                 posthog.capture("datastream_selected", {

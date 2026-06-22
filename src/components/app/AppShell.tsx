@@ -316,6 +316,9 @@ export function AppShell() {
                 layer={activeLayer}
                 filters={filters}
                 shapes={shapes}
+                onClearText={() => setQuery("")}
+                onClearExtent={() => setBbox(false)}
+                onClearShapes={() => setShapes([])}
                 selectedFeatureId={
                   selection?.layerId === activeLayer.id ? selection.featureId : undefined
                 }

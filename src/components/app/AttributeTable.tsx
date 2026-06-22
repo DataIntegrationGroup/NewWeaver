@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
@@ -10,11 +9,11 @@ import {
 } from "@tanstack/react-table"
 import type { Feature, FeatureCollection, Polygon } from "geojson"
 import {
+  AlignJustify,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
+  X,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -42,10 +41,33 @@ interface AttributeTableProps {
   shapes?: Polygon[]
   selectedFeatureId?: string
   onSelect: (featureId: string) => void
+  /** Clear the active filters/selection from the footer chips. */
+  onClearText?: () => void
+  onClearExtent?: () => void
+  onClearShapes?: () => void
 }
 
 function featureId(f: Feature): string {
   return String(f.id ?? f.properties?.id ?? "")
+}
+
+/** A dismissible chip describing one active filter, shown in the table footer. */
+function FilterChip({ label, onClear }: { label: string; onClear?: () => void }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+      <span className="max-w-32 truncate">{label}</span>
+      {onClear && (
+        <button
+          type="button"
+          aria-label="Clear filter"
+          onClick={onClear}
+          className="hover:text-foreground"
+        >
+          <X className="size-3" />
+        </button>
+      )}
+    </span>
+  )
 }
 
 function TableView({
@@ -57,6 +79,9 @@ function TableView({
   shapes,
   selectedFeatureId,
   onSelect,
+  onClearText,
+  onClearExtent,
+  onClearShapes,
 }: {
   fc: FeatureCollection
   fields?: FieldDisplay
@@ -64,6 +89,7 @@ function TableView({
   loading?: boolean
 } & Omit<AttributeTableProps, "layer">) {
   const [sorting, setSorting] = useState<SortingState>([])
+  const [dense, setDense] = useState(false)
 
   // Apply the text/extent filters, then narrow to any drawn selection polygons.
   const rows = useMemo(() => {
@@ -95,9 +121,35 @@ function TableView({
     getRowId: (f) => featureId(f),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 10 } },
   })
+
+  // Row virtualization: only the rows in (and near) the viewport are in the DOM,
+  // so a 278k-row layer (OSE PODs) scrolls smoothly. Spacer rows above/below
+  // hold the scroll height. Plain windowing — no extra dependency.
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [viewportH, setViewportH] = useState(400)
+  const rowH = dense ? 26 : 44
+  const overscan = 8
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const measure = () => setViewportH(el.clientHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const sortedRows = table.getRowModel().rows
+  const total = sortedRows.length
+  const start = Math.max(0, Math.floor(scrollTop / rowH) - overscan)
+  const end = Math.min(total, start + Math.ceil(viewportH / rowH) + overscan * 2)
+  const visibleRows = sortedRows.slice(start, end)
+  const padTop = start * rowH
+  const padBottom = (total - end) * rowH
+  const colCount = table.getAllLeafColumns().length
 
   if (rows.length === 0) {
     return (
@@ -124,7 +176,11 @@ function TableView({
 
   return (
     <div data-testid="attribute-table" className="flex h-full flex-col bg-card text-sm">
-      <div className="flex-1 overflow-auto">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-auto"
+        onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+      >
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -154,7 +210,12 @@ function TableView({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => {
+            {padTop > 0 && (
+              <tr aria-hidden style={{ height: padTop }}>
+                <td colSpan={colCount} />
+              </tr>
+            )}
+            {visibleRows.map((row) => {
               const isSelected = row.id === selectedFeatureId
               return (
                 <TableRow
@@ -162,6 +223,7 @@ function TableView({
                   data-testid="table-row"
                   data-feature-id={row.id}
                   data-selected={isSelected || undefined}
+                  style={{ height: rowH }}
                   className={cn(
                     "cursor-pointer border-b border-border/40 transition-colors even:bg-muted/30 hover:bg-accent/60",
                     isSelected &&
@@ -172,7 +234,10 @@ function TableView({
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="whitespace-nowrap px-3 py-1.5 tabular-nums"
+                      className={cn(
+                        "whitespace-nowrap px-3 align-middle tabular-nums",
+                        dense ? "py-0.5 text-xs" : "py-2"
+                      )}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -180,39 +245,39 @@ function TableView({
                 </TableRow>
               )
             })}
+            {padBottom > 0 && (
+              <tr aria-hidden style={{ height: padBottom }}>
+                <td colSpan={colCount} />
+              </tr>
+            )}
           </TableBody>
         </Table>
       </div>
       <div className="flex items-center justify-between gap-3 border-t bg-card px-3 py-1.5">
-        <span data-testid="table-count" className="font-medium text-muted-foreground">
-          {rows.length.toLocaleString()} feature{rows.length === 1 ? "" : "s"}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label="Previous page"
-            data-testid="table-prev"
-            disabled={!table.getCanPreviousPage()}
-            onClick={() => table.previousPage()}
-          >
-            <ChevronLeft />
-          </Button>
-          <span className="min-w-16 text-center text-xs tabular-nums text-muted-foreground">
-            Page {table.getState().pagination.pageIndex + 1} of{" "}
-            {table.getPageCount() || 1}
+        <div className="flex min-w-0 items-center gap-2">
+          <span data-testid="table-count" className="shrink-0 font-medium text-muted-foreground">
+            {rows.length.toLocaleString()} feature{rows.length === 1 ? "" : "s"}
           </span>
-          <Button
-            size="icon-sm"
-            variant="ghost"
-            aria-label="Next page"
-            data-testid="table-next"
-            disabled={!table.getCanNextPage()}
-            onClick={() => table.nextPage()}
-          >
-            <ChevronRight />
-          </Button>
+          <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
+            {filters.q && (
+              <FilterChip label={`“${filters.q}”`} onClear={onClearText} />
+            )}
+            {filters.bbox && <FilterChip label="Map view" onClear={onClearExtent} />}
+            {shapes && shapes.length > 0 && (
+              <FilterChip label="Selection" onClear={onClearShapes} />
+            )}
+          </div>
         </div>
+        <Button
+          size="icon-sm"
+          variant={dense ? "secondary" : "ghost"}
+          aria-label="Toggle row density"
+          data-testid="table-density"
+          title="Toggle row density"
+          onClick={() => setDense((d) => !d)}
+        >
+          <AlignJustify />
+        </Button>
       </div>
     </div>
   )

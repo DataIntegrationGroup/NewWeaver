@@ -109,11 +109,34 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange }: L
     : SECTIONS
   const openValue = q ? sections.map((s) => s.section) : open
 
+  const allSections = SECTIONS.map((s) => s.section)
+
   return (
     <div className="space-y-4">
-      <h2 className="!text-base !font-semibold uppercase tracking-wide text-muted-foreground">
-        Layers
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="!text-base !font-semibold uppercase tracking-wide text-muted-foreground">
+          Layers
+        </h2>
+        <div className="flex items-center gap-1 text-xs">
+          <button
+            type="button"
+            data-testid="layers-expand-all"
+            onClick={() => setOpen(allSections)}
+            className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            Expand all
+          </button>
+          <span className="text-border">|</span>
+          <button
+            type="button"
+            data-testid="layers-collapse-all"
+            onClick={() => setOpen([])}
+            className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            Collapse all
+          </button>
+        </div>
+      </div>
       <Input
         type="search"
         placeholder="Search layers…"

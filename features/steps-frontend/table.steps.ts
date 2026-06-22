@@ -21,10 +21,6 @@ Given("the attribute table is open", async function (this: BrowserWorld) {
   await openTable(this)
 })
 
-Given("the active layer has more features than one page", async function () {
-  // Fixture has 15 features (> pageSize 10); nothing to set up.
-})
-
 Then("the table shows one row per feature in the layer", async function (this: BrowserWorld) {
   const count = await this.page.getByTestId("table-count").textContent()
   assert.match(count ?? "", /15 features/)
@@ -70,15 +66,6 @@ Then("the table shows {int} row", async function (this: BrowserWorld, n: number)
     (count) => document.querySelectorAll('[data-testid="table-row"]').length === count,
     n
   )
-})
-
-Then("the table shows the first page of rows", async function (this: BrowserWorld) {
-  assert.equal(await this.page.getByTestId("table-row").count(), 10)
-})
-
-Then("the user can advance to the next page", async function (this: BrowserWorld) {
-  await this.page.getByTestId("table-next").click()
-  assert.equal(await this.page.getByTestId("table-row").count(), 5)
 })
 
 When("the user sorts by a column", async function (this: BrowserWorld) {

@@ -1,7 +1,8 @@
 import { Fragment, useRef, useState } from "react"
-import { Layers } from "lucide-react"
+import { Layers, Maximize } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 import type { Map as MaplibreMap, GeoJSONSource } from "maplibre-gl"
-import type { Polygon } from "geojson"
+import type { FeatureCollection, Polygon, Position } from "geojson"
 import {
   Map,
   Popup,
@@ -23,9 +24,34 @@ import {
 import type { LayerConfig } from "@/catalog/layers"
 import type { FeatureFilters } from "@/lib/filterFeatures"
 import { selectFields, type FieldDisplay } from "@/lib/fields"
+import {
+  staLayerKey,
+  featuresLayerKey,
+  arcgisLayerKey,
+} from "@/hooks/useLayerData"
 
 /** Plain string cast used when a layer declares no value formatter. */
 const defaultFormat = (_key: string, value: unknown) => String(value ?? "")
+
+/** React Query cache key for a layer's GeoJSON data (mirrors the data hooks). */
+function layerCacheKey(layer: LayerConfig) {
+  if (layer.source === "sta") return staLayerKey(layer)
+  if (layer.source === "arcgis") return arcgisLayerKey(layer)
+  return featuresLayerKey(layer)
+}
+
+/** Expand a bbox to include every coordinate in a geometry's nested arrays. */
+function growBbox(coords: unknown, bbox: [number, number, number, number]) {
+  if (typeof (coords as number[])[0] === "number") {
+    const [x, y] = coords as Position
+    if (x < bbox[0]) bbox[0] = x
+    if (y < bbox[1]) bbox[1] = y
+    if (x > bbox[2]) bbox[2] = x
+    if (y > bbox[3]) bbox[3] = y
+    return
+  }
+  for (const c of coords as unknown[]) growBbox(c, bbox)
+}
 import type { Selection } from "@/lib/urlState"
 import {
   CatalogLayer,
@@ -86,7 +112,32 @@ export function MapView({
 }: MapViewProps) {
   const internalMapRef = useRef<MapRef | null>(null)
   const mapRef = externalMapRef ?? internalMapRef
+  const queryClient = useQueryClient()
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [cursor, setCursor] = useState<[number, number] | null>(null)
+
+  // Zoom to the combined extent of the visible layers' loaded features.
+  const fitToData = () => {
+    const map = mapRef.current
+    if (!map) return
+    const bbox: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity]
+    let any = false
+    for (const layer of layers) {
+      const fc = queryClient.getQueryData<FeatureCollection>(layerCacheKey(layer))
+      for (const f of fc?.features ?? []) {
+        const g = f.geometry
+        if (!g || g.type === "GeometryCollection") continue
+        growBbox((g as { coordinates: unknown }).coordinates, bbox)
+        any = true
+      }
+    }
+    if (any && Number.isFinite(bbox[0])) {
+      map.fitBounds(
+        [[bbox[0], bbox[1]], [bbox[2], bbox[3]]],
+        { padding: 60, maxZoom: 14, duration: 600 }
+      )
+    }
+  }
   const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
   const clusterLayerIds = new Set(
     layers.filter(isClustered).map(clusterLayerId)
@@ -107,6 +158,7 @@ export function MapView({
   // Hit-test on move: a feature under the pointer drives the hover popup and
   // the pointer cursor; empty space clears both.
   const handleMouseMove = (e: MapLayerMouseEvent) => {
+    setCursor([e.lngLat.lng, e.lngLat.lat])
     const hit = e.features?.[0]
     // Clusters get a pointer cursor but no attribute popup.
     if (!hit || hit.properties?.cluster) {
@@ -226,7 +278,10 @@ export function MapView({
         cursor={hoverInfo ? "pointer" : undefined}
         onClick={handleClick}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoverInfo(null)}
+        onMouseLeave={() => {
+          setHoverInfo(null)
+          setCursor(null)
+        }}
         onLoad={handleLoad}
         onMoveEnd={emitMove}
       >
@@ -349,8 +404,28 @@ export function MapView({
           </PopoverContent>
         </Popover>
 
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Zoom to data"
+          title="Zoom to the visible layers"
+          data-testid="fit-to-data"
+          onClick={fitToData}
+        >
+          <Maximize />
+        </Button>
+
         <DrawControls map={drawMap} onShapesChange={onShapesChange} />
       </div>
+
+      {cursor && (
+        <div
+          data-testid="cursor-coords"
+          className="pointer-events-none absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded border bg-card/90 px-2 py-0.5 font-mono text-[11px] tabular-nums text-muted-foreground shadow-sm backdrop-blur"
+        >
+          {cursor[1].toFixed(4)}, {cursor[0].toFixed(4)}
+        </div>
+      )}
     </div>
   )
 }
