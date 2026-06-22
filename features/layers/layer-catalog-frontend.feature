@@ -37,6 +37,17 @@ Feature: Layer catalog and toggles
     Given the "City of Albuquerque (CABQ)" layer is toggled on
     Then the "City of Albuquerque (CABQ)" layer has an opacity slider
 
+  Scenario: Searching narrows the layer list
+    When the user searches the layers for "springs"
+    Then the "Springs" layer toggle is visible
+    And the "City of Albuquerque (CABQ)" layer toggle is hidden
+
+  Scenario: Visible layers appear as chips on the map
+    Given the "Springs" layer is toggled on
+    Then the map shows a chip for the "Springs" layer
+    When the user removes the "Springs" layer chip
+    Then the "Springs" layer is toggled off
+
   Scenario Outline: Layer groups describe themselves on hover
     When the user hovers over the "<group>" layer group
     Then a tooltip explains the "<group>" group

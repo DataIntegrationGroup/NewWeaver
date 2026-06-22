@@ -34,7 +34,9 @@ import {
   interactiveLayerIdsFor,
   isClustered,
 } from "./MapLayers"
+import { Skeleton } from "@/components/ui/skeleton"
 import { FieldValue } from "./FieldValue"
+import { ActiveLayerChips } from "./ActiveLayerChips"
 
 interface MapViewProps {
   /** Optional external ref so the parent can drive the map (e.g. fly-to). */
@@ -47,6 +49,8 @@ interface MapViewProps {
   onLayerCount?: (id: string, count: number) => void
   /** When set, the active text filter matched no features — show an empty card. */
   emptyFilterQuery?: string
+  /** Toggle a layer off from its on-map chip. */
+  onToggleLayer?: (id: string) => void
   selection?: Selection
   initialView: { longitude: number; latitude: number; zoom: number }
   basemap: string
@@ -69,6 +73,7 @@ export function MapView({
   opacityById,
   onLayerCount,
   emptyFilterQuery,
+  onToggleLayer,
   selection,
   initialView,
   basemap,
@@ -81,6 +86,7 @@ export function MapView({
 }: MapViewProps) {
   const internalMapRef = useRef<MapRef | null>(null)
   const mapRef = externalMapRef ?? internalMapRef
+  const [mapLoaded, setMapLoaded] = useState(false)
   const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
   const clusterLayerIds = new Set(
     layers.filter(isClustered).map(clusterLayerId)
@@ -180,6 +186,7 @@ export function MapView({
   const handleLoad = () => {
     const map = mapRef.current
     if (!map) return
+    setMapLoaded(true)
     setDrawMap(map.getMap() as unknown as MaplibreMap)
     ;(window as unknown as { __weaverMap?: unknown }).__weaverMap = {
       getCenter: () => map.getCenter(),
@@ -295,7 +302,7 @@ export function MapView({
       {emptyFilterQuery && (
         <div
           data-testid="empty-filter"
-          className="pointer-events-none absolute inset-x-0 top-4 z-10 flex justify-center"
+          className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center"
         >
           <div className="pointer-events-auto max-w-sm rounded-lg border bg-card/95 px-4 py-3 text-center text-sm shadow-md backdrop-blur">
             <p className="font-medium text-foreground">No features match your filter</p>
@@ -306,6 +313,17 @@ export function MapView({
         </div>
       )}
 
+      {!mapLoaded && (
+        <Skeleton
+          data-testid="map-skeleton"
+          className="absolute inset-0 z-20 rounded-none"
+        />
+      )}
+
+      {onToggleLayer && (
+        <ActiveLayerChips layers={layers} onRemove={onToggleLayer} />
+      )}
+
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
         <Popover>
           <PopoverTrigger asChild>
@@ -313,6 +331,7 @@ export function MapView({
               variant="outline"
               size="icon-sm"
               aria-label="Choose basemap"
+              title="Choose basemap"
               data-testid="basemap-trigger"
             >
               <Layers />

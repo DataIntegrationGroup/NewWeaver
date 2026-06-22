@@ -240,3 +240,12 @@
 @media (prefers-reduced-motion: reduce) {
     .animate-marquee { animation: none; }
 }
+
+/* Indeterminate top loading bar — slides a short segment across the top. */
+@keyframes loadingbar {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+.animate-loadingbar {
+    animation: loadingbar 1.1s ease-in-out infinite;
+}

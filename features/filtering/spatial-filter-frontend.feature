@@ -8,6 +8,10 @@ Feature: Spatial and text filtering
     Given the user has opened the app
     And the "City of Albuquerque (CABQ)" layer is toggled on
 
+  Scenario: The filter control explains itself
+    When the user focuses the filter info button
+    Then a tooltip explains what filtering does
+
   @smoke
   Scenario: Filter data to the current map extent
     When the user enables "filter to map view"

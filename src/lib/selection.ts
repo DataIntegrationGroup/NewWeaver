@@ -64,7 +64,8 @@ export function pointInPolygon(p: Position, poly: Polygon): boolean {
   return !holes.some((hole) => pointInRing(p, hole))
 }
 
-function pointInAnyShape(f: Feature, shapes: Polygon[]): boolean {
+/** True when a feature's first point falls inside any of the drawn shapes. */
+export function pointInAnyShape(f: Feature, shapes: Polygon[]): boolean {
   const p = firstPosition(f)
   if (!p) return false
   return shapes.some((s) => pointInPolygon(p, s))

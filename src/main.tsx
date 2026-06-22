@@ -8,8 +8,10 @@ import { PostHogProvider } from "posthog-js/react"
 import "./index.css"
 import { POSTHOG_KEY, POSTHOG_HOST } from "./config"
 import { ThemeProvider } from "./components/theme-provider"
+import { ErrorBoundary } from "./components/ErrorBoundary"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { Toaster } from "./components/ui/sonner"
+import { TopLoadingBar } from "./components/app/TopLoadingBar"
 import { queryClient } from "./lib/queryClient"
 import { router } from "./router"
 
@@ -28,14 +30,17 @@ if (POSTHOG_KEY) {
 
 const app = (
   <StrictMode>
-    <ThemeProvider defaultTheme="system" storageKey="weaver-theme">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <RouterProvider router={router} />
-          <Toaster richColors closeButton />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="system" storageKey="weaver-theme">
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <TopLoadingBar />
+            <RouterProvider router={router} />
+            <Toaster richColors closeButton />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   </StrictMode>
 )
 

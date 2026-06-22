@@ -36,6 +36,7 @@ import { InspectPanel } from "./InspectPanel"
 import { AttributeTable } from "./AttributeTable"
 import { FilterControls } from "./FilterControls"
 import { ExportDialog } from "./ExportDialog"
+import { OnboardingTour } from "./OnboardingTour"
 
 /**
  * AppShell — header + filters + layer sidebar + map + inspect panel + table.
@@ -137,6 +138,15 @@ export function AppShell() {
       zoom: Math.max(map.getZoom(), 13),
       duration: 600,
     })
+  }
+
+  const handleToggleLayer = (id: string) => {
+    posthog.capture("layer_toggled", {
+      layer_id: id,
+      layer_title: getLayer(id)?.title,
+      visible: !layerIds.includes(id),
+    })
+    toggleLayer(id)
   }
 
   const shareView = async () => {
@@ -260,15 +270,7 @@ export function AppShell() {
             onOpacityChange={(id, v) =>
               setOpacityById((m) => ({ ...m, [id]: v }))
             }
-            onToggle={(id) => {
-              const nowVisible = !layerIds.includes(id)
-              posthog.capture("layer_toggled", {
-                layer_id: id,
-                layer_title: getLayer(id)?.title,
-                visible: nowVisible,
-              })
-              toggleLayer(id)
-            }}
+            onToggle={handleToggleLayer}
           />
         </aside>
 
@@ -287,6 +289,7 @@ export function AppShell() {
                 setLayerCounts((m) => (m[id] === n ? m : { ...m, [id]: n }))
               }
               emptyFilterQuery={emptyFilterQuery}
+              onToggleLayer={handleToggleLayer}
               selection={selection}
               initialView={initialView}
               basemap={basemap}
@@ -312,6 +315,7 @@ export function AppShell() {
               <AttributeTable
                 layer={activeLayer}
                 filters={filters}
+                shapes={shapes}
                 selectedFeatureId={
                   selection?.layerId === activeLayer.id ? selection.featureId : undefined
                 }
@@ -338,6 +342,8 @@ export function AppShell() {
         filters={filters}
         shapes={shapes}
       />
+
+      <OnboardingTour />
     </PageShell>
   )
 }

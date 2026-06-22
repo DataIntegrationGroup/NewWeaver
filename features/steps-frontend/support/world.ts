@@ -162,6 +162,14 @@ Before(async function (this: BrowserWorld) {
   this.context = await browser.newContext({
     permissions: ["clipboard-read", "clipboard-write"],
   })
+  // Suppress the first-visit onboarding tour so it can't overlap other specs.
+  await this.context.addInitScript(() => {
+    try {
+      localStorage.setItem("weaver-tour-seen", "1")
+    } catch {
+      /* ignore */
+    }
+  })
   this.page = await this.context.newPage()
   // Mock upstream APIs; let everything else (basemap tiles, app assets) through.
   await this.context.route("**/*", async (route) => {

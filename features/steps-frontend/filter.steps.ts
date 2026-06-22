@@ -111,3 +111,14 @@ Then("the map shows no features for that layer", async function (this: BrowserWo
 Then("the map shows an empty-filter message", async function (this: BrowserWorld) {
   await this.page.getByTestId("empty-filter").waitFor()
 })
+
+When("the user focuses the filter info button", async function (this: BrowserWorld) {
+  await this.page.locator('[data-testid="filter-info"]:visible').focus()
+})
+
+Then("a tooltip explains what filtering does", async function (this: BrowserWorld) {
+  await this.page
+    .getByRole("tooltip", { name: /limits data to the current map extent/ })
+    .first()
+    .waitFor()
+})

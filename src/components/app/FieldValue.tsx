@@ -1,13 +1,15 @@
 /**
  * FieldValue — renders a feature attribute value for the table, inspect panel,
- * and hover popup. A value that is an http(s) URL (e.g. the OSE `nmwrrs_wrs`
- * well-record link) becomes a clickable link labelled by its host; everything
- * else renders as plain text.
+ * and hover popup. URLs become a clickable link; coded values formatted as
+ * "CODE: Label" (the OSE status / pod_status / use_ fields) render the code as
+ * a chip followed by its label; everything else is plain text.
  */
 const URL_RE = /^https?:\/\/\S+$/i
+const CODE_RE = /^([A-Z][A-Z0-9]{1,5}): (.+)$/
 
 export function FieldValue({ value }: { value: string }) {
   const v = value.trim()
+
   if (URL_RE.test(v)) {
     let host = v
     try {
@@ -26,5 +28,18 @@ export function FieldValue({ value }: { value: string }) {
       </a>
     )
   }
+
+  const code = v.match(CODE_RE)
+  if (code) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+          {code[1]}
+        </span>
+        <span className="break-words">{code[2]}</span>
+      </span>
+    )
+  }
+
   return <>{value}</>
 }

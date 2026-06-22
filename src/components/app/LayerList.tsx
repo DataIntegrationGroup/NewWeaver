@@ -1,8 +1,11 @@
+import { useState } from "react"
+
 import {
   LAYER_CATALOG,
   SECTION_DESCRIPTIONS,
   type LayerConfig,
 } from "@/catalog/layers"
+import { Input } from "@/components/ui/input"
 import {
   LayerSelector,
   type LayerOption,
@@ -88,14 +91,43 @@ const DEFAULT_OPEN = SECTIONS.map((s) => s.section)
 export function LayerList({ visible, onToggle, opacityById, onOpacityChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
+  const [search, setSearch] = useState("")
+  const [open, setOpen] = useState<string[]>(DEFAULT_OPEN)
+
+  // Filter the catalog by title/description; while searching, every matching
+  // section is forced open so results aren't hidden inside a collapsed group.
+  const q = search.trim().toLowerCase()
+  const sections = q
+    ? SECTIONS.map((s) => ({
+        section: s.section,
+        options: s.options.filter(
+          (o) =>
+            o.title.toLowerCase().includes(q) ||
+            o.description?.toLowerCase().includes(q)
+        ),
+      })).filter((s) => s.options.length > 0)
+    : SECTIONS
+  const openValue = q ? sections.map((s) => s.section) : open
+
   return (
     <div className="space-y-4">
       <h2 className="!text-base !font-semibold uppercase tracking-wide text-muted-foreground">
         Layers
       </h2>
+      <Input
+        type="search"
+        placeholder="Search layers…"
+        data-testid="layer-search"
+        className="h-8"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {sections.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No layers match “{search}”.</p>
+      ) : (
       <TooltipProvider delayDuration={200}>
-      <Accordion type="multiple" defaultValue={DEFAULT_OPEN}>
-        {SECTIONS.map(({ section, options }) => {
+      <Accordion type="multiple" value={openValue} onValueChange={setOpen}>
+        {sections.map(({ section, options }) => {
           const help = SECTION_DESCRIPTIONS[section]
           const trigger = (
             <AccordionTrigger className="!text-xs !font-semibold uppercase tracking-wide text-muted-foreground/80">
@@ -134,6 +166,7 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange }: L
         })}
       </Accordion>
       </TooltipProvider>
+      )}
     </div>
   )
 }

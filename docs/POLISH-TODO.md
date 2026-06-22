@@ -30,25 +30,25 @@ Brainstormed UI/UX polish, grouped. ⚡ = quick win. Checked = shipped.
 ## Layer list
 
 - [ ] Per-visible-layer feature-count badge (needs cache-count without triggering hidden fetches)
-- [ ] Search box to filter the layer list (40+ layers)
-- [ ] Active-layer chips overlaid on the map
+- [x] Search box to filter the layer list (40+ layers)
+- [x] Active-layer chips overlaid on the map (click to hide a layer)
 - [ ] Remember open/closed accordion sections across visits
 
 ## Visual / theme
 
 - [x] Dark-mode audit — verified OK; header/sidebar/panels all theme correctly.
 - [x] Pair the basemap with the theme — dark mode → dark tiles, light → light; satellite is left as chosen.
-- [ ] Top loading bar during route/data transitions
-- [ ] Skeleton loaders for home cards / map first paint
+- [x] Top loading bar during data fetches (indeterminate bar pinned to the top)
+- [x] Skeleton loaders — map first paint, attribute table, and STA datastream panel
 - [ ] Open Graph meta tags for link previews
 
 ## Onboarding / sharing
 
-- [ ] First-visit hint tour (layers → click a point → share)
-- [ ] Info popovers ("?") on map controls (filter-to-map, draw, basemap)
+- [x] First-visit hint tour (3 steps: layers → inspect → share; dismissed once per browser)
+- [x] Info popovers / tooltips on map controls (filter, draw, basemap)
 
 ## Robustness / a11y
 
-- [ ] Error boundaries + friendly "API unavailable" states (STA / USGS / ArcGIS down)
-- [ ] Fetch-failure toast with retry
+- [x] Error boundary — friendly recovery card instead of a white screen on render crashes
+- [x] Fetch-failure toast with retry — names the failed layer, one-click refetch
 - [ ] `aria-live` for selection/loading; keyboard-nav for layer toggles + carousel

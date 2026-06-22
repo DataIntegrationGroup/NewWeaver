@@ -52,6 +52,26 @@ Then("the attribute table columns exclude {string}", async function (this: Brows
   assert.ok(!headers.some((h) => h.trim() === field), `did not expect a "${field}" column in ${headers.join(", ")}`)
 })
 
+When("the user draws a selection around a single feature", async function (this: BrowserWorld) {
+  // A box around the fixture's wl-1 (@ -106.62, 35.08); the other 14 sit near
+  // Roswell, outside it.
+  await this.setShapes([
+    {
+      type: "Polygon",
+      coordinates: [
+        [[-106.72, 35.0], [-106.52, 35.0], [-106.52, 35.18], [-106.72, 35.18], [-106.72, 35.0]],
+      ],
+    },
+  ])
+})
+
+Then("the table shows {int} row", async function (this: BrowserWorld, n: number) {
+  await this.page.waitForFunction(
+    (count) => document.querySelectorAll('[data-testid="table-row"]').length === count,
+    n
+  )
+})
+
 Then("the table shows the first page of rows", async function (this: BrowserWorld) {
   assert.equal(await this.page.getByTestId("table-row").count(), 10)
 })

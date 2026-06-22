@@ -14,6 +14,11 @@ Feature: Feature attribute table
     Then the table shows one row per feature in the layer
     And the columns match the layer's attribute fields
 
+  Scenario: A drawn selection scopes the table to enclosed features
+    Given the attribute table is open
+    When the user draws a selection around a single feature
+    Then the table shows 1 row
+
   Scenario: Table paginates large collections
     Given the active layer has more features than one page
     When the user opens the attribute table

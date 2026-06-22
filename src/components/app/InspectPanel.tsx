@@ -6,6 +6,7 @@ import { usePostHog } from "posthog-js/react"
 import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer } from "@/catalog/layers"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -305,7 +306,10 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
             Datastream
           </label>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading datastreams…</p>
+            <div data-testid="datastream-skeleton" className="space-y-2">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-40 w-full" />
+            </div>
           ) : !datastreams || datastreams.length === 0 ? (
             <p data-testid="no-datastreams" className="text-sm text-muted-foreground">
               No datastreams for this location.

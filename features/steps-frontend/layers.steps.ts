@@ -57,6 +57,18 @@ Then("the {string} layer has an opacity slider", async function (this: BrowserWo
   await this.page.getByTestId(`layer-opacity-${layerIdByTitle(title)}`).waitFor()
 })
 
+When("the user searches the layers for {string}", async function (this: BrowserWorld, term: string) {
+  await this.page.getByTestId("layer-search").fill(term)
+})
+
+Then("the map shows a chip for the {string} layer", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`chip-${layerIdByTitle(title)}`).waitFor()
+})
+
+When("the user removes the {string} layer chip", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`chip-${layerIdByTitle(title)}`).click()
+})
+
 When("the user hovers over the {string} layer group", async function (this: BrowserWorld, name: string) {
   // Move away first so re-hovering a second group reliably re-opens the tooltip.
   await this.page.mouse.move(0, 0)

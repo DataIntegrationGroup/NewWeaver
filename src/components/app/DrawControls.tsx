@@ -12,6 +12,11 @@ import type { Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type DrawMode = "rectangle" | "polygon"
 
@@ -39,7 +44,33 @@ export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
       modes: [
         new TerraDrawRectangleMode(),
         new TerraDrawPolygonMode(),
-        new TerraDrawSelectMode(),
+        // Select mode lets a finished shape be edited: drag the whole shape to
+        // reposition, drag a vertex to move it, click a midpoint to add a
+        // vertex, or click a vertex to delete it. Enabled for both shape kinds.
+        new TerraDrawSelectMode({
+          flags: {
+            polygon: {
+              feature: {
+                draggable: true,
+                coordinates: {
+                  midpoints: true,
+                  draggable: true,
+                  deletable: true,
+                },
+              },
+            },
+            rectangle: {
+              feature: {
+                draggable: true,
+                coordinates: {
+                  midpoints: true,
+                  draggable: true,
+                  deletable: true,
+                },
+              },
+            },
+          },
+        }),
       ],
     })
     draw.start()
@@ -59,6 +90,9 @@ export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
         .filter((g): g is Polygon => g.type === "Polygon")
       posthog.capture("draw_shape_completed", { shape_count: polys.length })
       onShapesChange(polys)
+      // Drop into select mode so the shape can be edited right away.
+      draw.setMode("select")
+      setMode(null)
     }
     draw.on("finish", onFinish)
     draw.on("change", emit)
@@ -98,35 +132,54 @@ export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
 
   return (
     <div className="flex flex-col gap-1 rounded-md border bg-card p-1 shadow-sm">
-      <Button
-        variant={mode === "rectangle" ? "default" : "ghost"}
-        size="icon-sm"
-        aria-label="Draw rectangle selection"
-        aria-pressed={mode === "rectangle"}
-        data-testid="draw-rectangle"
-        onClick={() => toggle("rectangle")}
-      >
-        <Square />
-      </Button>
-      <Button
-        variant={mode === "polygon" ? "default" : "ghost"}
-        size="icon-sm"
-        aria-label="Draw polygon selection"
-        aria-pressed={mode === "polygon"}
-        data-testid="draw-polygon"
-        onClick={() => toggle("polygon")}
-      >
-        <Hexagon />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Clear drawn selection"
-        data-testid="draw-clear"
-        onClick={clear}
-      >
-        <Trash2 />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={mode === "rectangle" ? "default" : "ghost"}
+            size="icon-sm"
+            aria-label="Draw rectangle selection"
+            aria-pressed={mode === "rectangle"}
+            data-testid="draw-rectangle"
+            onClick={() => toggle("rectangle")}
+          >
+            <Square />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          Draw a rectangle to select features for export
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={mode === "polygon" ? "default" : "ghost"}
+            size="icon-sm"
+            aria-label="Draw polygon selection"
+            aria-pressed={mode === "polygon"}
+            data-testid="draw-polygon"
+            onClick={() => toggle("polygon")}
+          >
+            <Hexagon />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          Draw a polygon to select features for export
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Clear drawn selection"
+            data-testid="draw-clear"
+            onClick={clear}
+          >
+            <Trash2 />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Clear the drawn selection</TooltipContent>
+      </Tooltip>
     </div>
   )
 }

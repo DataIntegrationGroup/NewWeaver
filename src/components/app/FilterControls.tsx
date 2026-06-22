@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react"
+import { Info } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface FilterControlsProps {
   bbox: boolean
@@ -48,6 +54,23 @@ export function FilterControls({ bbox, q, onBboxChange, onQueryChange }: FilterC
         value={text}
         onChange={(e) => onType(e.target.value)}
       />
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="About filtering"
+            data-testid="filter-info"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Info className="size-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-64">
+          <strong>Filter to map view</strong> limits data to the current map
+          extent. The text box matches feature attributes — type to narrow what’s
+          shown.
+        </TooltipContent>
+      </Tooltip>
     </div>
   )
 }
