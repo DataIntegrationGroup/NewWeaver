@@ -38,6 +38,11 @@ import { FilterControls } from "./FilterControls"
 import { ExportDialog } from "./ExportDialog"
 import { OnboardingTour } from "./OnboardingTour"
 
+const SIDEBAR_WIDTH_KEY = "weaver-sidebar-width"
+const SIDEBAR_MIN = 240
+const SIDEBAR_MAX = 520
+const SIDEBAR_DEFAULT = 288
+
 /**
  * AppShell — header + filters + layer sidebar + map + inspect panel + table.
  * All view state lives in the URL via useViewState, so any view is shareable.
@@ -72,6 +77,32 @@ export function AppShell() {
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
   // Per-layer filtered feature counts, reported by the map sources.
   const [layerCounts, setLayerCounts] = useState<Record<string, number>>({})
+
+  // Resizable layer sidebar (desktop only); width persisted across visits.
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = Number(localStorage.getItem(SIDEBAR_WIDTH_KEY))
+    return saved >= SIDEBAR_MIN && saved <= SIDEBAR_MAX ? saved : SIDEBAR_DEFAULT
+  })
+  // Drag the right edge to resize. Moving right (larger clientX) widens it.
+  const startSidebarResize = (e: React.PointerEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = sidebarWidth
+    const onMove = (ev: PointerEvent) =>
+      setSidebarWidth(
+        Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startW + (ev.clientX - startX)))
+      )
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove)
+      window.removeEventListener("pointerup", onUp)
+      setSidebarWidth((w) => {
+        localStorage.setItem(SIDEBAR_WIDTH_KEY, String(Math.round(w)))
+        return w
+      })
+    }
+    window.addEventListener("pointermove", onMove)
+    window.addEventListener("pointerup", onUp)
+  }
 
   const layerIds = search.layers ?? []
   const visibleLayers = LAYER_CATALOG.filter((l) => layerIds.includes(l.id))
@@ -256,10 +287,11 @@ export function AppShell() {
         <aside
           id="layer-sidebar"
           aria-label="Layers and filters"
+          style={{ width: sidebarWidth }}
           className={cn(
             "w-72 shrink-0 space-y-5 overflow-y-auto border-r bg-card p-5",
             "absolute inset-y-0 left-0 z-40 max-w-[85%] transition-transform duration-200",
-            "lg:static lg:max-w-none lg:translate-x-0",
+            "lg:relative lg:max-w-none lg:translate-x-0",
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -271,6 +303,15 @@ export function AppShell() {
               setOpacityById((m) => ({ ...m, [id]: v }))
             }
             onToggle={handleToggleLayer}
+          />
+          {/* Resize handle on the right edge — desktop only. */}
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize layers panel"
+            data-testid="sidebar-resize"
+            onPointerDown={startSidebarResize}
+            className="absolute right-0 top-0 z-20 hidden h-full w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 lg:block"
           />
         </aside>
 

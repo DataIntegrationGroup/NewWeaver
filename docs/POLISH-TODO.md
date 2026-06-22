@@ -33,6 +33,7 @@ Brainstormed UI/UX polish, grouped. ⚡ = quick win. Checked = shipped.
 - [x] Search box to filter the layer list (40+ layers)
 - [x] Active-layer chips overlaid on the map (click to hide a layer)
 - [x] Layer-tree tools — Expand all / Collapse all
+- [x] Resizable layer sidebar — drag the right edge (desktop); width persisted (localStorage)
 - [ ] Remember open/closed accordion sections across visits
 
 ## Visual / theme
@@ -46,6 +47,9 @@ Brainstormed UI/UX polish, grouped. ⚡ = quick win. Checked = shipped.
 ## Onboarding / sharing
 
 - [x] First-visit hint tour (3 steps: layers → inspect → share; dismissed once per browser)
+- [x] Interactive tour — each step spotlights its target (dim backdrop + cut-out +
+      pulsing ring) and anchors the card beside it; arrow keys / dot nav; click
+      backdrop to dismiss
 - [x] Info popovers / tooltips on map controls (filter, draw, basemap)
 
 ## Robustness / a11y
