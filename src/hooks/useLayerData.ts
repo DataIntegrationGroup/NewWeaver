@@ -188,7 +188,11 @@ export function useStaThings(
   })
 }
 
-/** Observations for a datastream, oldest→newest for charting. */
+/**
+ * Observations for a datastream, oldest→newest for charting. Follows STA's
+ * @iot.nextLink across all pages so the full series is plotted, not just the
+ * first page. Large `$top` keeps the round-trip count low.
+ */
 export function useObservations(
   datastreamId: string | number | undefined,
   staBaseUrl?: string
@@ -196,12 +200,10 @@ export function useObservations(
   return useQuery({
     queryKey: ["sta", staBaseUrl ?? "default", "observations", datastreamId],
     enabled: datastreamId !== undefined && datastreamId !== null,
-    queryFn: async () => {
-      const res = await staClient(staBaseUrl).observationsForDatastream(
-        datastreamId!,
-        { $orderby: "phenomenonTime asc", $top: 2000 }
-      )
-      return res.value
-    },
+    queryFn: () =>
+      staClient(staBaseUrl).observationsPaged(datastreamId!, {
+        $orderby: "phenomenonTime asc",
+        $top: 2000,
+      }),
   })
 }

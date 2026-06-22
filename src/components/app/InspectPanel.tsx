@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Check, Copy, Crosshair, X } from "lucide-react"
 import type { Feature, Position } from "geojson"
 import { usePostHog } from "posthog-js/react"
@@ -272,16 +272,24 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
   const pos = firstPosition(location)
 
   const { data: things, isLoading } = useStaThings(featureId, layer.staBaseUrl)
-  const datastreams = things?.flatMap((t) => t.Datastreams ?? [])
+  // Memoize so the reference is stable across renders — otherwise the
+  // auto-select effect below would re-run every render and clobber the user's
+  // datastream choice on the next paint.
+  const datastreams = useMemo(
+    () => things?.flatMap((t) => t.Datastreams ?? []),
+    [things]
+  )
   // Merge the properties of the location's Things (usually one) into one table.
   const thingProps = Object.assign({}, ...(things ?? []).map((t) => t.properties ?? {}))
   const [dsId, setDsId] = useState<string | undefined>(undefined)
 
-  // Auto-select the first datastream when a location's datastreams load.
+  // Default to the first datastream once they load, and recover if the current
+  // selection isn't in the list (e.g. after switching locations) — but keep a
+  // valid user choice untouched.
   useEffect(() => {
-    if (datastreams && datastreams.length > 0) {
-      setDsId(String(datastreams[0]["@iot.id"]))
-    }
+    if (!datastreams || datastreams.length === 0) return
+    const ids = datastreams.map((d) => String(d["@iot.id"]))
+    setDsId((cur) => (cur && ids.includes(cur) ? cur : ids[0]))
   }, [datastreams])
 
   const selected = datastreams?.find((d) => String(d["@iot.id"]) === dsId)
