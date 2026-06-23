@@ -45,6 +45,13 @@ interface BaseLayer {
    * the underlying data is unchanged. Defaults to a plain string cast.
    */
   formatValue?: (key: string, value: unknown) => string
+  /**
+   * Exclude from the attribute table's automatic active-layer pick. A dense,
+   * default-on context layer (e.g. statewide wells seeding the first paint)
+   * should not silently become the table subject and displace the agency layer
+   * the table defaults to. Explicit selection still opens it (SPEC §V.V12).
+   */
+  excludeFromAutoTable?: boolean
   /** Cluster dense points on the map. ArcGIS layers cluster by default. */
   cluster?: boolean
   /** Cluster merge radius in px (default 4, matching Weaver). Smaller = looser. */
@@ -162,9 +169,16 @@ const OCOTILLO_COLLECTIONS: {
   color: string
   /** Geometry kind; defaults to point. Polygon collections draw as fill. */
   geom?: "point" | "polygon"
+  /** On by default. Statewide integrated products seed the first paint. */
+  defaultVisible?: boolean
+  /** Map-context only — not the table's default subject (SPEC §V.V12). */
+  excludeFromAutoTable?: boolean
 }[] = [
   { id: "locations", title: "Locations", color: "#2563eb", description: "All monitoring locations." },
-  { id: "actively_monitored_wells", title: "Actively Monitored Wells", color: "#1d4ed8" },
+  // Statewide well coverage — default-on so the first map paint shows data
+  // across New Mexico, not one clustered network (SPEC §V.V5). Map-context
+  // only: it must not hijack the table's default subject (SPEC §V.V12).
+  { id: "actively_monitored_wells", title: "Actively Monitored Wells", color: "#1d4ed8", defaultVisible: true, excludeFromAutoTable: true },
   { id: "water_wells", title: "Water Wells", color: "#0ea5e9" },
   { id: "water_well_summary", title: "Water Well Summary", color: "#0891b2" },
   { id: "latest_depth_to_water_wells", title: "Latest Depth to Water (Wells)", color: "#0e7490" },
@@ -206,6 +220,8 @@ const ocotilloLayers: FeaturesLayer[] = OCOTILLO_COLLECTIONS.map((c) => ({
   source: "features",
   featuresBaseUrl: OCOTILLO_FEATURES_BASE_URL,
   collectionId: c.id,
+  defaultVisible: c.defaultVisible,
+  excludeFromAutoTable: c.excludeFromAutoTable,
   section: OCOTILLO_SECTION,
   style: c.geom === "polygon" ? polygonStyle(c.color) : staPoint(c.color),
 }))

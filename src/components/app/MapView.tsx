@@ -79,6 +79,8 @@ interface MapViewProps {
   onToggleLayer?: (id: string) => void
   selection?: Selection
   initialView: { longitude: number; latitude: number; zoom: number }
+  /** Frame the data extent on first paint (no explicit view in the URL). */
+  autoFit?: boolean
   basemap: string
   basemaps: BasemapOption[]
   onBasemapChange: (id: string) => void
@@ -102,6 +104,7 @@ export function MapView({
   onToggleLayer,
   selection,
   initialView,
+  autoFit,
   basemap,
   basemaps,
   onBasemapChange,
@@ -117,9 +120,10 @@ export function MapView({
   const [cursor, setCursor] = useState<[number, number] | null>(null)
 
   // Zoom to the combined extent of the visible layers' loaded features.
-  const fitToData = () => {
+  // Returns true if it actually fit (i.e. some feature geometry was loaded).
+  const fitToData = (): boolean => {
     const map = mapRef.current
-    if (!map) return
+    if (!map) return false
     const bbox: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity]
     let any = false
     for (const layer of layers) {
@@ -136,7 +140,25 @@ export function MapView({
         [[bbox[0], bbox[1]], [bbox[2], bbox[3]]],
         { padding: 60, maxZoom: 14, duration: 600 }
       )
+      return true
     }
+    return false
+  }
+
+  // First-paint auto-fit: when the URL carries no explicit view, frame the data
+  // across New Mexico instead of the static all-NM view (SPEC §V.V5). Fires once,
+  // after the map is ready and the enabled layers' features have loaded. A user
+  // pan or a shared deep-link (autoFit=false) is never overridden.
+  const didAutoFit = useRef(false)
+  const tryAutoFit = () => {
+    if (!autoFit || didAutoFit.current || !mapLoaded) return
+    if (fitToData()) didAutoFit.current = true
+  }
+  // A layer reporting its count means its features just landed in the cache —
+  // a good moment to attempt the first-paint fit.
+  const handleLayerCount = (id: string, count: number) => {
+    onLayerCount?.(id, count)
+    tryAutoFit()
   }
   const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
   const clusterLayerIds = new Set(
@@ -233,6 +255,16 @@ export function MapView({
     ])
   }
 
+  // Any deliberate navigation (user drag/zoom, or a programmatic fly-to) cancels
+  // a pending first-paint auto-fit, so a late-loading layer can never yank the
+  // view out from under a view the user already chose. The auto-fit's own
+  // fitBounds is exempt: it sets didAutoFit before animating, so by the time its
+  // moveEnd lands the flag is already true.
+  const handleMoveEnd = () => {
+    if (autoFit) didAutoFit.current = true
+    emitMove()
+  }
+
   // Test seam: deterministic map ops for the BDD harness (avoids driving the
   // WebGL canvas directly). Harmless in production.
   const handleLoad = () => {
@@ -259,6 +291,9 @@ export function MapView({
       layerIds: () => map.getStyle().layers.map((l) => l.id),
     }
     emitMove()
+    // Features may already be cached before the map finished loading; attempt
+    // the first-paint fit now that the map is ready.
+    if (autoFit && !didAutoFit.current && fitToData()) didAutoFit.current = true
   }
 
   return (
@@ -283,7 +318,7 @@ export function MapView({
           setCursor(null)
         }}
         onLoad={handleLoad}
-        onMoveEnd={emitMove}
+        onMoveEnd={handleMoveEnd}
       >
         {layers.map((layer) => (
           <CatalogLayer
@@ -291,7 +326,7 @@ export function MapView({
             layer={layer}
             filters={filters}
             opacity={opacityById?.[layer.id] ?? 1}
-            onCount={onLayerCount}
+            onCount={handleLayerCount}
             selectedFeatureId={
               selection?.layerId === layer.id ? selection.featureId : undefined
             }

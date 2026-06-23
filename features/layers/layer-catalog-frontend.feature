@@ -18,8 +18,11 @@ Feature: Layer catalog and toggles
     Then the catalog shows a "STA" layer group
     And the catalog shows a "Ocotillo" layer group
 
+  # The first paint must show data across New Mexico, not one clustered network
+  # (SPEC §V.V5): a statewide integrated product is default-on alongside CABQ.
   Scenario: Default layers are visible on load
     Then the "City of Albuquerque (CABQ)" layer is toggled on
+    And the "Actively Monitored Wells" layer is toggled on
     And the "Springs" layer is toggled off
     And the "Latest TDS (Wells)" layer is toggled off
 

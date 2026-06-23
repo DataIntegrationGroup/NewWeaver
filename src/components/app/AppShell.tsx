@@ -108,10 +108,15 @@ export function AppShell() {
   const visibleLayers = LAYER_CATALOG.filter((l) => layerIds.includes(l.id))
   const selectedLayer = selection ? getLayer(selection.layerId) : undefined
 
-  // Active layer for the table: the selected layer, else first visible.
+  // Active layer for the table: the selected layer, else the first visible
+  // table-eligible layer. Dense default-on context layers (e.g. statewide wells
+  // seeding the first paint) are excluded from this auto-pick so they don't
+  // displace the agency layer the table defaults to (SPEC §V.V12).
+  const tableCandidates = visibleLayers.filter((l) => !l.excludeFromAutoTable)
   const activeLayer =
     selectedLayer ??
-    visibleLayers.find((l) => l.source === "features") ??
+    tableCandidates.find((l) => l.source === "features") ??
+    tableCandidates[0] ??
     visibleLayers[0]
 
   const filters = { q: search.q, bbox: search.bbox, bounds }
@@ -333,6 +338,11 @@ export function AppShell() {
               onToggleLayer={handleToggleLayer}
               selection={selection}
               initialView={initialView}
+              autoFit={
+                search.lng === undefined &&
+                search.lat === undefined &&
+                search.z === undefined
+              }
               basemap={basemap}
               basemaps={BASEMAPS}
               onBasemapChange={setBasemap}
