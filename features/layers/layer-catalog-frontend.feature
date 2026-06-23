@@ -4,7 +4,7 @@ Feature: Layer catalog and toggles
   map. Each entry declares its source (OGC API Features or STA) and style.
   Users turn layers on and off; the list is driven entirely by the catalog, so
   a new dataset appears here without UI changes. Layers are grouped into
-  collapsible sections (STA, Ocotillo).
+  collapsible sections (Monitoring networks, Integrated data products).
 
   Background:
     Given the user has opened the app
@@ -15,8 +15,8 @@ Feature: Layer catalog and toggles
     And each layer shows its title and description
 
   Scenario: Layers are grouped into named sections
-    Then the catalog shows a "STA" layer group
-    And the catalog shows a "Ocotillo" layer group
+    Then the catalog shows a "Monitoring networks" layer group
+    And the catalog shows a "Integrated data products" layer group
 
   # The first paint must show data across New Mexico, not one clustered network
   # (SPEC §V.V5): a statewide integrated product is default-on alongside CABQ.
@@ -56,14 +56,14 @@ Feature: Layer catalog and toggles
     Then a tooltip explains the "<group>" group
 
     Examples:
-      | group    |
-      | STA      |
-      | Ocotillo |
+      | group                     |
+      | Monitoring networks       |
+      | Integrated data products  |
 
   Scenario: Layer groups collapse and expand
-    When the user collapses the "STA" layer group
+    When the user collapses the "Monitoring networks" layer group
     Then the "City of Albuquerque (CABQ)" layer toggle is hidden
-    When the user expands the "STA" layer group
+    When the user expands the "Monitoring networks" layer group
     Then the "City of Albuquerque (CABQ)" layer toggle is visible
 
   Scenario: Toggling a layer shows a loading indicator while data loads

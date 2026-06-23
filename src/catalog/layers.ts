@@ -166,7 +166,7 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
   defaultVisible: a.code === "CABQ",
   measurementType: "water_level",
   query: { $filter: `properties/agency eq '${a.code}'`, $top: 2000 },
-  section: "STA",
+  section: "Monitoring networks",
   style: staPoint(a.color),
 }))
 
@@ -176,7 +176,8 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
  * collection. All start hidden to avoid clutter; users toggle them on from the
  * "New Mexico Water Data (Ocotillo)" section of the layer list.
  */
-const OCOTILLO_SECTION = "Ocotillo"
+// Human-meaningful header (SPEC §T.T9 / §V.V8): "Ocotillo" is internal vocab.
+const OCOTILLO_SECTION = "Integrated data products"
 
 const OCOTILLO_COLLECTIONS: {
   id: string
@@ -507,14 +508,17 @@ export function layersForMeasurement(type: MeasurementType): string[] {
  * Help text for each layer-group heading, shown as a tooltip on hover. Keyed by
  * the `section` value used on the layers above.
  */
+// Plain-language, scope-focused group captions (no interface-mechanics copy,
+// SPEC §V.V7). Keyed by the section header above.
 export const SECTION_DESCRIPTIONS: Record<string, string> = {
-  STA: "Live monitoring locations from the SensorThings API (FROST), grouped by operating agency. Turn an agency on to map its wells, then click a point to browse its datastreams and chart the measured time series.",
-  Ocotillo:
-    "New Mexico water datasets from the Ocotillo OGC API Features service — water wells, springs, surface water, chemistry, and project areas. Each layer is a published collection; turn one on to load its features onto the map.",
+  "Monitoring networks":
+    "Live monitoring locations operated by water agencies across New Mexico — cities, counties, irrigation districts, and the State Engineer — each network mapped on its own.",
+  "Integrated data products":
+    "New Mexico water data integrated from many sources into statewide products — water wells, springs, surface water, water levels, and chemistry.",
   "OSE GIS":
-    "Office of the State Engineer datasets served as ArcGIS REST Feature Services — statewide Points of Diversion and Aquifer Test Wells. These layers are dense, so the map clusters them; zoom or click a cluster to break it apart.",
+    "Statewide datasets from the New Mexico Office of the State Engineer — Points of Diversion and Aquifer Test Wells.",
   NWIS:
-    "USGS sites and observations from the modern Water Data for the Nation OGC API, scoped to New Mexico — groundwater wells plus latest continuous and daily values, field measurements, and channel measurements. Layers are dense and cluster; zoom or click a cluster to break it apart.",
+    "U.S. Geological Survey sites and observations for New Mexico, from the Water Data for the Nation service — groundwater wells plus continuous, daily, field, and channel measurements.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {
