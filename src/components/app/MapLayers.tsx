@@ -51,6 +51,8 @@ interface LayerProps2 {
   selectedFeatureId?: string
   /** Layer opacity 0–1 (default 1). */
   opacity?: number
+  /** Whether the layer is drawn (default true). Hidden via its on-map chip. */
+  visible?: boolean
   /** Reports the filtered feature count after rendering. */
   onCount?: (id: string, count: number) => void
 }
@@ -128,12 +130,14 @@ function GeoSource({
   fc,
   selectedFeatureId,
   opacity = 1,
+  visible = true,
   onCount,
 }: {
   layer: LayerConfig
   fc: FeatureCollection
   selectedFeatureId?: string
   opacity?: number
+  visible?: boolean
   onCount?: (id: string, count: number) => void
 }) {
   const count = fc.features.length
@@ -142,6 +146,9 @@ function GeoSource({
   }, [onCount, layer.id, count])
 
   const paint = withOpacity(layer.style.paint ?? {}, layer.style.type, opacity)
+  // MapLibre layout visibility: hides the layer (no draw, no clicks) while
+  // keeping the source loaded, so its chip and count survive a hide toggle.
+  const vis = visible === false ? "none" : "visible"
 
   if (!isClustered(layer)) {
     return (
@@ -151,7 +158,7 @@ function GeoSource({
             id: renderLayerId(layer),
             type: layer.style.type,
             paint,
-            layout: layer.style.layout ?? {},
+            layout: { ...(layer.style.layout ?? {}), visibility: vis },
           } as unknown as LayerProps)}
         />
         {highlightLayer(layer.id, selectedFeatureId)}
@@ -180,6 +187,7 @@ function GeoSource({
           type: "circle",
           filter: ["has", "point_count"],
           paint: withOpacity(clusterPaint(color), "circle", opacity),
+          layout: { visibility: vis },
         } as unknown as LayerProps)}
       />
       {/* Individual (unclustered) points — the interactive feature layer. */}
@@ -189,6 +197,7 @@ function GeoSource({
           type: "circle",
           filter: ["!", ["has", "point_count"]],
           paint,
+          layout: { visibility: vis },
         } as unknown as LayerProps)}
       />
       {highlightLayer(layer.id, selectedFeatureId)}

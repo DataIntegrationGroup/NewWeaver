@@ -88,6 +88,9 @@ export function AppShell() {
   // Measurement-facet fit request (SPEC §T.T4); nonce retriggers the same ids.
   const [fitRequest, setFitRequest] = useState<{ ids: string[]; nonce: number } | null>(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
+  // Layers hidden from the map via their chip (still enabled/listed, just not
+  // drawn). Distinct from toggleLayer, which removes a layer outright.
+  const [hiddenLayerIds, setHiddenLayerIds] = useState<string[]>([])
   // Per-layer filtered feature counts, reported by the map sources.
   const [layerCounts, setLayerCounts] = useState<Record<string, number>>({})
 
@@ -235,7 +238,21 @@ export function AppShell() {
       layer_title: getLayer(id)?.title,
       visible: !layerIds.includes(id),
     })
+    // Drop any stale hidden flag so a re-enabled layer comes back visible.
+    setHiddenLayerIds((ids) => ids.filter((x) => x !== id))
     toggleLayer(id)
+  }
+
+  // Chip body click: hide/show the layer on the map without removing it.
+  const handleToggleLayerHidden = (id: string) => {
+    setHiddenLayerIds((ids) =>
+      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
+    )
+    posthog.capture("layer_visibility_toggled", {
+      layer_id: id,
+      layer_title: getLayer(id)?.title,
+      hidden: !hiddenLayerIds.includes(id),
+    })
   }
 
   const shareView = async () => {
@@ -412,6 +429,8 @@ export function AppShell() {
               layers={visibleLayers}
               filters={filters}
               opacityById={opacityById}
+              hiddenLayerIds={hiddenLayerIds}
+              onToggleLayerHidden={handleToggleLayerHidden}
               onLayerCount={(id, n) =>
                 setLayerCounts((m) => (m[id] === n ? m : { ...m, [id]: n }))
               }

@@ -66,7 +66,22 @@ Then("the map shows a chip for the {string} layer", async function (this: Browse
 })
 
 When("the user removes the {string} layer chip", async function (this: BrowserWorld, title: string) {
-  await this.page.getByTestId(`chip-${layerIdByTitle(title)}`).click()
+  await this.page.getByTestId(`chip-remove-${layerIdByTitle(title)}`).click()
+})
+
+When("the user clicks the {string} layer chip", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`chip-toggle-${layerIdByTitle(title)}`).click()
+})
+
+Then("the {string} layer chip is shown as hidden", async function (this: BrowserWorld, title: string) {
+  await this.page
+    .getByTestId(`chip-${layerIdByTitle(title)}`)
+    .and(this.page.locator("[data-hidden]"))
+    .waitFor()
+})
+
+Then("the map still shows a chip for the {string} layer", async function (this: BrowserWorld, title: string) {
+  await this.page.getByTestId(`chip-${layerIdByTitle(title)}`).waitFor()
 })
 
 When("the user hovers over the {string} layer group", async function (this: BrowserWorld, name: string) {

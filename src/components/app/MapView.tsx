@@ -73,12 +73,16 @@ interface MapViewProps {
   filters: FeatureFilters
   /** Layer id → opacity (0–1). */
   opacityById?: Record<string, number>
+  /** Ids of enabled layers hidden from the map via their chip (still listed). */
+  hiddenLayerIds?: string[]
   /** Reports a layer's filtered feature count (for the empty-filter state). */
   onLayerCount?: (id: string, count: number) => void
   /** When set, the active text filter matched no features — show an empty card. */
   emptyFilterQuery?: string
-  /** Toggle a layer off from its on-map chip. */
+  /** Remove a layer entirely from its on-map chip (× button). */
   onToggleLayer?: (id: string) => void
+  /** Toggle a layer's map visibility from its on-map chip (body click). */
+  onToggleLayerHidden?: (id: string) => void
   selection?: Selection
   /** Pin dropped by the location search (SPEC §T.T3). */
   marker?: { lng: number; lat: number } | null
@@ -105,9 +109,11 @@ export function MapView({
   layers,
   filters,
   opacityById,
+  hiddenLayerIds,
   onLayerCount,
   emptyFilterQuery,
   onToggleLayer,
+  onToggleLayerHidden,
   selection,
   marker,
   fitRequest,
@@ -363,6 +369,7 @@ export function MapView({
             layer={layer}
             filters={filters}
             opacity={opacityById?.[layer.id] ?? 1}
+            visible={!hiddenLayerIds?.includes(layer.id)}
             onCount={handleLayerCount}
             selectedFeatureId={
               selection?.layerId === layer.id ? selection.featureId : undefined
@@ -447,8 +454,13 @@ export function MapView({
         />
       )}
 
-      {onToggleLayer && (
-        <ActiveLayerChips layers={layers} onRemove={onToggleLayer} />
+      {onToggleLayer && onToggleLayerHidden && (
+        <ActiveLayerChips
+          layers={layers}
+          hiddenIds={hiddenLayerIds}
+          onToggle={onToggleLayerHidden}
+          onRemove={onToggleLayer}
+        />
       )}
 
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">

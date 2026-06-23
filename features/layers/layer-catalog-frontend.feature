@@ -51,6 +51,14 @@ Feature: Layer catalog and toggles
     When the user removes the "Springs" layer chip
     Then the "Springs" layer is toggled off
 
+  Scenario: Clicking a chip hides its layer without removing it
+    Given the "Springs" layer is toggled on
+    Then the map shows a chip for the "Springs" layer
+    When the user clicks the "Springs" layer chip
+    Then the "Springs" layer chip is shown as hidden
+    And the map still shows a chip for the "Springs" layer
+    And the "Springs" layer is toggled on
+
   Scenario Outline: Layer groups describe themselves on hover
     When the user hovers over the "<group>" layer group
     Then a tooltip explains the "<group>" group
