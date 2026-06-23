@@ -69,9 +69,7 @@ export function ActiveLayerChips({
                   )}
                   style={{ background: isHidden ? "transparent" : layerColor(l) }}
                 />
-                <span className={cn("max-w-[10rem] truncate", isHidden && "line-through")}>
-                  {l.title}
-                </span>
+                <span className="max-w-[10rem] truncate">{l.title}</span>
               </button>
               <button
                 type="button"
