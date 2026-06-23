@@ -21,8 +21,10 @@ P1-3 underserved today; fix their entry.
   datastreams"). Scope/coverage/provenance copy allowed + encouraged.
 - C6 stack: React + Vite, TanStack Router/Query/Table, MapLibre GL (react-map-gl),
   shadcn/radix, echarts. Don't assume — confirm in T1.
-- C7 geocoder = US Census Geocoder (free, no key, public-domain, US-only — fits NM).
-  [DECIDED 2026-06-22]. Nominatim/OSM = fallback if Census down.
+- C7 geocoder = Photon (komoot/OSM): free, no key, CORS-enabled, matches places
+  AND addresses, supports type-ahead suggestions. Results bbox-biased to NM.
+  [REVISED 2026-06-23: was US Census Geocoder — Census is US-address-only, has no
+  autocomplete, and sends no CORS headers, so browser geocoding never resolved.]
 
 ## §I surfaces
 
@@ -67,7 +69,7 @@ P1-3 underserved today; fix their entry.
 |----|----|------|-------|
 | T1 | x | discover codebase → docs/codebase-map.md: framework/build/routing, map impl + layer registration, layer-list grouping (STA/OCOTILLO)→service map, landing/About/Help/Map components, existing search/geocode/filter, confirm no backend | V11,I.map,I.layers,I.svc |
 | T2 | x | fix default map view: fit-to-data-extent across enabled layers OR arrival-location; >1 representative layer visible, no misleading single cluster | V5,I.map |
-| T3 | x | location search on Map: address/place via client geocoder (US Census, C7); fly+drop marker; results panel "what we have / what we don't"; query OGC/ArcGIS collections by bbox (no server nearest — compute nearest client-side from bbox results). well-ID = address-only; optional client-side filter on loaded feature ids (monitoring_location_number/@iot.id/pod_file). doc choice in codebase-map | V3,C2,C7,I.map,I.svc |
+| T3 | x | location search on Map: address/place via client geocoder (Photon, C7) with type-ahead suggestions; fly+drop marker; results panel "what we have / what we don't"; query OGC/ArcGIS collections by bbox (no server nearest — compute nearest client-side from bbox results). well-ID = address-only; optional client-side filter on loaded feature ids (monitoring_location_number/@iot.id/pod_file). doc choice in codebase-map | V3,C2,C7,I.map,I.svc |
 | T4a | x | add `measurementType` field to BaseLayer (src/catalog/layers.ts:29); populate per layer (depth_to_water, tds, chemistry, water_elevation, water_level, surface_water...). prereq for facet | I.layers |
 | T4 | x | "browse by what's measured" facet keyed on T4a field: categories across networks; select → enable matching layers all networks + zoom extent | V4,T4a,I.map,I.layers |
 | T5 | x | make export discoverable from a result: surface Download +/or API-collection link wherever narrowed (location result, facet, layer), not just toolbar | V9,I.export,I.map |

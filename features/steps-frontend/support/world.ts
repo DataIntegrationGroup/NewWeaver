@@ -94,15 +94,36 @@ async function mockApi(route: Route): Promise<boolean> {
     return json(fx.OSE_AQUIFER_FC).then(() => true)
   }
 
-  // US Census Geocoder — return a near, far, or no-match result keyed off the
-  // address text so location-search specs are deterministic (SPEC §T.T3).
+  // US Census geocoder — called via JSONP (<script> tag), so fulfill with a
+  // JS callback invocation, not JSON. Street addresses match (NEAR); places
+  // like "Remote Mesa" and unfindable text return no match, so geocodeAddress
+  // falls back to Photon (SPEC §T.T3).
   if (/geocoding\.geo\.census\.gov/.test(url)) {
-    const address = decodeURIComponent(
-      new URL(url).searchParams.get("address") ?? ""
+    const params = new URL(url).searchParams
+    const address = decodeURIComponent(params.get("address") ?? "").toLowerCase()
+    const callback = params.get("callback") ?? "callback"
+    const fixture =
+      /no such|unfindable|xyzzy|remote|nowhere|mesa/.test(address)
+        ? fx.CENSUS_NONE
+        : fx.CENSUS_NEAR
+    await route.fulfill({
+      status: 200,
+      contentType: "application/javascript",
+      headers: { "access-control-allow-origin": "*" },
+      body: `${callback}(${JSON.stringify(fixture)})`,
+    })
+    return true
+  }
+
+  // Photon geocoder — return a near, far, or no-match result keyed off the
+  // query text so location-search specs are deterministic (SPEC §T.T3).
+  if (/photon\.komoot\.io/.test(url)) {
+    const q = decodeURIComponent(
+      new URL(url).searchParams.get("q") ?? ""
     ).toLowerCase()
-    if (/no such|unfindable|xyzzy/.test(address)) return json(fx.CENSUS_NONE).then(() => true)
-    if (/remote|nowhere|mesa/.test(address)) return json(fx.CENSUS_FAR).then(() => true)
-    return json(fx.CENSUS_NEAR).then(() => true)
+    if (/no such|unfindable|xyzzy/.test(q)) return json(fx.PHOTON_NONE).then(() => true)
+    if (/remote|nowhere|mesa/.test(q)) return json(fx.PHOTON_FAR).then(() => true)
+    return json(fx.PHOTON_NEAR).then(() => true)
   }
 
   // Esri satellite raster tiles — stub so the satellite basemap renders without

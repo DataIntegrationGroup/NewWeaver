@@ -21,3 +21,10 @@ Feature: Location search and coverage
   Scenario: An address that can't be found is reported, not silent
     When the user searches for the location "xyzzy no such place"
     Then the search reports that the address could not be found
+
+  Scenario: Type-ahead suggestions appear and can be picked
+    When the user types "Yale" into the location search
+    Then location suggestions are shown
+    When the user picks the first suggestion
+    Then a pin is dropped at the searched location
+    And the coverage panel lists nearby monitored data

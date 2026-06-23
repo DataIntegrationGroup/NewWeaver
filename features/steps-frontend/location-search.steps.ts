@@ -10,6 +10,27 @@ When(
   }
 )
 
+When(
+  "the user types {string} into the location search",
+  async function (this: BrowserWorld, text: string) {
+    await this.page.getByTestId("location-search-input").fill(text)
+  }
+)
+
+Then(
+  "location suggestions are shown",
+  async function (this: BrowserWorld) {
+    await this.page.getByTestId("location-search-suggestions").waitFor()
+  }
+)
+
+When(
+  "the user picks the first suggestion",
+  async function (this: BrowserWorld) {
+    await this.page.getByTestId("location-search-suggestion").first().click()
+  }
+)
+
 Then(
   "a pin is dropped at the searched location",
   async function (this: BrowserWorld) {

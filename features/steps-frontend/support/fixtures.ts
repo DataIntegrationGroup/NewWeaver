@@ -1,27 +1,58 @@
 /** Deterministic API fixtures served to the browser via Playwright routing. */
 
 /**
- * US Census Geocoder responses. `NEAR` lands on YALE1 (-106.62, 35.08) so the
- * CABQ fixture point is within the coverage radius; `FAR` lands in the empty
- * northeast corner so no fixture point is nearby (drives the V3 empty message).
+ * Photon geocoder responses (GeoJSON FeatureCollection). `NEAR` lands on YALE1
+ * (-106.62, 35.08) so the CABQ fixture point is within the coverage radius;
+ * `FAR` lands in the empty northeast corner so no fixture point is nearby
+ * (drives the V3 empty message); `NONE` has no features.
+ */
+export const PHOTON_NEAR = {
+  features: [
+    {
+      geometry: { type: "Point", coordinates: [-106.62, 35.08] },
+      properties: {
+        osm_type: "W",
+        osm_id: 1,
+        housenumber: "100",
+        street: "Yale Blvd",
+        city: "Albuquerque",
+        state: "New Mexico",
+        country: "United States",
+      },
+    },
+  ],
+}
+
+export const PHOTON_FAR = {
+  features: [
+    {
+      geometry: { type: "Point", coordinates: [-103.2, 36.7] },
+      properties: {
+        osm_type: "N",
+        osm_id: 2,
+        name: "Remote Mesa",
+        state: "New Mexico",
+        country: "United States",
+      },
+    },
+  ],
+}
+
+export const PHOTON_NONE = { features: [] }
+
+/**
+ * US Census geocoder (JSONP) responses. `NEAR` lands on YALE1 so the CABQ
+ * fixture point is within the coverage radius; `NONE` has no matches, which
+ * makes geocodeAddress fall back to Photon (e.g. for the "Remote Mesa" place
+ * that drives the V3 empty message via PHOTON_FAR).
  */
 export const CENSUS_NEAR = {
   result: {
     addressMatches: [
       {
-        matchedAddress: "100 Yale Blvd, Albuquerque, NM",
+        matchedAddress: "100 YALE BLVD, ALBUQUERQUE, NM, 87106",
         coordinates: { x: -106.62, y: 35.08 },
-      },
-    ],
-  },
-}
-
-export const CENSUS_FAR = {
-  result: {
-    addressMatches: [
-      {
-        matchedAddress: "Remote Mesa, NM",
-        coordinates: { x: -103.2, y: 36.7 },
+        tigerLine: { tigerLineId: "12345" },
       },
     ],
   },

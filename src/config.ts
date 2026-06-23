@@ -60,10 +60,29 @@ export const POSTHOG_HOST =
   env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com"
 
 /**
- * US Census Geocoder — free, key-less, public-domain address geocoding (US
- * only, which suits New Mexico). Powers the Map page's location search so a
- * well owner can find what's monitored near an address (SPEC §C.C7 / §T.T3).
+ * Geocoding for the Map page's location search (SPEC §C.C7 / §T.T3). Two free,
+ * key-less services, each covering the other's gap:
+ *
+ *  - US Census Geocoder — authoritative US street-address coverage (TIGER house
+ *    numbers Photon's OSM data often lacks). Sends no CORS headers, so we call
+ *    it via JSONP. US street addresses only — no places, no autocomplete.
+ *  - Photon (komoot/OSM) — CORS-enabled, matches *places* (cities, landmarks)
+ *    and supports forgiving prefix search. Drives the type-ahead suggestions
+ *    and is the fallback when Census finds no street match.
+ *
+ * Submit tries Census first (precise), then falls back to Photon.
  */
 export const CENSUS_GEOCODER_URL =
   env.VITE_CENSUS_GEOCODER_URL ??
   "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
+
+export const PHOTON_GEOCODER_URL =
+  env.VITE_PHOTON_GEOCODER_URL ?? "https://photon.komoot.io/api"
+
+/**
+ * Center used to *bias* (not restrict) Photon results toward New Mexico, as
+ * "lng,lat". A query like "Springer" prefers the NM town, but a real address
+ * elsewhere (e.g. Guilford CT) still resolves — unlike a hard bbox filter.
+ */
+export const GEOCODER_BIAS =
+  env.VITE_GEOCODER_BIAS ?? "-106.0,34.5"

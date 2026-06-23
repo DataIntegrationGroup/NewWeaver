@@ -1,18 +1,23 @@
 /**
- * LocationSearch — address search on the Map page (SPEC §T.T3 / §V.V3).
+ * LocationSearch — address / place search on the Map page (SPEC §T.T3 / §V.V3).
  *
- * Geocodes a free-text address client-side (US Census), asks the parent to fly
- * the map and drop a pin, then reports coverage: what's monitored nearby and,
- * when nothing is, an explicit "nothing monitored here" — so a well owner
- * always knows whether they're in the right place.
+ * Geocodes free text client-side (Photon/OSM), with type-ahead suggestions as
+ * the user types. On selection it asks the parent to fly the map and drop a
+ * pin, then reports coverage: what's monitored nearby and, when nothing is, an
+ * explicit "nothing monitored here" — so a well owner always knows whether
+ * they're in the right place.
  */
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Download, MapPin, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { LayerConfig } from "@/catalog/layers"
-import { geocodeAddress, type GeocodeResult } from "@/lib/geocode"
+import {
+  geocodeAddress,
+  suggestPlaces,
+  type GeocodeResult,
+} from "@/lib/geocode"
 import { nearbyCoverage, COVERAGE_RADIUS_KM, type Coverage } from "@/lib/coverage"
 
 interface LocationSearchProps {
@@ -25,22 +30,75 @@ interface LocationSearchProps {
 
 type Status = "idle" | "searching" | "notfound" | "error" | "located"
 
+const SUGGEST_DEBOUNCE_MS = 250
+
 export function LocationSearch({ layers, onLocate, onExport }: LocationSearchProps) {
   const queryClient = useQueryClient()
   const [value, setValue] = useState("")
   const [status, setStatus] = useState<Status>("idle")
   const [result, setResult] = useState<GeocodeResult | null>(null)
   const [coverage, setCoverage] = useState<Coverage | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const [suggestions, setSuggestions] = useState<GeocodeResult[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const geocodeAbort = useRef<AbortController | null>(null)
+  const suggestAbort = useRef<AbortController | null>(null)
+  // Skip the next debounced suggest pass (e.g. after picking a suggestion, the
+  // input value changes but we don't want to re-open the dropdown).
+  const skipSuggest = useRef(false)
+
+  // Debounced type-ahead suggestions.
+  useEffect(() => {
+    if (skipSuggest.current) {
+      skipSuggest.current = false
+      return
+    }
+    const q = value.trim()
+    if (!q) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    const timer = setTimeout(async () => {
+      suggestAbort.current?.abort()
+      const ctrl = new AbortController()
+      suggestAbort.current = ctrl
+      const found = await suggestPlaces(q, ctrl.signal)
+      if (ctrl.signal.aborted) return
+      setSuggestions(found)
+      setShowSuggestions(found.length > 0)
+    }, SUGGEST_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [value])
+
+  /** Drop the pin and compute coverage for a resolved match. */
+  const locate = (found: GeocodeResult) => {
+    setResult(found)
+    setStatus("located")
+    onLocate(found)
+    setCoverage(nearbyCoverage([found.lng, found.lat], layers, queryClient))
+  }
+
+  const pick = (s: GeocodeResult) => {
+    suggestAbort.current?.abort()
+    skipSuggest.current = true
+    setValue(s.label)
+    setSuggestions([])
+    setShowSuggestions(false)
+    locate(s)
+  }
 
   const run = async (e: React.FormEvent) => {
     e.preventDefault()
     const q = value.trim()
     if (!q) return
-    abortRef.current?.abort()
+    // Submitting runs the full geocode (Census-first, precise street match) —
+    // not the top type-ahead suggestion, which is only a coarse Photon hit.
+    suggestAbort.current?.abort()
+    geocodeAbort.current?.abort()
     const ctrl = new AbortController()
-    abortRef.current = ctrl
+    geocodeAbort.current = ctrl
     setStatus("searching")
+    setShowSuggestions(false)
     setCoverage(null)
     try {
       const found = await geocodeAddress(q, ctrl.signal)
@@ -51,23 +109,22 @@ export function LocationSearch({ layers, onLocate, onExport }: LocationSearchPro
         onLocate(null)
         return
       }
-      setResult(found)
-      setStatus("located")
-      onLocate(found)
-      setCoverage(
-        nearbyCoverage([found.lng, found.lat], layers, queryClient)
-      )
+      locate(found)
     } catch {
       if (!ctrl.signal.aborted) setStatus("error")
     }
   }
 
   const clear = () => {
-    abortRef.current?.abort()
+    geocodeAbort.current?.abort()
+    suggestAbort.current?.abort()
+    skipSuggest.current = true
     setValue("")
     setStatus("idle")
     setResult(null)
     setCoverage(null)
+    setSuggestions([])
+    setShowSuggestions(false)
     onLocate(null)
   }
 
@@ -81,11 +138,43 @@ export function LocationSearch({ layers, onLocate, onExport }: LocationSearchPro
             type="search"
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            onFocus={() => setShowSuggestions(suggestions.length > 0)}
             placeholder="Search an address or place…"
             aria-label="Address or place"
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={showSuggestions}
+            aria-controls="location-search-suggestions"
             data-testid="location-search-input"
             className="pl-8"
           />
+          {showSuggestions && suggestions.length > 0 && (
+            <ul
+              id="location-search-suggestions"
+              role="listbox"
+              data-testid="location-search-suggestions"
+              className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover p-1 shadow-md"
+            >
+              {suggestions.map((s) => (
+                <li key={s.id} role="option" aria-selected={false}>
+                  <button
+                    type="button"
+                    data-testid="location-search-suggestion"
+                    // Use mousedown so the pick fires before the input blur
+                    // that would otherwise close the dropdown first.
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      pick(s)
+                    }}
+                    className="flex w-full items-start gap-1.5 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                  >
+                    <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+                    <span>{s.label}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <Button type="submit" size="sm" data-testid="location-search-submit">
           Find
