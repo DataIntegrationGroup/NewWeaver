@@ -30,8 +30,8 @@ function NavBar({
     >
       <div
         className={cn(
-          "flex items-center justify-between gap-4 py-3",
-          fluid ? "px-5" : "mx-auto max-w-6xl px-6"
+          "flex items-center justify-between gap-2 py-3 sm:gap-4",
+          fluid ? "px-3 sm:px-5" : "mx-auto max-w-6xl px-4 sm:px-6"
         )}
       >
         {children}
@@ -97,7 +97,7 @@ function NavBarActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="navbar-actions"
-      className={cn("flex items-center gap-3", className)}
+      className={cn("flex items-center gap-1.5 sm:gap-3", className)}
       {...props}
     />
   )

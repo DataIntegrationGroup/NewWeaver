@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { Download, Layers, Share2 } from "lucide-react"
+import { Download, Layers, Share2, Table2 } from "lucide-react"
 import type { Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 import { toast } from "sonner"
@@ -284,7 +284,7 @@ export function AppShell() {
           <NavBarBrand asChild>
             <Link to="/">Weaver</Link>
           </NavBarBrand>
-          <NavBarNav>
+          <NavBarNav className="hidden sm:flex">
             <NavBarLink asChild>
               <Link to="/about">About</Link>
             </NavBarLink>
@@ -302,33 +302,41 @@ export function AppShell() {
             size="sm"
             data-testid="toggle-table"
             aria-pressed={tableOpen}
+            aria-label={tableOpen ? "Hide attribute table" : "Show attribute table"}
             onClick={() => {
               const next = !tableOpen
               if (next) posthog.capture("attribute_table_opened")
               setTableOpen(next)
             }}
           >
-            {tableOpen ? "Hide table" : "Attribute table"}
+            <Table2 />
+            <span className="hidden sm:inline">
+              {tableOpen ? "Hide table" : "Attribute table"}
+            </span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             data-testid="share-view"
+            aria-label="Share this view"
             onClick={shareView}
           >
             <Share2 />
-            Share
+            <span className="hidden sm:inline">Share</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             data-testid="open-export"
+            aria-label="Download data"
             onClick={() => setExportOpen(true)}
           >
             <Download />
-            Download
+            <span className="hidden sm:inline">Download</span>
           </Button>
-          <Badge variant="secondary">v0.1.0</Badge>
+          <Badge variant="secondary" className="hidden sm:inline-flex">
+            v0.1.0
+          </Badge>
           <ModeToggle />
         </NavBarActions>
       </NavBar>
@@ -368,6 +376,20 @@ export function AppShell() {
             }
             onToggle={handleToggleLayer}
           />
+          {/* About/Help live in the navbar on ≥sm; on mobile they move here so
+              the cramped header stays uncluttered. */}
+          <nav className="flex gap-4 border-t pt-4 text-sm sm:hidden">
+            <Link to="/about" className="text-muted-foreground hover:text-foreground">
+              About
+            </Link>
+            <Link
+              to="/help"
+              data-testid="nav-help-mobile"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Help
+            </Link>
+          </nav>
           {/* Resize handle on the right edge — desktop only. */}
           <div
             role="separator"
@@ -423,7 +445,7 @@ export function AppShell() {
             />
           </div>
           {tableOpen && activeLayer && (
-            <div className="h-72 shrink-0 border-t bg-card">
+            <div className="h-[45vh] shrink-0 border-t bg-card sm:h-72">
               <AttributeTable
                 layer={activeLayer}
                 filters={filters}

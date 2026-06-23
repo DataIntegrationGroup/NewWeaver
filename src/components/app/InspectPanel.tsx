@@ -4,6 +4,7 @@ import type { Feature, Position } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
 import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer } from "@/catalog/layers"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -118,16 +119,20 @@ function PanelShell({
     <aside
       data-testid="inspect-panel"
       style={{ width }}
-      className="relative flex h-full shrink-0 flex-col border-l bg-card"
+      className={cn(
+        "relative flex h-full shrink-0 flex-col border-l bg-card",
+        // Mobile: cover the map as a full-width overlay instead of squishing it.
+        "max-lg:absolute max-lg:inset-0 max-lg:z-40 max-lg:border-l-0 max-lg:!w-full"
+      )}
     >
-      {/* Resize handle on the left edge. */}
+      {/* Resize handle on the left edge — desktop only (pointer drag). */}
       <div
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize panel"
         data-testid="inspect-resize"
         onPointerDown={startResize}
-        className="absolute left-0 top-0 z-20 h-full w-1.5 -translate-x-1/2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40"
+        className="absolute left-0 top-0 z-20 hidden h-full w-1.5 -translate-x-1/2 cursor-col-resize bg-transparent transition-colors hover:bg-primary/40 lg:block"
       />
       <header className="flex items-center justify-between gap-2 border-b px-4 py-3">
         <h2 className="!text-lg !leading-tight" data-testid="inspect-title">
