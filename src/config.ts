@@ -54,6 +54,16 @@ export const USGS_OGC_BASE_URL =
  * builds and CI emit nothing by default. Host defaults to US cloud; set
  * VITE_POSTHOG_HOST to eu.i.posthog.com (or a reverse proxy) to override.
  */
+/**
+ * Nightly statistics JSON, built by DIE and published read-only to GCP (SPEC
+ * §I.stats-json / §T.T11b). The home dashboard reads counts (services/datasets/
+ * sites) and a source-update activity feed from this single file — Weaver itself
+ * computes none of it, preserving the client-only constraint (§C.C2). Unset by
+ * default so dev/CI never depend on a live file; the dashboard falls back to
+ * locally-derived counts and an empty feed when it is absent (§V.V13, §V.V14).
+ */
+export const STATS_URL = env.VITE_STATS_URL ?? ""
+
 export const POSTHOG_KEY = env.VITE_POSTHOG_KEY ?? ""
 
 export const POSTHOG_HOST =
