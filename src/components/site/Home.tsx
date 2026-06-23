@@ -113,7 +113,7 @@ const DOORWAYS = [
  * can judge "is my thing in here?" before clicking. Scope copy, not mechanics.
  */
 const ORIENTATION =
-  "Weaver brings together groundwater levels, water quality, springs, and surface water from state, local, and federal monitoring networks across New Mexico."
+  "Groundwater levels, water quality, springs, and surface water — from state, local, and federal monitoring networks across New Mexico."
 
 export function Home() {
   useDocumentTitle("Weaver — New Mexico Water Data")
