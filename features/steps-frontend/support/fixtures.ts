@@ -1,5 +1,34 @@
 /** Deterministic API fixtures served to the browser via Playwright routing. */
 
+/**
+ * US Census Geocoder responses. `NEAR` lands on YALE1 (-106.62, 35.08) so the
+ * CABQ fixture point is within the coverage radius; `FAR` lands in the empty
+ * northeast corner so no fixture point is nearby (drives the V3 empty message).
+ */
+export const CENSUS_NEAR = {
+  result: {
+    addressMatches: [
+      {
+        matchedAddress: "100 Yale Blvd, Albuquerque, NM",
+        coordinates: { x: -106.62, y: 35.08 },
+      },
+    ],
+  },
+}
+
+export const CENSUS_FAR = {
+  result: {
+    addressMatches: [
+      {
+        matchedAddress: "Remote Mesa, NM",
+        coordinates: { x: -103.2, y: 36.7 },
+      },
+    ],
+  },
+}
+
+export const CENSUS_NONE = { result: { addressMatches: [] } }
+
 export const LOCATIONS = {
   value: [
     {

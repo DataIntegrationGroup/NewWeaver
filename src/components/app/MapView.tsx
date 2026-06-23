@@ -5,10 +5,12 @@ import type { Map as MaplibreMap, GeoJSONSource } from "maplibre-gl"
 import type { FeatureCollection, Polygon, Position } from "geojson"
 import {
   Map,
+  Marker,
   Popup,
   type MapRef,
   type MapLayerMouseEvent,
 } from "@/components/ui/map"
+import { MapPin } from "lucide-react"
 import { DrawControls } from "./DrawControls"
 import { Button } from "@/components/ui/button"
 import {
@@ -78,6 +80,8 @@ interface MapViewProps {
   /** Toggle a layer off from its on-map chip. */
   onToggleLayer?: (id: string) => void
   selection?: Selection
+  /** Pin dropped by the location search (SPEC §T.T3). */
+  marker?: { lng: number; lat: number } | null
   initialView: { longitude: number; latitude: number; zoom: number }
   /** Frame the data extent on first paint (no explicit view in the URL). */
   autoFit?: boolean
@@ -103,6 +107,7 @@ export function MapView({
   emptyFilterQuery,
   onToggleLayer,
   selection,
+  marker,
   initialView,
   autoFit,
   basemap,
@@ -320,6 +325,14 @@ export function MapView({
         onLoad={handleLoad}
         onMoveEnd={handleMoveEnd}
       >
+        {marker && (
+          <Marker longitude={marker.lng} latitude={marker.lat} anchor="bottom">
+            <MapPin
+              className="size-7 fill-primary text-primary-foreground drop-shadow"
+              data-testid="search-marker"
+            />
+          </Marker>
+        )}
         {layers.map((layer) => (
           <CatalogLayer
             key={layer.id}

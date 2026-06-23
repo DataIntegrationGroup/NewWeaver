@@ -58,3 +58,12 @@ export const POSTHOG_KEY = env.VITE_POSTHOG_KEY ?? ""
 
 export const POSTHOG_HOST =
   env.VITE_POSTHOG_HOST ?? "https://us.i.posthog.com"
+
+/**
+ * US Census Geocoder — free, key-less, public-domain address geocoding (US
+ * only, which suits New Mexico). Powers the Map page's location search so a
+ * well owner can find what's monitored near an address (SPEC §C.C7 / §T.T3).
+ */
+export const CENSUS_GEOCODER_URL =
+  env.VITE_CENSUS_GEOCODER_URL ??
+  "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"

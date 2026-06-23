@@ -94,6 +94,17 @@ async function mockApi(route: Route): Promise<boolean> {
     return json(fx.OSE_AQUIFER_FC).then(() => true)
   }
 
+  // US Census Geocoder — return a near, far, or no-match result keyed off the
+  // address text so location-search specs are deterministic (SPEC §T.T3).
+  if (/geocoding\.geo\.census\.gov/.test(url)) {
+    const address = decodeURIComponent(
+      new URL(url).searchParams.get("address") ?? ""
+    ).toLowerCase()
+    if (/no such|unfindable|xyzzy/.test(address)) return json(fx.CENSUS_NONE).then(() => true)
+    if (/remote|nowhere|mesa/.test(address)) return json(fx.CENSUS_FAR).then(() => true)
+    return json(fx.CENSUS_NEAR).then(() => true)
+  }
+
   // Esri satellite raster tiles — stub so the satellite basemap renders without
   // a real network call.
   if (/arcgisonline\.com/.test(url)) {

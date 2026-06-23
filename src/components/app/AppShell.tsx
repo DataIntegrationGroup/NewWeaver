@@ -31,6 +31,8 @@ import {
 import { useViewState } from "@/hooks/useViewState"
 import type { Selection } from "@/lib/urlState"
 import { LayerList } from "./LayerList"
+import { LocationSearch } from "./LocationSearch"
+import type { GeocodeResult } from "@/lib/geocode"
 import { MapView } from "./MapView"
 import { InspectPanel } from "./InspectPanel"
 import { AttributeTable } from "./AttributeTable"
@@ -74,6 +76,8 @@ export function AppShell() {
   const [exportOpen, setExportOpen] = useState(false)
   const [shapes, setShapes] = useState<Polygon[]>([])
   const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
+  // Pin dropped by the location search (SPEC §T.T3); null when none.
+  const [searchMarker, setSearchMarker] = useState<{ lng: number; lat: number } | null>(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
   // Per-layer filtered feature counts, reported by the map sources.
   const [layerCounts, setLayerCounts] = useState<Record<string, number>>({})
@@ -174,6 +178,17 @@ export function AppShell() {
       zoom: Math.max(map.getZoom(), 13),
       duration: 600,
     })
+  }
+
+  // Location search located (or cleared) a place: drop/clear the pin and fly to it.
+  const handleLocate = (r: GeocodeResult | null) => {
+    if (r) {
+      setSearchMarker({ lng: r.lng, lat: r.lat })
+      flyTo(r.lng, r.lat)
+      posthog.capture("location_searched", { label: r.label })
+    } else {
+      setSearchMarker(null)
+    }
   }
 
   const handleToggleLayer = (id: string) => {
@@ -300,6 +315,7 @@ export function AppShell() {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
+          <LocationSearch layers={visibleLayers} onLocate={handleLocate} />
           <div className="lg:hidden">{filterControls}</div>
           <LayerList
             visible={layerIds}
@@ -337,6 +353,7 @@ export function AppShell() {
               emptyFilterQuery={emptyFilterQuery}
               onToggleLayer={handleToggleLayer}
               selection={selection}
+              marker={searchMarker}
               initialView={initialView}
               autoFit={
                 search.lng === undefined &&
