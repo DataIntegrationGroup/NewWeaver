@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { Check, Copy, Crosshair, X } from "lucide-react"
 import type { Feature, Position } from "geojson"
 import { usePostHog } from "posthog-js/react"
@@ -214,8 +214,47 @@ function AttributeList({
   )
 }
 
+/** Who operates / publishes this layer, in plain language (SPEC §V.V6). */
+function whoMeasures(layer: LayerConfig): string {
+  if (layer.source === "sta") return layer.title
+  if (layer.source === "arcgis") return "the NM Office of the State Engineer"
+  if (layer.section === "NWIS") return "the U.S. Geological Survey (USGS)"
+  return "New Mexico Water Data (Ocotillo)"
+}
+
+/** What kind of thing this feature is, in plain language (SPEC §V.V6). */
+function whatIsIt(layer: LayerConfig): string {
+  if (layer.source === "sta") return "Monitoring location"
+  switch (layer.measurementType) {
+    case "surface_water":
+      return "Surface-water feature"
+    case "water_quality":
+      return "Water-quality sampling point"
+    case "water_level":
+    case "wells":
+      return "Well / monitoring point"
+    case "weather":
+      return "Weather station"
+    case "geochemistry":
+      return "Sample location"
+    default:
+      return "Mapped feature"
+  }
+}
+
+/** One plain-language sentence leading the panel: what it is, who measures it. */
+function PlainLead({ layer }: { layer: LayerConfig }) {
+  return (
+    <p data-testid="inspect-summary" className="text-sm text-muted-foreground">
+      {whatIsIt(layer)} — from{" "}
+      <span className="font-medium text-foreground">{whoMeasures(layer)}</span>.
+    </p>
+  )
+}
+
 function AttributeInspect({
   title,
+  lead,
   fc,
   featureId,
   fields,
@@ -224,6 +263,7 @@ function AttributeInspect({
   onZoomTo,
 }: {
   title: string
+  lead?: ReactNode
   fc: { features: Feature[] } | undefined
   featureId: string
   fields?: FieldDisplay
@@ -245,7 +285,16 @@ function AttributeInspect({
       {!feature ? (
         <p className="text-sm text-muted-foreground">Feature not found.</p>
       ) : (
-        <AttributeList properties={feature.properties ?? {}} fields={fields} format={format} />
+        <div className="space-y-4">
+          {/* Plain-language summary leads; technical attributes follow (V6). */}
+          {lead}
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Details
+            </p>
+            <AttributeList properties={feature.properties ?? {}} fields={fields} format={format} />
+          </div>
+        </div>
       )}
     </PanelShell>
   )
@@ -254,13 +303,13 @@ function AttributeInspect({
 /** Attribute list for a vector feature from OGC API Features. */
 function FeatureInspect({ layer, featureId, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useFeaturesLayer(layer)
-  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
+  return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
 }
 
 /** Attribute list for an OSE GIS feature from ArcGIS REST. */
 function ArcGisInspect({ layer, featureId, onClose, onZoomTo }: { layer: ArcGisLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useArcGisLayer(layer)
-  return <AttributeInspect title={layer.title} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
+  return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
 }
 
 /** Monitoring location → datastreams → time-series chart. */
@@ -301,17 +350,19 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
       onZoomTo={pos && onZoomTo ? () => onZoomTo(pos[0], pos[1]) : undefined}
     >
       <div className="space-y-4">
+        {/* Plain-language summary leads; technical terms follow (SPEC §V.V6). */}
+        <PlainLead layer={layer} />
         {Object.keys(thingProps).length > 0 && (
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Properties
+              Details
             </p>
             <AttributeList properties={thingProps} />
           </div>
         )}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Datastream
+            Measurements
           </label>
           {isLoading ? (
             <div data-testid="datastream-skeleton" className="space-y-2">
@@ -320,7 +371,7 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
             </div>
           ) : !datastreams || datastreams.length === 0 ? (
             <p data-testid="no-datastreams" className="text-sm text-muted-foreground">
-              No datastreams for this location.
+              No measurements recorded at this location.
             </p>
           ) : (
             <Select

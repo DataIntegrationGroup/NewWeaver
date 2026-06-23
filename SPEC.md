@@ -73,7 +73,7 @@ P1-3 underserved today; fix their entry.
 | T5 | x | make export discoverable from a result: surface Download +/or API-collection link wherever narrowed (location result, facet, layer), not just toolbar | V9,I.export,I.map |
 | T6 | x | reframe landing: replace 3 mechanism cards with question doorways → near-a-place(→T3), by-measured(→T4), use-in-GIS(→help GIS), build-with-API(→help API). real routes, plain labels, no "Standards-based" primary. keep "Explore map" but land on useful default (T2) | V1,V2,I.landing,I.help |
 | T7 | x | landing: one-line orientation statement above doorways — what coverage exists (data kinds + geo/temporal scope), pulled from real sources, no overstate | C5,I.landing,I.svc |
-| T8 | . | plain-language feature/point panel: lead with what-is-it + who-measures; tech ids secondary | V6,I.map |
+| T8 | x | plain-language feature/point panel: lead with what-is-it + who-measures; tech ids secondary | V6,I.map |
 | T9 | . | layer-panel headers: regroup STA+OCOTILLO → "Monitoring networks" (STA) vs "Integrated data products" (Ocotillo) [DECIDED]. update SECTION_DESCRIPTIONS (layers.ts:452). raw "OCOTILLO" not user-visible | V8,I.layers |
 | T10 | . | copy cleanup: remove mechanics bullets from About "What you can do" + Help "Using the map" ("click point→datastreams", "click feature→attributes"). KEEP scope/provenance + Data sources/API/GIS sections intact | V7,C4,C5,I.about,I.help |
 

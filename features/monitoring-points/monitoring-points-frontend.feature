@@ -19,6 +19,11 @@ Feature: Monitoring points to time-series chart
     Then the panel shows the point's properties
     And the point properties include "aquifer"
 
+  # SPEC §T.T8 / §V.V6 — lead with plain language before technical terms.
+  Scenario: The panel leads with a plain-language summary
+    Given the user has clicked a monitoring point
+    Then the panel leads with a plain-language summary
+
   Scenario: A monitoring point exposes water-level datastreams
     When the user clicks a monitoring point with water-level data
     Then the datastream list includes manual water-level measurements

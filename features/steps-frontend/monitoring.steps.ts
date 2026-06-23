@@ -45,6 +45,18 @@ Then("the panel shows the point's properties", async function (this: BrowserWorl
   await this.page.getByTestId("attribute-list").waitFor()
 })
 
+Then(
+  "the panel leads with a plain-language summary",
+  async function (this: BrowserWorld) {
+    const summary = this.page.getByTestId("inspect-summary")
+    await summary.waitFor()
+    const text = (await summary.textContent()) ?? ""
+    assert.ok(text.trim().length > 0)
+    // The lead must be plain — no library/protocol jargon up front (V6).
+    assert.ok(!/SensorThings|OGC|datastream/i.test(text))
+  }
+)
+
 Then("the point properties include {string}", async function (this: BrowserWorld, field: string) {
   const text = (await this.page.getByTestId("attribute-list").textContent()) ?? ""
   assert.ok(text.includes(field), `expected "${field}" in the properties table`)
