@@ -75,7 +75,7 @@ P1-3 underserved today; fix their entry.
 | T7 | x | landing: one-line orientation statement above doorways — what coverage exists (data kinds + geo/temporal scope), pulled from real sources, no overstate | C5,I.landing,I.svc |
 | T8 | x | plain-language feature/point panel: lead with what-is-it + who-measures; tech ids secondary | V6,I.map |
 | T9 | x | layer-panel headers: regroup STA+OCOTILLO → "Monitoring networks" (STA) vs "Integrated data products" (Ocotillo) [DECIDED]. update SECTION_DESCRIPTIONS (layers.ts:452). raw "OCOTILLO" not user-visible | V8,I.layers |
-| T10 | . | copy cleanup: remove mechanics bullets from About "What you can do" + Help "Using the map" ("click point→datastreams", "click feature→attributes"). KEEP scope/provenance + Data sources/API/GIS sections intact | V7,C4,C5,I.about,I.help |
+| T10 | x | copy cleanup: remove mechanics bullets from About "What you can do" + Help "Using the map" ("click point→datastreams", "click feature→attributes"). KEEP scope/provenance + Data sources/API/GIS sections intact | V7,C4,C5,I.about,I.help |
 
 Sequencing: T1 → T2 (quick win) → T3,T4,T5 (core value) → T6,T7 (entry reframe, dep on routes) → T8,T9,T10 (polish).
 

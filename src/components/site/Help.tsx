@@ -234,15 +234,12 @@ export function Help() {
                   on and off. Each layer is a monitoring network or an integrated
                   dataset.
                 </li>
+                {/* Click-a-point / click-a-feature mechanics bullets removed —
+                    the panel and table communicate themselves by affordance now
+                    (SPEC §T.T10 / §V.V7). */}
                 <li>
-                  <strong>Monitoring points.</strong> Click a point to open its
-                  panel, choose a datastream, and view a time-series chart of its
-                  observations.
-                </li>
-                <li>
-                  <strong>Vector features.</strong> Click a feature to inspect its
-                  attributes, or open the <em>Attribute table</em> to browse,
-                  sort, and page through a layer.
+                  <strong>Find a place.</strong> Search an address to see what’s
+                  monitored nearby, with the coverage — and gaps — for that location.
                 </li>
                 <li>
                   <strong>Filter.</strong> Restrict data to the current map extent

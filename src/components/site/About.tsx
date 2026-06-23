@@ -49,11 +49,18 @@ export function About() {
 
         <section>
           <h2 className="!text-2xl text-primary">What you can do</h2>
+          {/* Interface-mechanics bullets removed — the UI communicates these by
+              affordance now (SPEC §T.T10 / §V.V7). Scope/capability statements
+              kept. */}
           <ul className="mt-3 list-disc space-y-2 pl-6 text-muted-foreground">
-            <li>Browse monitoring locations and integrated layers on the map.</li>
-            <li>Click a monitoring point to view its datastreams and plot a time series.</li>
-            <li>Click a vector feature to inspect its attributes, or open the attribute table.</li>
-            <li>Filter by area and by text, and share the exact view via its URL.</li>
+            <li>
+              Find what’s monitored near an address, or browse by what’s measured —
+              water levels, water quality, surface water — across every network at once.
+            </li>
+            <li>
+              Take the data with you: download a result or connect your own tools to
+              the same open APIs.
+            </li>
           </ul>
         </section>
 
