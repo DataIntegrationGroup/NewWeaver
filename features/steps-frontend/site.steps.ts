@@ -53,6 +53,43 @@ Then("the interactive map is shown", async function (this: BrowserWorld) {
   await this.page.getByTestId("map").waitFor()
 })
 
+Then(
+  "the user sees question-based entry doorways",
+  async function (this: BrowserWorld) {
+    await this.page.getByTestId("home-doorways").waitFor()
+    for (const hash of ["find", "measure", "gis", "api"]) {
+      await this.page.getByTestId(`doorway-${hash}`).waitFor()
+    }
+  }
+)
+
+Then(
+  "no doorway is labelled {string}",
+  async function (this: BrowserWorld, label: string) {
+    const text = (await this.page.getByTestId("home-doorways").textContent()) ?? ""
+    assert.ok(!text.includes(label), `doorways should not mention "${label}"`)
+  }
+)
+
+Then(
+  "the user sees a one-line coverage statement",
+  async function (this: BrowserWorld) {
+    const text = (await this.page.getByTestId("home-orientation").textContent()) ?? ""
+    assert.ok(text.trim().length > 0)
+  }
+)
+
+When(
+  "the user opens the {string} doorway",
+  async function (this: BrowserWorld, _label: string) {
+    await this.page.getByTestId("doorway-find").click()
+  }
+)
+
+Then("the location search is ready", async function (this: BrowserWorld) {
+  await this.page.getByTestId("location-search-input").waitFor()
+})
+
 Then("the user sees the documentation and help page", async function (this: BrowserWorld) {
   await this.page.getByTestId("help-page").waitFor()
   const text = await this.page.getByTestId("help-page").textContent()

@@ -1,8 +1,7 @@
 import { Link } from "@tanstack/react-router"
-import { ArrowRight, Map as MapIcon, Database, Activity } from "lucide-react"
+import { ArrowRight, MapPin, Layers, Compass, Code2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { SLACK_URL } from "./SiteHeader"
 import { SitePage as Page } from "./SitePage"
@@ -65,23 +64,48 @@ function Hero() {
   )
 }
 
-const FEATURES = [
+/**
+ * Question-based doorways (SPEC §T.T6): each maps to a persona's question and
+ * is a real route, not decoration. "Standards-based" is deliberately absent as
+ * a primary doorway — it's a feature only a developer values (§V.V2).
+ */
+const DOORWAYS = [
   {
-    icon: MapIcon,
-    title: "Interactive map",
-    body: "Browse monitoring locations and integrated water-data layers across New Mexico. Toggle layers, inspect features, and share the exact view via URL.",
+    icon: MapPin,
+    title: "Find data near a place",
+    body: "Search an address and see what’s monitored nearby — or whether anything is.",
+    to: "/map" as const,
+    hash: "find",
   },
   {
-    icon: Activity,
-    title: "Time series",
-    body: "Click a monitoring point to list its datastreams and plot observations over time, served from the FROST SensorThings API.",
+    icon: Layers,
+    title: "Browse by what’s measured",
+    body: "Jump straight to water levels, water quality, or surface water — across every network at once.",
+    to: "/map" as const,
+    hash: "measure",
   },
   {
-    icon: Database,
-    title: "Standards-based",
-    body: "Everything is read through open interfaces — OGC API Features, OGC SensorThings, ArcGIS REST, and the USGS Water Data for the Nation API — so the data is interoperable, not bespoke.",
+    icon: Compass,
+    title: "Use it in your GIS",
+    body: "Connect ArcGIS Pro or QGIS directly to the OGC API Features service.",
+    to: "/help" as const,
+    hash: "gis",
+  },
+  {
+    icon: Code2,
+    title: "Build with the API",
+    body: "Read the same open endpoints Weaver uses, straight from your own tools.",
+    to: "/help" as const,
+    hash: "api",
   },
 ]
+
+/**
+ * One-line orientation statement (SPEC §T.T7): plain-language scope so a visitor
+ * can judge "is my thing in here?" before clicking. Scope copy, not mechanics.
+ */
+const ORIENTATION =
+  "Weaver brings together groundwater levels, water quality, springs, and surface water from state, local, and federal monitoring networks across New Mexico."
 
 export function Home() {
   useDocumentTitle("Weaver — New Mexico Water Data")
@@ -89,17 +113,31 @@ export function Home() {
     <Page>
       <Hero />
       <Separator className="my-10" />
-      <section className="grid gap-6 md:grid-cols-3" data-testid="home-cards">
-        {FEATURES.map((f) => (
-          <Card key={f.title} className="h-full">
-            <CardHeader>
-              <f.icon className="size-6 text-primary" />
-              <CardTitle className="!text-xl">{f.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {f.body}
-            </CardContent>
-          </Card>
+      <p
+        className="mx-auto max-w-3xl text-center text-lg text-muted-foreground"
+        data-testid="home-orientation"
+      >
+        {ORIENTATION}
+      </p>
+      <section
+        className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        data-testid="home-doorways"
+      >
+        {DOORWAYS.map((d) => (
+          <Link
+            key={d.title}
+            to={d.to}
+            hash={d.hash}
+            data-testid={`doorway-${d.hash}`}
+            className="group block h-full rounded-xl border bg-card p-5 text-left transition-colors hover:border-primary hover:bg-accent"
+          >
+            <d.icon className="size-6 text-primary" />
+            <h3 className="mt-3 flex items-center gap-1 text-lg font-semibold">
+              {d.title}
+              <ArrowRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
+            </h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">{d.body}</p>
+          </Link>
         ))}
       </section>
 

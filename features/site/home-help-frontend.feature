@@ -15,6 +15,23 @@ Feature: Home and help pages
     When the user clicks the link to the map
     Then the interactive map is shown
 
+  # SPEC §T.T6 / §V.V1, §V.V2 — question doorways, not mechanism cards.
+  Scenario: Home page offers question-based doorways
+    Given the user opens the home page
+    Then the user sees question-based entry doorways
+    And no doorway is labelled "Standards-based"
+
+  # SPEC §T.T7 — one-line scope so a visitor can judge "is my thing in here?".
+  Scenario: Home page states what data it covers
+    Given the user opens the home page
+    Then the user sees a one-line coverage statement
+
+  Scenario: A doorway routes into the discovery map
+    Given the user opens the home page
+    When the user opens the "find a place" doorway
+    Then the interactive map is shown
+    And the location search is ready
+
   Scenario: Home page lists the data-source partners
     Given the user opens the home page
     Then the user sees the data partners carousel

@@ -161,6 +161,25 @@ export function AppShell() {
     }
   }, [select, clearSelection])
 
+  // Landing doorways deep-link here with a hash (SPEC §T.T6): #find focuses the
+  // location search; #measure reveals the measurement facet. Sidebar opens so
+  // the target is visible on mobile.
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, "")
+    if (hash !== "find" && hash !== "measure") return
+    setSidebarOpen(true)
+    const t = setTimeout(() => {
+      if (hash === "find") {
+        document.getElementById("location-search-input")?.focus()
+      } else {
+        document
+          .querySelector('[data-testid="measurement-facet"]')
+          ?.scrollIntoView({ block: "nearest" })
+      }
+    }, 50)
+    return () => clearTimeout(t)
+  }, [])
+
   // Keep the basemap paired with the theme: dark mode → dark tiles, light →
   // light. Satellite is theme-neutral, so leave it as the user chose.
   useEffect(() => {

@@ -287,7 +287,7 @@ export function Help() {
                 </li>
               </ul>
 
-              <div className="space-y-2 pt-1">
+              <div id="api" className="scroll-mt-6 space-y-2 pt-1">
                 <h3 className="!text-lg font-semibold text-primary">
                   API endpoints
                 </h3>
