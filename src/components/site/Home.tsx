@@ -32,10 +32,18 @@ function Hero() {
           Weaving Together New Mexico Water Data
         </p>
         <p className="mt-4 max-w-md text-muted-foreground">
-          The New Mexico Water Data Initiative (NMWDI) is a collaborative effort
-          to improve the availability and accessibility of water data in New
-          Mexico. Weaver displays public, integrated water data on an
-          interactive map.
+          Weaver brings public water data from across New Mexico together on one
+          interactive map — explore monitoring locations, measurements, and
+          integrated datasets in your area. Part of the{" "}
+          <a
+            href="https://newmexicowaterdata.org"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            New Mexico Water Data Initiative
+          </a>
+          .
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Button asChild size="lg">
