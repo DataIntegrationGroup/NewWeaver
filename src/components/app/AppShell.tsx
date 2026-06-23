@@ -334,7 +334,11 @@ export function AppShell() {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          <LocationSearch layers={visibleLayers} onLocate={handleLocate} />
+          <LocationSearch
+            layers={visibleLayers}
+            onLocate={handleLocate}
+            onExport={() => setExportOpen(true)}
+          />
           <MeasurementFacet onSelect={handleMeasurement} />
           <div className="lg:hidden">{filterControls}</div>
           <LayerList
@@ -408,6 +412,7 @@ export function AppShell() {
                 onClearText={() => setQuery("")}
                 onClearExtent={() => setBbox(false)}
                 onClearShapes={() => setShapes([])}
+                onExport={() => setExportOpen(true)}
                 selectedFeatureId={
                   selection?.layerId === activeLayer.id ? selection.featureId : undefined
                 }

@@ -8,7 +8,7 @@
  */
 import { useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { MapPin, Search, X } from "lucide-react"
+import { Download, MapPin, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { LayerConfig } from "@/catalog/layers"
@@ -19,11 +19,13 @@ interface LocationSearchProps {
   layers: LayerConfig[]
   /** Fly the map to this point and drop a pin; null clears the pin. */
   onLocate: (result: GeocodeResult | null) => void
+  /** Open the export flow for the data the user has narrowed to (SPEC §T.T5). */
+  onExport: () => void
 }
 
 type Status = "idle" | "searching" | "notfound" | "error" | "located"
 
-export function LocationSearch({ layers, onLocate }: LocationSearchProps) {
+export function LocationSearch({ layers, onLocate, onExport }: LocationSearchProps) {
   const queryClient = useQueryClient()
   const [value, setValue] = useState("")
   const [status, setStatus] = useState<Status>("idle")
@@ -147,6 +149,17 @@ export function LocationSearch({ layers, onLocate }: LocationSearchProps) {
                   </li>
                 ))}
               </ul>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+                data-testid="coverage-export"
+                onClick={onExport}
+              >
+                <Download />
+                Download this data
+              </Button>
             </>
           ) : (
             <p

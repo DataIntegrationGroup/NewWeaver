@@ -13,6 +13,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Download,
   X,
 } from "lucide-react"
 
@@ -45,6 +46,8 @@ interface AttributeTableProps {
   onClearText?: () => void
   onClearExtent?: () => void
   onClearShapes?: () => void
+  /** Open the export flow for this layer's features (SPEC §T.T5). */
+  onExport?: () => void
 }
 
 function featureId(f: Feature): string {
@@ -82,6 +85,7 @@ function TableView({
   onClearText,
   onClearExtent,
   onClearShapes,
+  onExport,
 }: {
   fc: FeatureCollection
   fields?: FieldDisplay
@@ -268,16 +272,30 @@ function TableView({
             )}
           </div>
         </div>
-        <Button
-          size="icon-sm"
-          variant={dense ? "secondary" : "ghost"}
-          aria-label="Toggle row density"
-          data-testid="table-density"
-          title="Toggle row density"
-          onClick={() => setDense((d) => !d)}
-        >
-          <AlignJustify />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {onExport && (
+            <Button
+              size="sm"
+              variant="outline"
+              data-testid="table-export"
+              title="Download these features"
+              onClick={onExport}
+            >
+              <Download />
+              Download
+            </Button>
+          )}
+          <Button
+            size="icon-sm"
+            variant={dense ? "secondary" : "ghost"}
+            aria-label="Toggle row density"
+            data-testid="table-density"
+            title="Toggle row density"
+            onClick={() => setDense((d) => !d)}
+          >
+            <AlignJustify />
+          </Button>
+        </div>
       </div>
     </div>
   )
