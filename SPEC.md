@@ -35,6 +35,11 @@ P1-3 underserved today; fix their entry.
 - I.layers — layer panel; group headers STA (agency networks), OCOTILLO (product names)
 - I.svc — backing services: OGC API Features, SensorThings/FROST, ArcGIS REST, USGS NWIS
 - I.export — Download/export control
+- I.home-dash — home-page data dashboard (stat tiles + activity feed) [NEW 2026-06-23]
+- I.stats-json — nightly stats JSON on GCP (counts + update events), built by DIE,
+  frontend fetches read-only. URL via `VITE_*` config const (cf I.svc pattern) [NEW 2026-06-23]
+- I.catalog — Data Catalog page, new route `/catalog`: tiled gallery of all
+  datasets/products, searchable, full metadata per card [NEW 2026-06-23]
 
 ## §V invariants
 
@@ -62,6 +67,21 @@ P1-3 underserved today; fix their entry.
   flagged `excludeFromAutoTable`; explicit selection still opens them. Catalog order +
   "first visible features layer" heuristic else lets a dense empty default layer
   displace the agency/toggled layer the table defaults to.
+- V13 dashboard counts (services/datasets/sites) read from nightly DIE stats JSON
+  (I.stats-json), not hardcoded, not computed live. JSON missing/stale/unreachable →
+  graceful fallback (last-known or "—"), never crash, never fabricate. No overstate.
+- V14 activity feed reads update events from same stats JSON (I.stats-json). JSON
+  absent → scaffold shows empty/placeholder state clearly labeled, NEVER fabricated
+  timestamps. Adapter wraps fetch so source swap = config change only.
+- V15 catalog card "view on map" = real `/map` deep link with that dataset's layer
+  visible (reuse urlState visible-layers encoding), not decorative (cf V1).
+- V16 catalog card shareable link = stable URL-addressable deep link to that
+  dataset (e.g. `/catalog?dataset={id}` or `#id`), copyable from card.
+- V17 catalog searchable across ALL displayed metadata (title/desc/measurementType/
+  section/service). Empty search → explicit "no datasets match" message (cf V3).
+- V18 catalog metadata pulled from single source-of-truth (catalog/layers.ts +
+  service map), no per-card hardcoded duplication. Missing metadata field hidden,
+  not faked.
 
 ## §T tasks
 
@@ -78,8 +98,20 @@ P1-3 underserved today; fix their entry.
 | T8 | x | plain-language feature/point panel: lead with what-is-it + who-measures; tech ids secondary | V6,I.map |
 | T9 | x | layer-panel headers: regroup STA+OCOTILLO → "Monitoring networks" (STA) vs "Integrated data products" (Ocotillo) [DECIDED]. update SECTION_DESCRIPTIONS (layers.ts:452). raw "OCOTILLO" not user-visible | V8,I.layers |
 | T10 | x | copy cleanup: remove mechanics bullets from About "What you can do" + Help "Using the map" ("click point→datastreams", "click feature→attributes"). KEEP scope/provenance + Data sources/API/GIS sections intact | V7,C4,C5,I.about,I.help |
+| T11a | x | build unified dataset-metadata selector: one fn over catalog/layers.ts + service map → list of {id, title, description, measurementType, section/group label, service name, protocol, route deep-link}. single source-of-truth for dashboard counts AND catalog cards | V18,I.catalog,I.svc,I.layers |
+| T11b | x | stats-JSON client: fetch nightly DIE JSON from GCP (URL = new `VITE_STATS_URL` const in config.ts), TanStack Query, typed schema {generatedAt, counts:{services,datasets,sites}, events:[{source,timestamp,kind?}]}. graceful fail (missing/stale/unreachable → fallback, no crash) | V13,V14,I.stats-json |
+| T11 | x | home dashboard (I.home-dash) on `/`: stat tiles = #services + #datasets + total #sites, all from T11b stats JSON. place near hero, below/with doorways (T6). show generatedAt ("updated {date}"). missing → "—"/last-known, no magic numbers | V13,T11b,I.home-dash |
+| T12 | x | activity feed on dashboard: render update events from T11b JSON (source, timestamp, kind). JSON absent → empty/placeholder clearly labeled. NO fabricated timestamps | V14,T11b,I.home-dash |
+| T13 | x | Data Catalog route `/catalog` + nav link (header/landing doorway). tiled/gallery layout, one card per dataset/product from T11a | I.catalog,I.landing |
+| T14 | x | catalog card content: show all available metadata (T11a fields); hide missing, don't fake. each card = shareable deep link (V16) + "view on map" button → `/map` w/ layer visible (V15) | V15,V16,V18,T11a,I.catalog,I.map |
+| T15 | x | catalog search/filter: match across all displayed metadata; type-ahead OK. empty result → explicit "no datasets match" | V17,I.catalog |
 
 Sequencing: T1 → T2 (quick win) → T3,T4,T5 (core value) → T6,T7 (entry reframe, dep on routes) → T8,T9,T10 (polish).
+New (2026-06-23): T11a (shared metadata selector) + T11b (stats-JSON client) → T11,T12
+(home dashboard) → T13 (catalog route) → T14,T15 (catalog cards + search). T14
+view-on-map reuses urlState visible-layers deep-link (codebase-map). T14 metadata
+depends on T4a `measurementType` (done). Dashboard counts/feed = read-only from
+DIE nightly JSON (I.stats-json); Weaver does NOT compute them (keeps C2 client-only).
 
 ## §B bugs
 
@@ -87,7 +119,20 @@ Sequencing: T1 → T2 (quick win) → T3,T4,T5 (core value) → T6,T7 (entry ref
 |----|------|-------|-----|
 | B1 | 2026-06-22 | T2 made statewide `actively_monitored_wells` default-visible (V5). It's features-source + early in catalog order, so the table's "first visible features layer" auto-pick promoted it over CABQ/toggled Springs; mock returns it empty → 8 filter/table/draw/sort BDD scenarios failed (table bound to empty layer). | V12: `excludeFromAutoTable` flag; AppShell skips flagged layers in table auto-pick |
 
-## open-Q — all resolved ✓
+## open-Q (dashboard+catalog, 2026-06-23)
+
+- O5 source unit DECIDED → show BOTH: #services + #datasets as separate tiles, plus
+  total #sites (V13, T11).
+- O6 ✓ activity feed + ALL counts DECIDED → nightly DIE job writes static JSON to GCP
+  (I.stats-json); frontend fetches read-only (T11b). NOT scaffold-only, NOT live-computed.
+  JSON schema = `{generatedAt, counts:{services,datasets,sites}, events:[{source,timestamp,kind?}]}`.
+- O7 ✓ RESOLVED → no live site-count query. Site count precomputed nightly by DIE in
+  stats JSON. Keeps C2 (Weaver computes nothing). Open sub-Q: exact JSON URL/schema =
+  DIE-side, coordinate before T11b.
+- O8 ? catalog scope: include STA agency networks as cards too, or Ocotillo products
+  only? default → ALL datasets (STA + Ocotillo + OSE + NWIS) for completeness. confirm.
+
+## open-Q — original, all resolved ✓
 
 - O1 ✓ NO server well-ID lookup. No service exposes queryable well-ID search; nearest-point
   not implemented. ID fields exist (monitoring_location_number/@iot.id/pod_file) but only

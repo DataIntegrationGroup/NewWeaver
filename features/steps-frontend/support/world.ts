@@ -14,6 +14,10 @@ import * as fx from "./fixtures"
 
 setDefaultTimeout(60_000)
 
+// Mockable URL for the nightly stats JSON (SPEC §T.T11b). Injected into the
+// dev server via `define` and intercepted in mockApi below.
+const STATS_TEST_URL = "https://stats.example.test/weaver-stats.json"
+
 let server: ViteDevServer
 let browser: Browser
 let baseURL: string
@@ -23,6 +27,11 @@ BeforeAll(async function () {
     configFile: "vite.config.ts",
     server: { port: 5180, strictPort: true },
     logLevel: "warn",
+    // Point the home dashboard at a mockable stats file (SPEC §T.T11b); the
+    // route handler below fulfils it from the WEAVER_STATS fixture.
+    define: {
+      "import.meta.env.VITE_STATS_URL": JSON.stringify(STATS_TEST_URL),
+    },
   })
   await server.listen()
   baseURL = `http://localhost:5180`
@@ -63,6 +72,11 @@ async function mockApi(route: Route): Promise<boolean> {
     if (/\/Locations/.test(url) && /BernCo/.test(url)) return json(fx.LOCATIONS_MANY).then(() => true)
     if (/\/Locations/.test(url)) return json(fx.LOCATIONS).then(() => true)
     return json({ value: [] }).then(() => true)
+  }
+
+  // Nightly stats JSON for the home dashboard (SPEC §T.T11b / §V.V13, §V.V14).
+  if (/stats\.example\.test\/weaver-stats/.test(url)) {
+    return json(fx.WEAVER_STATS).then(() => true)
   }
 
   if (/features\.newmexicowaterdata/.test(url)) {

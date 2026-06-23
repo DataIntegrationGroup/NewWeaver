@@ -13,6 +13,7 @@ export const SLACK_URL = "https://new-mexico-water-data.slack.com"
 const NAV = [
   { to: "/", label: "Home", exact: true },
   { to: "/map", label: "Map", exact: false },
+  { to: "/catalog", label: "Catalog", exact: false },
   { to: "/about", label: "About", exact: false },
   { to: "/help", label: "Help", exact: false },
 ] as const
