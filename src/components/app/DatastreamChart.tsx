@@ -88,8 +88,10 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
     ],
     series: [
       {
-        type: "line",
-        showSymbol: false,
+        // Discrete groundwater-level measurements: plot each reading as a
+        // point (scatter), not a connected line that implies continuity.
+        type: "scatter",
+        symbolSize: 6,
         data: points,
         name: datastream.name,
       },
