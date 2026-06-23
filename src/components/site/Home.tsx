@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { SLACK_URL } from "./SiteHeader"
 import { SitePage as Page } from "./SitePage"
 import { DataSourceCarousel } from "./DataSourceCarousel"
+import { DataDashboard } from "./DataDashboard"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import nmwdiIcon from "@/assets/nmwdi-icon.png"
 
@@ -148,6 +149,10 @@ export function Home() {
           </Link>
         ))}
       </section>
+
+      <Separator className="my-10" />
+
+      <DataDashboard />
 
       <Separator className="my-10" />
 
