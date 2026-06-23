@@ -146,11 +146,6 @@ export function Home() {
       <section data-testid="home-data-sources">
         <div className="mb-5 text-center">
           <h2 className="!text-3xl text-secondary">Our data partners</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-            Weaver weaves together public water data from agencies across New
-            Mexico and beyond, read live through open, standards-based services.
-            Explore each partner in the New Mexico Water Data catalog.
-          </p>
         </div>
         <DataSourceCarousel />
       </section>
