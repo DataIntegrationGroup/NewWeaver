@@ -36,6 +36,12 @@ export function useViewState() {
         : [...current, id]
       patch({ layers })
     },
+    /** Enable the given layer ids (union with current visible). */
+    enableLayers(ids: string[]) {
+      const current = search.layers ?? []
+      const layers = [...new Set([...current, ...ids])]
+      patch({ layers })
+    },
     setView(lng: number, lat: number, z: number) {
       patch({ lng, lat, z }, true)
     },

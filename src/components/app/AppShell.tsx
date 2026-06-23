@@ -20,7 +20,12 @@ import {
 } from "@/components/ui/navbar"
 import { PageShell } from "@/components/ui/page"
 import { NEW_MEXICO_VIEW } from "@/components/ui/map"
-import { LAYER_CATALOG, getLayer } from "@/catalog/layers"
+import {
+  LAYER_CATALOG,
+  getLayer,
+  layersForMeasurement,
+  type MeasurementType,
+} from "@/catalog/layers"
 import {
   BASEMAPS,
   DEFAULT_BASEMAP,
@@ -32,6 +37,7 @@ import { useViewState } from "@/hooks/useViewState"
 import type { Selection } from "@/lib/urlState"
 import { LayerList } from "./LayerList"
 import { LocationSearch } from "./LocationSearch"
+import { MeasurementFacet } from "./MeasurementFacet"
 import type { GeocodeResult } from "@/lib/geocode"
 import { MapView } from "./MapView"
 import { InspectPanel } from "./InspectPanel"
@@ -55,6 +61,7 @@ export function AppShell() {
     search,
     selection,
     toggleLayer,
+    enableLayers,
     setView,
     select,
     clearSelection,
@@ -78,6 +85,8 @@ export function AppShell() {
   const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
   // Pin dropped by the location search (SPEC §T.T3); null when none.
   const [searchMarker, setSearchMarker] = useState<{ lng: number; lat: number } | null>(null)
+  // Measurement-facet fit request (SPEC §T.T4); nonce retriggers the same ids.
+  const [fitRequest, setFitRequest] = useState<{ ids: string[]; nonce: number } | null>(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
   // Per-layer filtered feature counts, reported by the map sources.
   const [layerCounts, setLayerCounts] = useState<Record<string, number>>({})
@@ -189,6 +198,16 @@ export function AppShell() {
     } else {
       setSearchMarker(null)
     }
+  }
+
+  // Facet pick: enable every layer measuring this type (across all networks)
+  // and zoom the map to their combined extent (SPEC §T.T4 / §V.V4).
+  const handleMeasurement = (type: MeasurementType) => {
+    const ids = layersForMeasurement(type)
+    if (ids.length === 0) return
+    enableLayers(ids)
+    setFitRequest((prev) => ({ ids, nonce: (prev?.nonce ?? 0) + 1 }))
+    posthog.capture("measurement_facet_selected", { measurement: type, layers: ids.length })
   }
 
   const handleToggleLayer = (id: string) => {
@@ -316,6 +335,7 @@ export function AppShell() {
           )}
         >
           <LocationSearch layers={visibleLayers} onLocate={handleLocate} />
+          <MeasurementFacet onSelect={handleMeasurement} />
           <div className="lg:hidden">{filterControls}</div>
           <LayerList
             visible={layerIds}
@@ -354,6 +374,7 @@ export function AppShell() {
               onToggleLayer={handleToggleLayer}
               selection={selection}
               marker={searchMarker}
+              fitRequest={fitRequest ?? undefined}
               initialView={initialView}
               autoFit={
                 search.lng === undefined &&

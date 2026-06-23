@@ -1,4 +1,4 @@
-import { Fragment, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { Layers, Maximize } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import type { Map as MaplibreMap, GeoJSONSource } from "maplibre-gl"
@@ -82,6 +82,8 @@ interface MapViewProps {
   selection?: Selection
   /** Pin dropped by the location search (SPEC §T.T3). */
   marker?: { lng: number; lat: number } | null
+  /** Fit the map to a set of layers' extent (measurement facet, SPEC §T.T4). */
+  fitRequest?: { ids: string[]; nonce: number }
   initialView: { longitude: number; latitude: number; zoom: number }
   /** Frame the data extent on first paint (no explicit view in the URL). */
   autoFit?: boolean
@@ -108,6 +110,7 @@ export function MapView({
   onToggleLayer,
   selection,
   marker,
+  fitRequest,
   initialView,
   autoFit,
   basemap,
@@ -124,14 +127,16 @@ export function MapView({
   const [mapLoaded, setMapLoaded] = useState(false)
   const [cursor, setCursor] = useState<[number, number] | null>(null)
 
-  // Zoom to the combined extent of the visible layers' loaded features.
+  // Zoom to the combined extent of the loaded features. With no ids, fits all
+  // visible layers; with ids, only those (used by the measurement facet, T4).
   // Returns true if it actually fit (i.e. some feature geometry was loaded).
-  const fitToData = (): boolean => {
+  const fitToData = (ids?: string[]): boolean => {
     const map = mapRef.current
     if (!map) return false
+    const target = ids ? layers.filter((l) => ids.includes(l.id)) : layers
     const bbox: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity]
     let any = false
-    for (const layer of layers) {
+    for (const layer of target) {
       const fc = queryClient.getQueryData<FeatureCollection>(layerCacheKey(layer))
       for (const f of fc?.features ?? []) {
         const g = f.geometry
@@ -159,11 +164,30 @@ export function MapView({
     if (!autoFit || didAutoFit.current || !mapLoaded) return
     if (fitToData()) didAutoFit.current = true
   }
+
+  // Facet fit (SPEC §T.T4): when a measurement category is chosen, frame just
+  // its layers. Their data may still be loading, so the request is held and
+  // retried as those layers' features land (handleLayerCount), then cleared.
+  const pendingFit = useRef<string[] | null>(null)
+  const tryPendingFit = () => {
+    if (!pendingFit.current || !mapLoaded) return
+    if (fitToData(pendingFit.current)) pendingFit.current = null
+  }
+  useEffect(() => {
+    if (fitRequest?.ids?.length) {
+      pendingFit.current = fitRequest.ids
+      tryPendingFit()
+    }
+    // Only react to a new request (nonce), not to identity churn of the array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitRequest?.nonce])
+
   // A layer reporting its count means its features just landed in the cache —
-  // a good moment to attempt the first-paint fit.
+  // a good moment to attempt the first-paint fit and any pending facet fit.
   const handleLayerCount = (id: string, count: number) => {
     onLayerCount?.(id, count)
     tryAutoFit()
+    tryPendingFit()
   }
   const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
   const clusterLayerIds = new Set(
@@ -458,7 +482,7 @@ export function MapView({
           aria-label="Zoom to data"
           title="Zoom to the visible layers"
           data-testid="fit-to-data"
-          onClick={fitToData}
+          onClick={() => fitToData()}
         >
           <Maximize />
         </Button>

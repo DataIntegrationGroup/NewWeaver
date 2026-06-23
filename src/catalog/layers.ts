@@ -26,10 +26,25 @@ export interface LayerStyle {
   layout?: Record<string, unknown>
 }
 
+/**
+ * What a layer measures, independent of which network produces it. Powers the
+ * "browse by what's measured" facet so a researcher can enable, say, all water
+ * quality data across every agency at once (SPEC §T.T4, §V.V4).
+ */
+export type MeasurementType =
+  | "water_level"
+  | "water_quality"
+  | "surface_water"
+  | "wells"
+  | "weather"
+  | "geochemistry"
+
 interface BaseLayer {
   id: string
   title: string
   description?: string
+  /** What this layer measures (for the measurement facet). */
+  measurementType?: MeasurementType
   /** Shown in the catalog/toggle list; off by default unless true. */
   defaultVisible?: boolean
   /** Group heading in the layer list. Layers without a section list first. */
@@ -149,6 +164,7 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
   source: "sta",
   staBaseUrl: STA_ST2_BASE_URL,
   defaultVisible: a.code === "CABQ",
+  measurementType: "water_level",
   query: { $filter: `properties/agency eq '${a.code}'`, $top: 2000 },
   section: "STA",
   style: staPoint(a.color),
@@ -173,30 +189,32 @@ const OCOTILLO_COLLECTIONS: {
   defaultVisible?: boolean
   /** Map-context only — not the table's default subject (SPEC §V.V12). */
   excludeFromAutoTable?: boolean
+  /** What this collection measures (for the measurement facet, SPEC §T.T4). */
+  mt?: MeasurementType
 }[] = [
-  { id: "locations", title: "Locations", color: "#2563eb", description: "All monitoring locations." },
+  { id: "locations", title: "Locations", color: "#2563eb", description: "All monitoring locations.", mt: "wells" },
   // Statewide well coverage — default-on so the first map paint shows data
   // across New Mexico, not one clustered network (SPEC §V.V5). Map-context
   // only: it must not hijack the table's default subject (SPEC §V.V12).
-  { id: "actively_monitored_wells", title: "Actively Monitored Wells", color: "#1d4ed8", defaultVisible: true, excludeFromAutoTable: true },
-  { id: "water_wells", title: "Water Wells", color: "#0ea5e9" },
-  { id: "water_well_summary", title: "Water Well Summary", color: "#0891b2" },
-  { id: "latest_depth_to_water_wells", title: "Latest Depth to Water (Wells)", color: "#0e7490" },
-  { id: "depth_to_water_trend_wells", title: "Depth to Water Trend (Wells)", color: "#155e75" },
-  { id: "water_elevation_wells", title: "Water Elevation (Wells)", color: "#0d9488" },
-  { id: "latest_tds_wells", title: "Latest TDS (Wells)", color: "#dc2626" },
-  { id: "avg_tds_wells", title: "Average TDS (Wells)", color: "#ea580c" },
-  { id: "major_chemistry_results", title: "Major Chemistry (Wells)", color: "#db2777" },
-  { id: "minor_chemistry_wells", title: "Minor Chemistry (Wells)", color: "#c026d3" },
-  { id: "springs", title: "Springs", color: "#16a34a" },
-  { id: "diversions_surface_water", title: "Surface Water Diversions", color: "#65a30d" },
-  { id: "perennial_streams", title: "Perennial Streams", color: "#0284c7" },
-  { id: "ephemeral_streams", title: "Ephemeral Streams", color: "#38bdf8" },
-  { id: "lakes_ponds_reservoirs", title: "Lakes, Ponds, and Reservoirs", color: "#2dd4bf" },
-  { id: "outfalls_wastewater_return_flow", title: "Outfalls and Return Flow", color: "#a16207" },
-  { id: "meteorological_stations", title: "Meteorological Stations", color: "#7c3aed" },
-  { id: "rock_sample_locations", title: "Rock Sample Locations", color: "#92400e" },
-  { id: "soil_gas_sample_locations", title: "Soil Gas Sample Locations", color: "#9333ea" },
+  { id: "actively_monitored_wells", title: "Actively Monitored Wells", color: "#1d4ed8", defaultVisible: true, excludeFromAutoTable: true, mt: "wells" },
+  { id: "water_wells", title: "Water Wells", color: "#0ea5e9", mt: "wells" },
+  { id: "water_well_summary", title: "Water Well Summary", color: "#0891b2", mt: "wells" },
+  { id: "latest_depth_to_water_wells", title: "Latest Depth to Water (Wells)", color: "#0e7490", mt: "water_level" },
+  { id: "depth_to_water_trend_wells", title: "Depth to Water Trend (Wells)", color: "#155e75", mt: "water_level" },
+  { id: "water_elevation_wells", title: "Water Elevation (Wells)", color: "#0d9488", mt: "water_level" },
+  { id: "latest_tds_wells", title: "Latest TDS (Wells)", color: "#dc2626", mt: "water_quality" },
+  { id: "avg_tds_wells", title: "Average TDS (Wells)", color: "#ea580c", mt: "water_quality" },
+  { id: "major_chemistry_results", title: "Major Chemistry (Wells)", color: "#db2777", mt: "water_quality" },
+  { id: "minor_chemistry_wells", title: "Minor Chemistry (Wells)", color: "#c026d3", mt: "water_quality" },
+  { id: "springs", title: "Springs", color: "#16a34a", mt: "surface_water" },
+  { id: "diversions_surface_water", title: "Surface Water Diversions", color: "#65a30d", mt: "surface_water" },
+  { id: "perennial_streams", title: "Perennial Streams", color: "#0284c7", mt: "surface_water" },
+  { id: "ephemeral_streams", title: "Ephemeral Streams", color: "#38bdf8", mt: "surface_water" },
+  { id: "lakes_ponds_reservoirs", title: "Lakes, Ponds, and Reservoirs", color: "#2dd4bf", mt: "surface_water" },
+  { id: "outfalls_wastewater_return_flow", title: "Outfalls and Return Flow", color: "#a16207", mt: "surface_water" },
+  { id: "meteorological_stations", title: "Meteorological Stations", color: "#7c3aed", mt: "weather" },
+  { id: "rock_sample_locations", title: "Rock Sample Locations", color: "#92400e", mt: "geochemistry" },
+  { id: "soil_gas_sample_locations", title: "Soil Gas Sample Locations", color: "#9333ea", mt: "geochemistry" },
   { id: "other_things", title: "Other Thing Types", color: "#6b7280" },
   {
     id: "project_areas",
@@ -222,6 +240,7 @@ const ocotilloLayers: FeaturesLayer[] = OCOTILLO_COLLECTIONS.map((c) => ({
   collectionId: c.id,
   defaultVisible: c.defaultVisible,
   excludeFromAutoTable: c.excludeFromAutoTable,
+  measurementType: c.mt,
   section: OCOTILLO_SECTION,
   style: c.geom === "polygon" ? polygonStyle(c.color) : staPoint(c.color),
 }))
@@ -431,6 +450,7 @@ const nwisLayers: FeaturesLayer[] = [
     featuresBaseUrl: USGS_OGC_BASE_URL,
     collectionId: "monitoring-locations",
     query: { site_type_code: "GW", state_code: "35" },
+    measurementType: "water_level",
     section: NWIS_SECTION,
     cluster: true,
     fields: { include: NWIS_DISPLAY_FIELDS },
@@ -460,6 +480,28 @@ export const LAYER_CATALOG: LayerConfig[] = [
   ...oseGisLayers,
   ...nwisLayers,
 ]
+
+/**
+ * Measurement categories for the "browse by what's measured" facet (SPEC §T.T4).
+ * Ordered most- to least-common; only categories with ≥1 catalog layer surface.
+ */
+const ALL_MEASUREMENT_CATEGORIES: { type: MeasurementType; label: string }[] = [
+  { type: "water_level", label: "Water levels" },
+  { type: "water_quality", label: "Water quality" },
+  { type: "surface_water", label: "Surface water" },
+  { type: "wells", label: "Wells" },
+  { type: "weather", label: "Weather" },
+  { type: "geochemistry", label: "Geochemistry" },
+]
+
+export const MEASUREMENT_CATEGORIES = ALL_MEASUREMENT_CATEGORIES.filter((c) =>
+  LAYER_CATALOG.some((l) => l.measurementType === c.type)
+)
+
+/** Layer ids that measure the given type, across all networks. */
+export function layersForMeasurement(type: MeasurementType): string[] {
+  return LAYER_CATALOG.filter((l) => l.measurementType === type).map((l) => l.id)
+}
 
 /**
  * Help text for each layer-group heading, shown as a tooltip on hover. Keyed by
