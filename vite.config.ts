@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        // GeoServer WFS — same-origin proxy (mirrored by nginx in prod) because
+        // the upstream sends no CORS headers. /geoserver/wfs?… forwards as-is.
+        "/geoserver": {
+          target: "https://geoserver.newmexicowaterdata.org",
+          changeOrigin: true,
+        },
         "/ingest/static": {
           target: "https://us-assets.i.posthog.com",
           changeOrigin: true,

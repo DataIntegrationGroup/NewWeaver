@@ -30,6 +30,7 @@ import {
   staLayerKey,
   featuresLayerKey,
   arcgisLayerKey,
+  wfsLayerKey,
 } from "@/hooks/useLayerData"
 
 /** Plain string cast used when a layer declares no value formatter. */
@@ -39,6 +40,7 @@ const defaultFormat = (_key: string, value: unknown) => String(value ?? "")
 function layerCacheKey(layer: LayerConfig) {
   if (layer.source === "sta") return staLayerKey(layer)
   if (layer.source === "arcgis") return arcgisLayerKey(layer)
+  if (layer.source === "wfs") return wfsLayerKey(layer)
   return featuresLayerKey(layer)
 }
 

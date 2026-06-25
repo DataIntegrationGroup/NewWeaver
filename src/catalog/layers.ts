@@ -10,9 +10,11 @@
 import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
 import type { ArcGisQuery } from "@/clients/arcGisRest"
+import type { WfsQuery } from "@/clients/wfsClient"
 import type { FieldDisplay } from "@/lib/fields"
 import { formatOseValue } from "@/lib/oseCodes"
 import {
+  GEOSERVER_WFS_BASE_URL,
   OCOTILLO_FEATURES_BASE_URL,
   OSE_ARCGIS_BASE_URL,
   STA_ST2_BASE_URL,
@@ -121,7 +123,22 @@ export interface ArcGisLayer extends BaseLayer {
   mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
 }
 
-export type LayerConfig = FeaturesLayer | StaLayer | ArcGisLayer
+/**
+ * Layer read from an OGC Web Feature Service (WFS), e.g. GeoServer. `typeName`
+ * is the workspace-qualified layer (`workspace:layer`); `wfsBaseUrl` is the
+ * GeoServer base (the `/wfs` path is appended by the client). GeoServer returns
+ * GeoJSON via `outputFormat=application/json`, so these ride the shared path.
+ */
+export interface WfsLayer extends BaseLayer {
+  source: "wfs"
+  /** WFS endpoint base, e.g. `…/geoserver`. */
+  wfsBaseUrl: string
+  /** Workspace-qualified type name, e.g. `die:nm_arsenic_summary`. */
+  typeName: string
+  query?: WfsQuery
+}
+
+export type LayerConfig = FeaturesLayer | StaLayer | ArcGisLayer | WfsLayer
 
 // Scatter markers carry a dark border so light-colored fills stay legible on
 // the pale basemap (matches the original Weaver black point stroke).
@@ -475,11 +492,66 @@ const nwisLayers: FeaturesLayer[] = [
   ),
 ]
 
+/**
+ * GeoServer WFS — New Mexico Water Data summary layers served from GeoServer
+ * (GEOSERVER_WFS_BASE_URL) as a Web Feature Service. Each entry maps 1:1 to a
+ * GeoServer typeName in the `die` workspace. Start hidden; users toggle them on
+ * from the "GeoServer summaries" section.
+ */
+const WFS_SECTION = "GeoServer summaries"
+
+const WFS_LAYERS: {
+  typeName: string
+  title: string
+  description: string
+  color: string
+  mt: MeasurementType
+}[] = [
+  {
+    typeName: "die:nm_arsenic_summary",
+    title: "Arsenic Summary",
+    description:
+      "Per-location arsenic summary for New Mexico, served from GeoServer (WFS, die:nm_arsenic_summary).",
+    color: "#b91c1c",
+    mt: "water_quality",
+  },
+  {
+    typeName: "die:nm_waterlevels_summary",
+    title: "Water Levels Summary",
+    description:
+      "Per-location water-level summary for New Mexico, served from GeoServer (WFS, die:nm_waterlevels_summary).",
+    color: "#1d4ed8",
+    mt: "water_level",
+  },
+  {
+    typeName: "die:nm_tds_summary",
+    title: "TDS Summary",
+    description:
+      "Per-location total-dissolved-solids summary for New Mexico, served from GeoServer (WFS, die:nm_tds_summary).",
+    color: "#ea580c",
+    mt: "water_quality",
+  },
+]
+
+const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
+  id: `wfs-${w.typeName.split(":").pop()!.replace(/_/g, "-")}`,
+  title: w.title,
+  description: w.description,
+  source: "wfs",
+  wfsBaseUrl: GEOSERVER_WFS_BASE_URL,
+  typeName: w.typeName,
+  measurementType: w.mt,
+  section: WFS_SECTION,
+  cluster: true,
+  style: staPoint(w.color),
+}))
+
 export const LAYER_CATALOG: LayerConfig[] = [
   ...st2AgencyLayers,
   ...ocotilloLayers,
   ...oseGisLayers,
   ...nwisLayers,
+  ...wfsLayers,
 ]
 
 /**
@@ -519,6 +591,8 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
     "Statewide datasets from the New Mexico Office of the State Engineer — Points of Diversion and Aquifer Test Wells.",
   NWIS:
     "U.S. Geological Survey sites and observations for New Mexico, from the Water Data for the Nation service — groundwater wells plus continuous, daily, field, and channel measurements.",
+  "GeoServer summaries":
+    "Per-location summary layers for New Mexico served from GeoServer — arsenic, water levels, and total dissolved solids.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {

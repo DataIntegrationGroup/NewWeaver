@@ -42,6 +42,18 @@ export const OSE_ARCGIS_BASE_URL =
   env.VITE_OSE_ARCGIS_BASE_URL ??
   "https://services2.arcgis.com/qXZbWTdPDbTjl7Dy/arcgis/rest/services"
 
+// GeoServer WFS — New Mexico Water Data's GeoServer, serving summary layers
+// (arsenic, water levels, TDS) as OGC Web Feature Service. Each layer names its
+// own `typeName` (workspace:layer). GeoServer's `outputFormat=application/json`
+// returns standard GeoJSON, so the layers ride the shared map/table path.
+//
+// Routed through a same-origin `/geoserver` proxy (vite dev proxy + nginx in
+// prod, mirroring /ingest) because GeoServer sends no CORS headers — a direct
+// browser fetch to the upstream host is blocked. Override with an absolute URL
+// via VITE_GEOSERVER_WFS_BASE_URL if a CORS-enabled endpoint becomes available.
+export const GEOSERVER_WFS_BASE_URL =
+  env.VITE_GEOSERVER_WFS_BASE_URL ?? "/geoserver"
+
 // USGS Water Data for the Nation — the modern NWIS replacement, served as an
 // OGC API Features endpoint (same protocol as the DIE/Ocotillo pygeoapi). The
 // `monitoring-locations` collection carries NWIS sites; we read it through the

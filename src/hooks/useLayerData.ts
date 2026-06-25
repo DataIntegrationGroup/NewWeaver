@@ -4,12 +4,14 @@ import type { FeatureCollection } from "geojson"
 import { staClient, type Location } from "@/clients/sensorThings"
 import { featuresClient } from "@/clients/ogcFeatures"
 import { arcgisClient } from "@/clients/arcGisRest"
+import { wfsClient } from "@/clients/wfsClient"
 import { setLoadProgress, clearLoadProgress } from "@/lib/loadProgress"
 import {
   LAYER_CATALOG,
   type ArcGisLayer,
   type FeaturesLayer,
   type StaLayer,
+  type WfsLayer,
 } from "@/catalog/layers"
 
 const EMPTY: FeatureCollection = { type: "FeatureCollection", features: [] }
@@ -31,11 +33,15 @@ export function featuresLayerKey(layer: FeaturesLayer) {
 export function arcgisLayerKey(layer: ArcGisLayer) {
   return ["arcgis", layer.serviceUrl, layer.query ?? null] as const
 }
+export function wfsLayerKey(layer: WfsLayer) {
+  return ["wfs", layer.wfsBaseUrl, layer.typeName, layer.query ?? null] as const
+}
 
 /** Query key for any catalog layer, dispatching on its source. */
 function layerKey(layer: (typeof LAYER_CATALOG)[number]) {
   if (layer.source === "sta") return staLayerKey(layer)
   if (layer.source === "arcgis") return arcgisLayerKey(layer)
+  if (layer.source === "wfs") return wfsLayerKey(layer)
   return featuresLayerKey(layer)
 }
 
@@ -158,6 +164,46 @@ export function useArcGisLayer(layer: ArcGisLayer) {
           ...f,
           properties: map((f.properties ?? {}) as Record<string, unknown>),
         })),
+      }
+    },
+    placeholderData: EMPTY,
+  })
+}
+
+/**
+ * Key every WFS feature by GeoServer's unique top-level `id` (e.g.
+ * `nm_arsenic_summary.1`), copying it into `properties.id` too. Map selection
+ * reads `properties.id` while the inspector/table read the top-level `id`, so
+ * the two must agree — and GeoServer's per-typeName id is the only field
+ * guaranteed unique (a layer's own `id` column may repeat or be absent).
+ */
+function wfsToGeoJSON(fc: FeatureCollection): FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: fc.features.map((f, i) => {
+      const p = (f.properties ?? {}) as Record<string, unknown>
+      const id = String(f.id ?? p.id ?? i)
+      return { ...f, id, properties: { ...p, id } }
+    }),
+  }
+}
+
+/** Vector features from a GeoServer WFS typeName, as GeoJSON. */
+export function useWfsLayer(layer: WfsLayer) {
+  return useQuery({
+    queryKey: wfsLayerKey(layer),
+    queryFn: async () => {
+      try {
+        const fc = await wfsClient(layer.wfsBaseUrl).getAllFeatures(
+          layer.typeName,
+          layer.query,
+          undefined,
+          undefined,
+          (n) => setLoadProgress(layer.id, n)
+        )
+        return wfsToGeoJSON(fc as FeatureCollection)
+      } finally {
+        clearLoadProgress(layer.id)
       }
     },
     placeholderData: EMPTY,

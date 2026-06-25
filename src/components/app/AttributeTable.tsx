@@ -18,8 +18,8 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer } from "@/catalog/layers"
-import { useFeaturesLayer, useStaLayer, useArcGisLayer } from "@/hooks/useLayerData"
+import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer } from "@/catalog/layers"
+import { useFeaturesLayer, useStaLayer, useArcGisLayer, useWfsLayer } from "@/hooks/useLayerData"
 import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
 import { pointInAnyShape } from "@/lib/selection"
 import { selectFields, type FieldDisplay } from "@/lib/fields"
@@ -316,8 +316,14 @@ function ArcGisTable({ layer, ...rest }: { layer: ArcGisLayer } & Omit<Attribute
   return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} loading={isFetching} {...rest} />
 }
 
+function WfsTable({ layer, ...rest }: { layer: WfsLayer } & Omit<AttributeTableProps, "layer">) {
+  const { data, isFetching } = useWfsLayer(layer)
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} loading={isFetching} {...rest} />
+}
+
 export function AttributeTable({ layer, ...rest }: AttributeTableProps) {
   if (layer.source === "sta") return <StaTable layer={layer} {...rest} />
   if (layer.source === "arcgis") return <ArcGisTable layer={layer} {...rest} />
+  if (layer.source === "wfs") return <WfsTable layer={layer} {...rest} />
   return <FeaturesTable layer={layer} {...rest} />
 }

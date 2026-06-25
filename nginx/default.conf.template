@@ -43,6 +43,15 @@ server {
         proxy_ssl_server_name on;
     }
 
+    # GeoServer WFS reverse proxy — the upstream sends no CORS headers, so the
+    # client fetches it same-origin under /geoserver. Mirrors the dev proxy in
+    # vite.config.ts; the path is forwarded unchanged.
+    location ^~ /geoserver/ {
+        proxy_pass https://geoserver.newmexicowaterdata.org/geoserver/;
+        proxy_set_header Host geoserver.newmexicowaterdata.org;
+        proxy_ssl_server_name on;
+    }
+
     # SPA client-side routing: unknown paths fall back to the app shell.
     location / {
         try_files $uri $uri/ /index.html;

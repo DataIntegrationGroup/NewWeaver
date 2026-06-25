@@ -8,11 +8,13 @@ import {
   type StaLayer,
   type FeaturesLayer,
   type ArcGisLayer,
+  type WfsLayer,
 } from "@/catalog/layers"
 import {
   useStaLayer,
   useFeaturesLayer,
   useArcGisLayer,
+  useWfsLayer,
 } from "@/hooks/useLayerData"
 import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
 
@@ -223,9 +225,16 @@ function ArcGisSource({ layer, filters, ...rest }: { layer: ArcGisLayer } & Omit
   return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
 }
 
+function WfsSource({ layer, filters, ...rest }: { layer: WfsLayer } & Omit<LayerProps2, "layer">) {
+  const { data } = useWfsLayer(layer)
+  if (!data) return null
+  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
+}
+
 /** Render a single catalog layer, dispatching on its source. */
 export function CatalogLayer({ layer, ...rest }: LayerProps2) {
   if (layer.source === "sta") return <StaSource layer={layer} {...rest} />
   if (layer.source === "arcgis") return <ArcGisSource layer={layer} {...rest} />
+  if (layer.source === "wfs") return <WfsSource layer={layer} {...rest} />
   return <FeaturesSource layer={layer} {...rest} />
 }

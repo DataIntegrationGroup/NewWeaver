@@ -12,6 +12,7 @@ import {
   staLayerKey,
   featuresLayerKey,
   arcgisLayerKey,
+  wfsLayerKey,
 } from "@/hooks/useLayerData"
 
 /** Default coverage radius: ~8 km (5 mi) around the searched point. */
@@ -36,6 +37,7 @@ export interface Coverage {
 function layerCacheKey(layer: LayerConfig) {
   if (layer.source === "sta") return staLayerKey(layer)
   if (layer.source === "arcgis") return arcgisLayerKey(layer)
+  if (layer.source === "wfs") return wfsLayerKey(layer)
   return featuresLayerKey(layer)
 }
 

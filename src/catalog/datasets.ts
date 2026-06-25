@@ -60,6 +60,9 @@ function serviceFor(layer: LayerConfig): DatasetService {
   if (layer.source === "arcgis") {
     return { name: "NM OSE GIS (ArcGIS REST)", protocol: "ArcGIS REST" }
   }
+  if (layer.source === "wfs") {
+    return { name: "NM Water Data GeoServer", protocol: "OGC WFS" }
+  }
   // source === "features"
   if (layer.featuresBaseUrl === OCOTILLO_FEATURES_BASE_URL) {
     return { name: "Ocotillo integrated data products", protocol: "OGC API Features" }

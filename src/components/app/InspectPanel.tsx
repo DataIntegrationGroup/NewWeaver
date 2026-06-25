@@ -3,7 +3,7 @@ import { Check, Copy, Crosshair, X } from "lucide-react"
 import type { Feature, Position } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
-import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer } from "@/catalog/layers"
+import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer } from "@/catalog/layers"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -19,6 +19,7 @@ import {
   useFeaturesLayer,
   useStaLayer,
   useArcGisLayer,
+  useWfsLayer,
   useStaThings,
 } from "@/hooks/useLayerData"
 import {
@@ -223,6 +224,7 @@ function AttributeList({
 function whoMeasures(layer: LayerConfig): string {
   if (layer.source === "sta") return layer.title
   if (layer.source === "arcgis") return "the NM Office of the State Engineer"
+  if (layer.source === "wfs") return "New Mexico Water Data (GeoServer)"
   if (layer.section === "NWIS") return "the U.S. Geological Survey (USGS)"
   return "New Mexico Water Data (Ocotillo)"
 }
@@ -314,6 +316,12 @@ function FeatureInspect({ layer, featureId, onClose, onZoomTo }: { layer: Featur
 /** Attribute list for an OSE GIS feature from ArcGIS REST. */
 function ArcGisInspect({ layer, featureId, onClose, onZoomTo }: { layer: ArcGisLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useArcGisLayer(layer)
+  return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
+}
+
+/** Attribute list for a GeoServer WFS feature. */
+function WfsInspect({ layer, featureId, onClose, onZoomTo }: { layer: WfsLayer } & Omit<InspectPanelProps, "layer">) {
+  const { data } = useWfsLayer(layer)
   return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
 }
 
@@ -423,5 +431,7 @@ export function InspectPanel({ layer, featureId, onClose, onZoomTo }: InspectPan
     return <StaInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "arcgis")
     return <ArcGisInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
+  if (layer.source === "wfs")
+    return <WfsInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   return <FeatureInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
 }

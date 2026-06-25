@@ -108,6 +108,14 @@ async function mockApi(route: Route): Promise<boolean> {
     return json(fx.OSE_AQUIFER_FC).then(() => true)
   }
 
+  // GeoServer WFS — summary layers (arsenic, water levels, TDS). GetFeature
+  // returns GeoJSON; serve the shared vector fixture so a toggled layer shows
+  // data without a live network call.
+  if (/\/geoserver\/wfs/.test(url)) {
+    if (/request=GetFeature/i.test(url)) return json(fx.WATER_LEVELS_ITEMS).then(() => true)
+    return json({}).then(() => true)
+  }
+
   // US Census geocoder — called via JSONP (<script> tag), so fulfill with a
   // JS callback invocation, not JSON. Street addresses match (NEAR); places
   // like "Remote Mesa" and unfindable text return no match, so geocodeAddress
