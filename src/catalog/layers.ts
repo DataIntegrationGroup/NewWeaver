@@ -531,6 +531,14 @@ const WFS_LAYERS: {
     color: "#ea580c",
     mt: "water_quality",
   },
+  {
+    typeName: "die:nm_groundwater_trends",
+    title: "Groundwater Trends",
+    description:
+      "Per-location groundwater level trend summary for New Mexico, served from GeoServer (WFS, die:nm_groundwater_trends).",
+    color: "#0f766e",
+    mt: "water_level",
+  },
 ]
 
 const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
