@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, SunDim } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
@@ -9,6 +9,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 /** How a layer's points are drawn — mirrors the map's circle paint so the
  *  swatch in the list matches what's on the map. */
@@ -174,6 +179,35 @@ function LayerSelector({
                       />
                     </span>
                   )}
+                  {checked && onOpacityChange && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label={`${option.title} opacity`}
+                          className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        >
+                          <SunDim className="size-4" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-44" side="left" align="center">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-muted-foreground">Opacity</span>
+                          <span className="text-xs tabular-nums">{Math.round(opacity * 100)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={Math.round(opacity * 100)}
+                          data-testid={`layer-opacity-${option.id}`}
+                          aria-label={`${option.title} opacity`}
+                          onChange={(e) => onOpacityChange(option.id, Number(e.target.value) / 100)}
+                          className="h-1 w-full cursor-pointer accent-primary"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
                   <Switch
                     id={`layer-${option.id}`}
                     data-testid={`layer-toggle-${option.id}`}
@@ -182,18 +216,6 @@ function LayerSelector({
                   />
                 </div>
               </div>
-              {checked && onOpacityChange && (
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={Math.round(opacity * 100)}
-                  data-testid={`layer-opacity-${option.id}`}
-                  aria-label={`${option.title} opacity`}
-                  onChange={(e) => onOpacityChange(option.id, Number(e.target.value) / 100)}
-                  className="h-1 w-full cursor-pointer accent-primary"
-                />
-              )}
             </li>
           )
         })}
