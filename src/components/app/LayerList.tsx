@@ -33,6 +33,9 @@ interface LayerListProps {
   /** Layer id → opacity (0–1); a visible layer gets an opacity slider. */
   opacityById?: Record<string, number>
   onOpacityChange?: (id: string, opacity: number) => void
+  /** Layer id → whether "not enough data" points are hidden. */
+  hideNoDataById?: Record<string, boolean>
+  onHideNoDataChange?: (id: string, hide: boolean) => void
 }
 
 /** Derive the legend swatch style from a catalog layer's MapLibre paint. */
@@ -62,6 +65,7 @@ function toOption(layer: LayerConfig): LayerOption {
     title: layer.title,
     description: layer.description,
     style: pointStyle(layer),
+    supportsNoDataFilter: layer.id === "wfs-nm-waterlevel-trends",
   }
 }
 
@@ -88,7 +92,7 @@ const DEFAULT_OPEN = ["Integrated data products"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -181,6 +185,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange }: L
                 progressById={progressById}
                 opacityById={opacityById}
                 onOpacityChange={onOpacityChange}
+                hideNoDataById={hideNoDataById}
+                onHideNoDataChange={onHideNoDataChange}
                 onToggle={onToggle}
               />
             </AccordionContent>

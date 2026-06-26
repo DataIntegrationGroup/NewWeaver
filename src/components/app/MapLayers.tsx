@@ -55,6 +55,8 @@ interface LayerProps2 {
   opacity?: number
   /** Whether the layer is drawn (default true). Hidden via its on-map chip. */
   visible?: boolean
+  /** Hide features where trend_category === "not enough data". */
+  hideNoData?: boolean
   /** Reports the filtered feature count after rendering. */
   onCount?: (id: string, count: number) => void
 }
@@ -225,10 +227,14 @@ function ArcGisSource({ layer, filters, ...rest }: { layer: ArcGisLayer } & Omit
   return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
 }
 
-function WfsSource({ layer, filters, ...rest }: { layer: WfsLayer } & Omit<LayerProps2, "layer">) {
+function WfsSource({ layer, filters, hideNoData, ...rest }: { layer: WfsLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useWfsLayer(layer)
   if (!data) return null
-  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
+  let fc = filterFeatures(data, filters)
+  if (hideNoData) {
+    fc = { ...fc, features: fc.features.filter((f) => f.properties?.trend_category !== "not enough data") }
+  }
+  return <GeoSource layer={layer} fc={fc} {...rest} />
 }
 
 /** Render a single catalog layer, dispatching on its source. */

@@ -88,6 +88,7 @@ export function AppShell() {
   // Measurement-facet fit request (SPEC §T.T4); nonce retriggers the same ids.
   const [fitRequest, setFitRequest] = useState<{ ids: string[]; nonce: number } | null>(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
+  const [hideNoDataById, setHideNoDataById] = useState<Record<string, boolean>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
   const [hiddenLayerIds, setHiddenLayerIds] = useState<string[]>([])
@@ -391,6 +392,10 @@ export function AppShell() {
             onOpacityChange={(id, v) =>
               setOpacityById((m) => ({ ...m, [id]: v }))
             }
+            hideNoDataById={hideNoDataById}
+            onHideNoDataChange={(id, hide) =>
+              setHideNoDataById((m) => ({ ...m, [id]: hide }))
+            }
             onToggle={handleToggleLayer}
           />
           {/* About/Help live in the navbar on ≥sm; on mobile they move here so
@@ -429,6 +434,7 @@ export function AppShell() {
               layers={visibleLayers}
               filters={filters}
               opacityById={opacityById}
+              hideNoDataById={hideNoDataById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}
               onLayerCount={(id, n) =>

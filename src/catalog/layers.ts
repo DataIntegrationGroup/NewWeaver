@@ -506,6 +506,7 @@ const WFS_LAYERS: {
   description: string
   color: string
   mt: MeasurementType
+  style?: LayerStyle
 }[] = [
   {
     typeName: "die:nm_arsenic_summary",
@@ -532,12 +533,36 @@ const WFS_LAYERS: {
     mt: "water_quality",
   },
   {
-    typeName: "die:nm_groundwater_trends",
+    typeName: "die:nm_waterlevel_trends",
     title: "Groundwater Trends",
     description:
-      "Per-location groundwater level trend summary for New Mexico, served from GeoServer (WFS, die:nm_groundwater_trends).",
-    color: "#0f766e",
+      "Per-location groundwater level trend summary for New Mexico, served from GeoServer (WFS, die:nm_waterlevel_trends).",
+    color: "#6b7280",
     mt: "water_level",
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "match",
+          ["get", "trend_category"],
+          "increasing", "#dc2626",
+          "decreasing", "#16a34a",
+          "stable",     "#6b7280",
+          /* default */ "#9ca3af",
+        ],
+      },
+    },
+  },
+  {
+    typeName: "die:nm_major_chemistry",
+    title: "Major Chemistry",
+    description:
+      "Major ion chemistry for New Mexico groundwater, served from GeoServer (WFS, die:nm_major_chemistry).",
+    color: "#7c3aed",
+    mt: "water_quality",
   },
 ]
 
@@ -551,7 +576,7 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
   measurementType: w.mt,
   section: WFS_SECTION,
   cluster: true,
-  style: staPoint(w.color),
+  style: w.style ?? staPoint(w.color),
 }))
 
 export const LAYER_CATALOG: LayerConfig[] = [

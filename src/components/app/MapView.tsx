@@ -75,6 +75,8 @@ interface MapViewProps {
   filters: FeatureFilters
   /** Layer id → opacity (0–1). */
   opacityById?: Record<string, number>
+  /** Layer id → whether "not enough data" points are hidden. */
+  hideNoDataById?: Record<string, boolean>
   /** Ids of enabled layers hidden from the map via their chip (still listed). */
   hiddenLayerIds?: string[]
   /** Reports a layer's filtered feature count (for the empty-filter state). */
@@ -111,6 +113,7 @@ export function MapView({
   layers,
   filters,
   opacityById,
+  hideNoDataById,
   hiddenLayerIds,
   onLayerCount,
   emptyFilterQuery,
@@ -371,6 +374,7 @@ export function MapView({
             layer={layer}
             filters={filters}
             opacity={opacityById?.[layer.id] ?? 1}
+            hideNoData={hideNoDataById?.[layer.id] ?? false}
             visible={!hiddenLayerIds?.includes(layer.id)}
             onCount={handleLayerCount}
             selectedFeatureId={

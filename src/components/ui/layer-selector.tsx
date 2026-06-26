@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Loader2, SunDim } from "lucide-react"
+import { Loader2, Settings } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
@@ -85,6 +85,8 @@ export interface LayerOption {
   description?: string
   /** Point style used to draw the legend swatch. */
   style: PointStyle
+  /** Shows a "hide no-data points" toggle in the settings popover. */
+  supportsNoDataFilter?: boolean
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -98,6 +100,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → opacity (0–1). A visible layer gets an opacity slider. */
   opacityById?: Record<string, number>
   onOpacityChange?: (id: string, opacity: number) => void
+  /** Layer id → whether "not enough data" points are hidden. */
+  hideNoDataById?: Record<string, boolean>
+  onHideNoDataChange?: (id: string, hide: boolean) => void
   onToggle: (id: string) => void
 }
 
@@ -113,6 +118,8 @@ function LayerSelector({
   progressById,
   opacityById,
   onOpacityChange,
+  hideNoDataById,
+  onHideNoDataChange,
   onToggle,
   className,
   ...props
@@ -184,13 +191,13 @@ function LayerSelector({
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          aria-label={`${option.title} opacity`}
+                          aria-label={`${option.title} settings`}
                           className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
-                          <SunDim className="size-4" />
+                          <Settings className="size-4" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-44" side="left" align="center">
+                      <PopoverContent className="w-48" side="left" align="center">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs text-muted-foreground">Opacity</span>
                           <span className="text-xs tabular-nums">{Math.round(opacity * 100)}%</span>
@@ -205,6 +212,16 @@ function LayerSelector({
                           onChange={(e) => onOpacityChange(option.id, Number(e.target.value) / 100)}
                           className="h-1 w-full cursor-pointer accent-primary"
                         />
+                        {option.supportsNoDataFilter && onHideNoDataChange && (
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                            <span className="text-xs text-muted-foreground">Hide no-data points</span>
+                            <Switch
+                              checked={hideNoDataById?.[option.id] ?? false}
+                              onCheckedChange={(v) => onHideNoDataChange(option.id, v)}
+                              aria-label="Hide no-data points"
+                            />
+                          </div>
+                        )}
                       </PopoverContent>
                     </Popover>
                   )}
