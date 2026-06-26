@@ -78,8 +78,8 @@ const SECTIONS: { section: string; options: LayerOption[] }[] = (() => {
   return [...groups].map(([section, options]) => ({ section, options }))
 })()
 
-/** All sections expanded by default. */
-const DEFAULT_OPEN = SECTIONS.map((s) => s.section)
+/** Integrated data products expanded; all others collapsed. */
+const DEFAULT_OPEN = ["Integrated data products"]
 
 /**
  * LayerList — the catalog of map layers, each with a legend swatch and a

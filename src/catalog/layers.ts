@@ -180,7 +180,7 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
   description: `${a.title} monitoring locations from the st2 FROST server (agency=${a.code}).`,
   source: "sta",
   staBaseUrl: STA_ST2_BASE_URL,
-  defaultVisible: a.code === "CABQ",
+  defaultVisible: false,
   measurementType: "water_level",
   query: { $filter: `properties/agency eq '${a.code}'`, $top: 2000 },
   section: "Monitoring networks",
@@ -194,7 +194,7 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
  * "New Mexico Water Data (Ocotillo)" section of the layer list.
  */
 // Human-meaningful header (SPEC §T.T9 / §V.V8): "Ocotillo" is internal vocab.
-const OCOTILLO_SECTION = "Integrated data products"
+const OCOTILLO_SECTION = "NMBGMR GIS"
 
 const OCOTILLO_COLLECTIONS: {
   id: string
@@ -496,9 +496,9 @@ const nwisLayers: FeaturesLayer[] = [
  * GeoServer WFS — New Mexico Water Data summary layers served from GeoServer
  * (GEOSERVER_WFS_BASE_URL) as a Web Feature Service. Each entry maps 1:1 to a
  * GeoServer typeName in the `die` workspace. Start hidden; users toggle them on
- * from the "GeoServer summaries" section.
+ * from the "Integrated data products" section.
  */
-const WFS_SECTION = "GeoServer summaries"
+const WFS_SECTION = "Integrated data products"
 
 const WFS_LAYERS: {
   typeName: string
@@ -547,11 +547,11 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
 }))
 
 export const LAYER_CATALOG: LayerConfig[] = [
+  ...wfsLayers,
   ...st2AgencyLayers,
   ...ocotilloLayers,
   ...oseGisLayers,
   ...nwisLayers,
-  ...wfsLayers,
 ]
 
 /**
@@ -585,13 +585,13 @@ export function layersForMeasurement(type: MeasurementType): string[] {
 export const SECTION_DESCRIPTIONS: Record<string, string> = {
   "Monitoring networks":
     "Live monitoring locations operated by water agencies across New Mexico — cities, counties, irrigation districts, and the State Engineer — each network mapped on its own.",
-  "Integrated data products":
+  "NMBGMR GIS":
     "New Mexico water data integrated from many sources into statewide products — water wells, springs, surface water, water levels, and chemistry.",
   "OSE GIS":
     "Statewide datasets from the New Mexico Office of the State Engineer — Points of Diversion and Aquifer Test Wells.",
   NWIS:
     "U.S. Geological Survey sites and observations for New Mexico, from the Water Data for the Nation service — groundwater wells plus continuous, daily, field, and channel measurements.",
-  "GeoServer summaries":
+  "Integrated data products":
     "Per-location summary layers for New Mexico served from GeoServer — arsenic, water levels, and total dissolved solids.",
 }
 
