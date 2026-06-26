@@ -57,6 +57,8 @@ interface LayerProps2 {
   visible?: boolean
   /** Hide features where trend_category === "not enough data". */
   hideNoData?: boolean
+  /** Override the layer's point color. */
+  colorOverride?: string
   /** Reports the filtered feature count after rendering. */
   onCount?: (id: string, count: number) => void
 }
@@ -135,6 +137,7 @@ function GeoSource({
   selectedFeatureId,
   opacity = 1,
   visible = true,
+  colorOverride,
   onCount,
 }: {
   layer: LayerConfig
@@ -142,6 +145,7 @@ function GeoSource({
   selectedFeatureId?: string
   opacity?: number
   visible?: boolean
+  colorOverride?: string
   onCount?: (id: string, count: number) => void
 }) {
   const count = fc.features.length
@@ -149,7 +153,10 @@ function GeoSource({
     onCount?.(layer.id, count)
   }, [onCount, layer.id, count])
 
-  const paint = withOpacity(layer.style.paint ?? {}, layer.style.type, opacity)
+  const basePaint = colorOverride
+    ? { ...(layer.style.paint ?? {}), "circle-color": colorOverride }
+    : (layer.style.paint ?? {})
+  const paint = withOpacity(basePaint, layer.style.type, opacity)
   // MapLibre layout visibility: hides the layer (no draw, no clicks) while
   // keeping the source loaded, so its chip and count survive a hide toggle.
   const vis = visible === false ? "none" : "visible"

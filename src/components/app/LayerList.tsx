@@ -36,6 +36,9 @@ interface LayerListProps {
   /** Layer id → whether "not enough data" points are hidden. */
   hideNoDataById?: Record<string, boolean>
   onHideNoDataChange?: (id: string, hide: boolean) => void
+  /** Layer id → color override hex string. */
+  colorById?: Record<string, string>
+  onColorChange?: (id: string, color: string) => void
 }
 
 /** Derive the legend swatch style from a catalog layer's MapLibre paint. */
@@ -92,7 +95,7 @@ const DEFAULT_OPEN = ["Integrated data products"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -187,6 +190,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
                 onOpacityChange={onOpacityChange}
                 hideNoDataById={hideNoDataById}
                 onHideNoDataChange={onHideNoDataChange}
+                colorById={colorById}
+                onColorChange={onColorChange}
                 onToggle={onToggle}
               />
             </AccordionContent>

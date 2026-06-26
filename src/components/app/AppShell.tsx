@@ -89,6 +89,7 @@ export function AppShell() {
   const [fitRequest, setFitRequest] = useState<{ ids: string[]; nonce: number } | null>(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
   const [hideNoDataById, setHideNoDataById] = useState<Record<string, boolean>>({})
+  const [colorById, setColorById] = useState<Record<string, string>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
   const [hiddenLayerIds, setHiddenLayerIds] = useState<string[]>([])
@@ -396,6 +397,10 @@ export function AppShell() {
             onHideNoDataChange={(id, hide) =>
               setHideNoDataById((m) => ({ ...m, [id]: hide }))
             }
+            colorById={colorById}
+            onColorChange={(id, color) =>
+              setColorById((m) => ({ ...m, [id]: color }))
+            }
             onToggle={handleToggleLayer}
           />
           {/* About/Help live in the navbar on ≥sm; on mobile they move here so
@@ -435,6 +440,7 @@ export function AppShell() {
               filters={filters}
               opacityById={opacityById}
               hideNoDataById={hideNoDataById}
+              colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}
               onLayerCount={(id, n) =>

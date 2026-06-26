@@ -103,6 +103,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → whether "not enough data" points are hidden. */
   hideNoDataById?: Record<string, boolean>
   onHideNoDataChange?: (id: string, hide: boolean) => void
+  /** Layer id → color override hex string. */
+  colorById?: Record<string, string>
+  onColorChange?: (id: string, color: string) => void
   onToggle: (id: string) => void
 }
 
@@ -120,6 +123,8 @@ function LayerSelector({
   onOpacityChange,
   hideNoDataById,
   onHideNoDataChange,
+  colorById,
+  onColorChange,
   onToggle,
   className,
   ...props
@@ -138,12 +143,15 @@ function LayerSelector({
           const loading = loadingIds?.includes(option.id) ?? false
           const loaded = progressById?.[option.id] ?? 0
           const opacity = opacityById?.[option.id] ?? 1
-          const label = (
+          const colorOverride = colorById?.[option.id]
+          const swatchStyle = colorOverride
+            ? { ...option.style, color: colorOverride }
+            : option.style
+          const titleLabel = (
             <label
               htmlFor={`layer-${option.id}`}
-              className="flex min-w-0 cursor-pointer items-center gap-2.5"
+              className="min-w-0 cursor-pointer"
             >
-              <PointSwatch point={option.style} />
               <span className="truncate text-sm font-medium leading-tight">
                 {option.title}
               </span>
@@ -158,16 +166,34 @@ function LayerSelector({
               className="space-y-1.5"
             >
               <div className="flex items-center justify-between gap-3">
-                {option.description ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>{label}</TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-56">
-                      {option.description}
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  label
-                )}
+                <div className="flex min-w-0 items-center gap-2.5">
+                  {onColorChange ? (
+                    <label
+                      aria-label={`${option.title} color`}
+                      className="shrink-0 cursor-pointer rounded focus-within:ring-2 focus-within:ring-ring"
+                    >
+                      <PointSwatch point={swatchStyle} />
+                      <input
+                        type="color"
+                        value={colorOverride ?? (typeof option.style.color === "string" ? option.style.color : "#6b7280")}
+                        onChange={(e) => onColorChange(option.id, e.target.value)}
+                        className="sr-only"
+                      />
+                    </label>
+                  ) : (
+                    <PointSwatch point={swatchStyle} />
+                  )}
+                  {option.description ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{titleLabel}</TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-56">
+                        {option.description}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    titleLabel
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {loading && (
                     <span className="flex items-center gap-1 text-muted-foreground">
