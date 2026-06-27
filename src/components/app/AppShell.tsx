@@ -1,23 +1,14 @@
 import { useEffect, useRef, useState } from "react"
-import { Link } from "@tanstack/react-router"
 import { Download, Layers, Share2, Table2 } from "lucide-react"
 import type { Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { ModeToggle } from "@/components/mode-toggle"
 import { useTheme } from "@/components/theme-provider"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import type { MapRef } from "@/components/ui/map"
-import {
-  NavBar,
-  NavBarBrand,
-  NavBarNav,
-  NavBarLink,
-  NavBarActions,
-} from "@/components/ui/navbar"
+import { SiteHeader } from "@/components/site/SiteHeader"
 import { PageShell } from "@/components/ui/page"
 import { NEW_MEXICO_VIEW } from "@/components/ui/map"
 import {
@@ -278,6 +269,51 @@ export function AppShell() {
     />
   )
 
+  // View actions (table / share / download) — live in the sidebar so the
+  // top navigation stays identical to the content pages.
+  const viewActions = (
+    <div className="grid grid-cols-3 gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-center"
+        data-testid="toggle-table"
+        aria-pressed={tableOpen}
+        aria-label={tableOpen ? "Hide attribute table" : "Show attribute table"}
+        onClick={() => {
+          const next = !tableOpen
+          if (next) posthog.capture("attribute_table_opened")
+          setTableOpen(next)
+        }}
+      >
+        <Table2 />
+        <span>{tableOpen ? "Hide" : "Table"}</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-center"
+        data-testid="share-view"
+        aria-label="Share this view"
+        onClick={shareView}
+      >
+        <Share2 />
+        <span>Share</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-center"
+        data-testid="open-export"
+        aria-label="Download data"
+        onClick={() => setExportOpen(true)}
+      >
+        <Download />
+        <span>Download</span>
+      </Button>
+    </div>
+  )
+
   return (
     <PageShell>
       <a
@@ -286,81 +322,23 @@ export function AppShell() {
       >
         Skip to map
       </a>
-      <NavBar fluid>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className="lg:hidden"
-            aria-label="Toggle layers panel"
-            aria-controls="layer-sidebar"
-            aria-expanded={sidebarOpen}
-            data-testid="toggle-sidebar"
-            onClick={() => setSidebarOpen((v) => !v)}
-          >
-            <Layers />
-          </Button>
-          <NavBarBrand asChild>
-            <Link to="/">Weaver</Link>
-          </NavBarBrand>
-          <NavBarNav className="hidden sm:flex">
-            <NavBarLink asChild>
-              <Link to="/about">About</Link>
-            </NavBarLink>
-            <NavBarLink asChild>
-              <Link to="/help" data-testid="nav-help">
-                Help
-              </Link>
-            </NavBarLink>
-          </NavBarNav>
-        </div>
-        <div className="hidden lg:block">{filterControls}</div>
-        <NavBarActions>
-          <Button
-            variant="outline"
-            size="sm"
-            data-testid="toggle-table"
-            aria-pressed={tableOpen}
-            aria-label={tableOpen ? "Hide attribute table" : "Show attribute table"}
-            onClick={() => {
-              const next = !tableOpen
-              if (next) posthog.capture("attribute_table_opened")
-              setTableOpen(next)
-            }}
-          >
-            <Table2 />
-            <span className="hidden sm:inline">
-              {tableOpen ? "Hide table" : "Attribute table"}
-            </span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            data-testid="share-view"
-            aria-label="Share this view"
-            onClick={shareView}
-          >
-            <Share2 />
-            <span className="hidden sm:inline">Share</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            data-testid="open-export"
-            aria-label="Download data"
-            onClick={() => setExportOpen(true)}
-          >
-            <Download />
-            <span className="hidden sm:inline">Download</span>
-          </Button>
-          <Badge variant="secondary" className="hidden sm:inline-flex">
-            v0.1.0
-          </Badge>
-          <ModeToggle />
-        </NavBarActions>
-      </NavBar>
+      <SiteHeader />
 
       <div className="relative flex min-h-0 flex-1">
+        {/* Mobile-only opener for the layers/controls panel (the panel is
+            always present on ≥lg). */}
+        <Button
+          variant="outline"
+          size="icon-sm"
+          className="absolute left-3 top-3 z-30 bg-card shadow-sm lg:hidden"
+          aria-label="Toggle layers panel"
+          aria-controls="layer-sidebar"
+          aria-expanded={sidebarOpen}
+          data-testid="toggle-sidebar"
+          onClick={() => setSidebarOpen((v) => !v)}
+        >
+          <Layers />
+        </Button>
         {sidebarOpen && (
           <button
             type="button"
@@ -385,8 +363,9 @@ export function AppShell() {
             onLocate={handleLocate}
             onExport={() => setExportOpen(true)}
           />
+          {viewActions}
           <MeasurementFacet onSelect={handleMeasurement} />
-          <div className="lg:hidden">{filterControls}</div>
+          {filterControls}
           <LayerList
             visible={layerIds}
             opacityById={opacityById}
@@ -403,20 +382,6 @@ export function AppShell() {
             }
             onToggle={handleToggleLayer}
           />
-          {/* About/Help live in the navbar on ≥sm; on mobile they move here so
-              the cramped header stays uncluttered. */}
-          <nav className="flex gap-4 border-t pt-4 text-sm sm:hidden">
-            <Link to="/about" className="text-muted-foreground hover:text-foreground">
-              About
-            </Link>
-            <Link
-              to="/help"
-              data-testid="nav-help-mobile"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Help
-            </Link>
-          </nav>
           {/* Resize handle on the right edge — desktop only. */}
           <div
             role="separator"
