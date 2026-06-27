@@ -177,7 +177,8 @@ function GeoSource({
     )
   }
 
-  const color = (paint["circle-color"] as string) ?? "#1f2937"
+  const rawColor = paint["circle-color"]
+  const color = colorOverride ?? (typeof rawColor === "string" ? rawColor : "#6b7280")
   return (
     <Source
       {...({
@@ -240,6 +241,10 @@ function WfsSource({ layer, filters, hideNoData, ...rest }: { layer: WfsLayer } 
   let fc = filterFeatures(data, filters)
   if (hideNoData) {
     fc = { ...fc, features: fc.features.filter((f) => f.properties?.trend_category !== "not enough data") }
+  }
+  if (layer.mapProperties) {
+    const mp = layer.mapProperties
+    fc = { ...fc, features: fc.features.map((f) => ({ ...f, properties: mp(f.properties ?? {}) })) }
   }
   return <GeoSource layer={layer} fc={fc} {...rest} />
 }

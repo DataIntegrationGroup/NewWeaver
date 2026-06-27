@@ -136,6 +136,9 @@ export interface WfsLayer extends BaseLayer {
   /** Workspace-qualified type name, e.g. `die:nm_arsenic_summary`. */
   typeName: string
   query?: WfsQuery
+  /** Optional per-feature property transform applied after fetch — normalize
+   *  fields, merge columns, or guarantee nulls are present strings. */
+  mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
 }
 
 export type LayerConfig = FeaturesLayer | StaLayer | ArcGisLayer | WfsLayer
@@ -507,6 +510,8 @@ const WFS_LAYERS: {
   color: string
   mt: MeasurementType
   style?: LayerStyle
+  fields?: FieldDisplay
+  mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
 }[] = [
   {
     typeName: "die:nm_arsenic_summary",
@@ -539,6 +544,17 @@ const WFS_LAYERS: {
       "Per-location groundwater level trend summary for New Mexico, served from GeoServer (WFS, die:nm_waterlevel_trends).",
     color: "#6b7280",
     mt: "water_level",
+    fields: {
+      include: ["name", "trend_category", "well_depth", "slope_ft_per_year", "span_years", "record_count", "source"],
+    },
+    mapProperties: (props) => {
+      const { well_depth, well_depth_units, ...rest } = props
+      const depth =
+        well_depth != null
+          ? `${well_depth} ${well_depth_units ?? ""}`.trim()
+          : "—"
+      return { ...rest, well_depth: depth }
+    },
     style: {
       type: "circle",
       paint: {
@@ -577,6 +593,8 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
   section: WFS_SECTION,
   cluster: true,
   style: w.style ?? staPoint(w.color),
+  ...(w.fields && { fields: w.fields }),
+  ...(w.mapProperties && { mapProperties: w.mapProperties }),
 }))
 
 export const LAYER_CATALOG: LayerConfig[] = [
