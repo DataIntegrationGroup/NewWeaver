@@ -36,6 +36,31 @@ import {
 /** Plain string cast used when a layer declares no value formatter. */
 const defaultFormat = (_key: string, value: unknown) => String(value ?? "")
 
+/**
+ * Resolve a MapLibre `circle-color` paint value to the actual hex for one
+ * feature. A plain string passes through; a data-driven `["match", ["get",
+ * field], label, color, …, fallback]` is evaluated against the feature's
+ * properties so the popup swatch matches the point on the map.
+ */
+function resolveCircleColor(
+  paintColor: unknown,
+  properties: Record<string, unknown>
+): string | undefined {
+  if (typeof paintColor === "string") return paintColor
+  if (!Array.isArray(paintColor)) return undefined
+  if (paintColor[0] !== "match") return undefined
+  const input = paintColor[1]
+  const field =
+    Array.isArray(input) && input[0] === "get" ? (input[1] as string) : undefined
+  if (!field) return undefined
+  const value = properties[field]
+  const fallback = paintColor[paintColor.length - 1] as string
+  for (let i = 2; i < paintColor.length - 1; i += 2) {
+    if (paintColor[i] === value) return paintColor[i + 1] as string
+  }
+  return fallback
+}
+
 /** React Query cache key for a layer's GeoJSON data (mirrors the data hooks). */
 function layerCacheKey(layer: LayerConfig) {
   if (layer.source === "sta") return staLayerKey(layer)
@@ -214,6 +239,7 @@ export function MapView({
     latitude: number
     name?: string
     title?: string
+    subtitle?: string
     color?: string
     properties: Record<string, unknown>
     fields?: FieldDisplay
@@ -232,12 +258,16 @@ export function MapView({
     }
     const properties = (hit.properties ?? {}) as Record<string, unknown>
     const layer = layers.find((l) => renderLayerId(l) === hit.layer?.id)
+    const override = layer ? colorById?.[layer.id] : undefined
+    const color =
+      override ?? resolveCircleColor(layer?.style.paint?.["circle-color"], properties)
     setHoverInfo({
       longitude: e.lngLat.lng,
       latitude: e.lngLat.lat,
       name: (properties.name as string) ?? undefined,
       title: layer?.title,
-      color: (layer?.style.paint?.["circle-color"] as string) ?? undefined,
+      subtitle: (properties.trend_category as string) ?? undefined,
+      color,
       properties,
       fields: layer?.fields,
       format: layer?.formatValue,
@@ -415,9 +445,14 @@ export function MapView({
                       </span>
                     </div>
                   )}
-                  {hoverInfo.name && (
-                    <p className="mt-0.5 text-sm font-semibold leading-tight">
-                      {hoverInfo.name}
+                  {(hoverInfo.name || hoverInfo.subtitle) && (
+                    <p className="mt-0.5 flex items-baseline gap-2 text-sm font-semibold leading-tight">
+                      {hoverInfo.name && <span>{hoverInfo.name}</span>}
+                      {hoverInfo.subtitle && (
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {hoverInfo.subtitle}
+                        </span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -425,6 +460,7 @@ export function MapView({
               <dl className="grid grid-cols-[max-content_1fr] text-xs [&>*:nth-last-child(-n+2)]:border-b-0">
                 {selectFields(Object.keys(hoverInfo.properties), hoverInfo.fields)
                   .filter((k) => k !== "name")
+                  .filter((k) => !(hoverInfo.subtitle && k === "trend_category"))
                   .map((k) => (
                     <Fragment key={k}>
                       <dt className="whitespace-nowrap border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
