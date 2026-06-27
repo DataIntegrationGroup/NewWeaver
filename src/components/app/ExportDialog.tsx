@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { MonitorCog } from "lucide-react"
@@ -78,6 +78,20 @@ export function ExportDialog({
   const hasFeatures = selection.features.length > 0
   // Time series / latest need STA locations; features can also use vector data.
   const exportable = kind === "features" ? hasLocations || hasFeatures : hasLocations
+
+  // Auto-pick a sensible default export kind: time series when STA locations are
+  // present, otherwise Features for vector-only selections (e.g. a WFS layer
+  // opened straight from a catalog Download link). Stops once the user chooses.
+  const userPickedKind = useRef(false)
+  useEffect(() => {
+    if (!open) {
+      userPickedKind.current = false
+      return
+    }
+    if (userPickedKind.current) return
+    if (!hasLocations && hasFeatures) setKind("features")
+    else if (hasLocations) setKind("timeseries")
+  }, [open, hasLocations, hasFeatures])
 
   const isLarge =
     kind === "timeseries" &&
@@ -201,7 +215,10 @@ export function ExportDialog({
               size="sm"
               className="h-auto whitespace-normal py-2 text-xs"
               disabled={running}
-              onClick={() => setKind(k.id)}
+              onClick={() => {
+                userPickedKind.current = true
+                setKind(k.id)
+              }}
             >
               {k.label}
             </Button>
