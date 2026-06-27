@@ -25,6 +25,9 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,
+      // Must be ≥ the persist maxAge (24h) so a cached layer query isn't
+      // garbage-collected before it can be restored from IndexedDB.
+      gcTime: 24 * 60 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
     },

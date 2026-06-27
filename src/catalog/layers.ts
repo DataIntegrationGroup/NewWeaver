@@ -606,6 +606,24 @@ export const LAYER_CATALOG: LayerConfig[] = [
 ]
 
 /**
+ * Bump when a persisted layer's feature shape changes (new `mapProperties`,
+ * renamed fields, etc.) so the IndexedDB cache busts instead of replaying a
+ * stale shape. Used as the persist `buster` in main.tsx.
+ */
+export const CATALOG_VERSION = "1"
+
+/**
+ * WFS typeNames whose fetched FeatureCollections are persisted to IndexedDB —
+ * only the "Integrated data products" section. The WFS query key carries the
+ * typeName, so the persist predicate matches on these.
+ */
+export const PERSISTED_WFS_TYPENAMES = new Set(
+  LAYER_CATALOG.filter((l) => l.source === "wfs" && l.section === WFS_SECTION).map(
+    (l) => (l as WfsLayer).typeName
+  )
+)
+
+/**
  * Measurement categories for the "browse by what's measured" facet (SPEC §T.T4).
  * Ordered most- to least-common; only categories with ≥1 catalog layer surface.
  */

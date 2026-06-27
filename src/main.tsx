@@ -1,6 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { QueryClientProvider } from "@tanstack/react-query"
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { RouterProvider } from "@tanstack/react-router"
 import posthog from "posthog-js"
 import { PostHogProvider } from "posthog-js/react"
@@ -13,6 +13,8 @@ import { TooltipProvider } from "./components/ui/tooltip"
 import { Toaster } from "./components/ui/sonner"
 import { TopLoadingBar } from "./components/app/TopLoadingBar"
 import { queryClient } from "./lib/queryClient"
+import { layerPersister } from "./lib/persister"
+import { CATALOG_VERSION, PERSISTED_WFS_TYPENAMES } from "./catalog/layers"
 import { router } from "./router"
 
 // Init only when a key is configured, so dev builds and CI emit nothing by
@@ -32,13 +34,31 @@ const app = (
   <StrictMode>
     <ErrorBoundary>
       <ThemeProvider defaultTheme="system" storageKey="weaver-theme">
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{
+            persister: layerPersister,
+            maxAge: 24 * 60 * 60 * 1000,
+            buster: CATALOG_VERSION,
+            dehydrateOptions: {
+              // Persist only the Integrated data products (WFS) layer queries.
+              shouldDehydrateQuery: (q) => {
+                const key = q.queryKey
+                return (
+                  key[0] === "wfs" &&
+                  typeof key[2] === "string" &&
+                  PERSISTED_WFS_TYPENAMES.has(key[2])
+                )
+              },
+            },
+          }}
+        >
           <TooltipProvider>
             <TopLoadingBar />
             <RouterProvider router={router} />
             <Toaster richColors closeButton />
           </TooltipProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </ThemeProvider>
     </ErrorBoundary>
   </StrictMode>
