@@ -16,6 +16,7 @@ import {
 } from "@/catalog/layers"
 import {
   OCOTILLO_FEATURES_BASE_URL,
+  STA_BASE_URL,
   STA_ST2_BASE_URL,
   USGS_OGC_BASE_URL,
 } from "@/config"
@@ -26,6 +27,8 @@ export interface DatasetService {
   name: string
   /** Standards protocol (e.g. "OGC API Features"). */
   protocol: string
+  /** Live endpoint for this dataset (a sample request the user can open). */
+  url?: string
 }
 
 /** Everything the dashboard and catalog need about one dataset. */
@@ -53,24 +56,37 @@ const MEASUREMENT_LABELS: Record<string, string> = Object.fromEntries(
  */
 function serviceFor(layer: LayerConfig): DatasetService {
   if (layer.source === "sta") {
+    const base = layer.staBaseUrl ?? STA_BASE_URL
+    const url = `${base}/Locations?$count=true&$top=10`
     return layer.staBaseUrl === STA_ST2_BASE_URL
-      ? { name: "NM agency monitoring networks (FROST)", protocol: "OGC SensorThings" }
-      : { name: "NM Water Data SensorThings (FROST)", protocol: "OGC SensorThings" }
+      ? { name: "NM agency monitoring networks (FROST)", protocol: "OGC SensorThings", url }
+      : { name: "NM Water Data SensorThings (FROST)", protocol: "OGC SensorThings", url }
   }
   if (layer.source === "arcgis") {
-    return { name: "NM OSE GIS (ArcGIS REST)", protocol: "ArcGIS REST" }
+    return {
+      name: "NM OSE GIS (ArcGIS REST)",
+      protocol: "ArcGIS REST",
+      url: `${layer.serviceUrl}/query?where=1%3D1&outFields=*&f=geojson&resultRecordCount=10`,
+    }
   }
   if (layer.source === "wfs") {
-    return { name: "NM Water Data GeoServer", protocol: "OGC WFS" }
+    return {
+      name: "NM Water Data GeoServer",
+      protocol: "OGC WFS",
+      url: `${layer.wfsBaseUrl}/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=${encodeURIComponent(
+        layer.typeName
+      )}&outputFormat=application/json&count=10`,
+    }
   }
   // source === "features"
+  const url = `${layer.featuresBaseUrl}/collections/${layer.collectionId}/items?f=json&limit=10`
   if (layer.featuresBaseUrl === OCOTILLO_FEATURES_BASE_URL) {
-    return { name: "Ocotillo integrated data products", protocol: "OGC API Features" }
+    return { name: "Ocotillo integrated data products", protocol: "OGC API Features", url }
   }
   if (layer.featuresBaseUrl === USGS_OGC_BASE_URL) {
-    return { name: "USGS Water Data for the Nation", protocol: "OGC API Features" }
+    return { name: "USGS Water Data for the Nation", protocol: "OGC API Features", url }
   }
-  return { name: "DIE data exchange (pygeoapi)", protocol: "OGC API Features" }
+  return { name: "DIE data exchange (pygeoapi)", protocol: "OGC API Features", url }
 }
 
 function toMeta(layer: LayerConfig): DatasetMeta {
@@ -97,6 +113,23 @@ export const DATASET_SERVICE_COUNT: number = new Set(
 
 /** Total dataset count. */
 export const DATASET_COUNT: number = DATASET_CATALOG.length
+
+/** Distinct group names, in catalog (section) order — drives grouped display. */
+export const DATASET_GROUPS: string[] = [
+  ...new Set(DATASET_CATALOG.map((d) => d.group)),
+]
+
+/** Distinct measurement labels present, in catalog order — a browse facet. */
+export const DATASET_MEASUREMENTS: string[] = [
+  ...new Set(
+    DATASET_CATALOG.map((d) => d.measurementLabel).filter((v): v is string => !!v)
+  ),
+]
+
+/** Distinct upstream service names, in catalog order — a browse facet. */
+export const DATASET_SOURCES: string[] = [
+  ...new Set(DATASET_CATALOG.map((d) => d.service.name)),
+]
 
 /** Lowercase haystack of all displayed metadata, for free-text search (§V.V17). */
 export function datasetSearchText(d: DatasetMeta): string {

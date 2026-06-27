@@ -158,10 +158,15 @@ export function AppShell() {
   }, [select, clearSelection])
 
   // Landing doorways deep-link here with a hash (SPEC §T.T6): #find focuses the
-  // location search; #measure reveals the measurement facet. Sidebar opens so
-  // the target is visible on mobile.
+  // location search; #measure reveals the measurement facet; #download (from a
+  // catalog card) opens the export dialog. Sidebar opens so the target is
+  // visible on mobile.
   useEffect(() => {
     const hash = window.location.hash.replace(/^#/, "")
+    if (hash === "download") {
+      setExportOpen(true)
+      return
+    }
     if (hash !== "find" && hash !== "measure") return
     setSidebarOpen(true)
     const t = setTimeout(() => {

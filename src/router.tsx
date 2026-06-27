@@ -11,14 +11,28 @@ import { Help } from "@/components/site/Help"
 import { DataCatalog } from "@/components/site/DataCatalog"
 import { validateSearch } from "@/lib/urlState"
 
-/** Catalog search params: free-text query + an optional shareable dataset id. */
+/**
+ * Catalog search params: free-text query, an optional shareable dataset id,
+ * comma-joined facet selections (group / measure / source), and a sort key.
+ */
 function validateCatalogSearch(raw: Record<string, unknown>): {
   q?: string
   dataset?: string
+  groups?: string
+  measures?: string
+  sources?: string
+  sort?: "name" | "source"
 } {
   const str = (v: unknown) =>
     typeof v === "string" && v.length > 0 ? v : undefined
-  return { q: str(raw.q), dataset: str(raw.dataset) }
+  return {
+    q: str(raw.q),
+    dataset: str(raw.dataset),
+    groups: str(raw.groups),
+    measures: str(raw.measures),
+    sources: str(raw.sources),
+    sort: raw.sort === "source" ? "source" : undefined,
+  }
 }
 
 const rootRoute = createRootRoute({
