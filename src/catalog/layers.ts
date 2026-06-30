@@ -503,6 +503,15 @@ const nwisLayers: FeaturesLayer[] = [
  */
 const WFS_SECTION = "Integrated data products"
 
+// Summary products carry well depth as separate value + unit columns; merge
+// into one human display field (e.g. "185 ft"). Shared by every WFS product.
+function mergeWellDepth(props: Record<string, unknown>): Record<string, unknown> {
+  const { well_depth, well_depth_units, ...rest } = props
+  const depth =
+    well_depth != null ? `${well_depth} ${well_depth_units ?? ""}`.trim() : "—"
+  return { ...rest, well_depth: depth }
+}
+
 const WFS_LAYERS: {
   typeName: string
   title: string
@@ -547,14 +556,7 @@ const WFS_LAYERS: {
     fields: {
       include: ["name", "trend_category", "well_depth", "slope_ft_per_year", "span_years", "record_count", "source"],
     },
-    mapProperties: (props) => {
-      const { well_depth, well_depth_units, ...rest } = props
-      const depth =
-        well_depth != null
-          ? `${well_depth} ${well_depth_units ?? ""}`.trim()
-          : "—"
-      return { ...rest, well_depth: depth }
-    },
+    mapProperties: mergeWellDepth,
     style: {
       type: "circle",
       paint: {
@@ -579,6 +581,158 @@ const WFS_LAYERS: {
       "Major ion chemistry for New Mexico groundwater, served from GeoServer (WFS, die:nm_major_chemistry).",
     color: "#7c3aed",
     mt: "water_quality",
+  },
+  {
+    typeName: "die:nm_monitoring_recency",
+    title: "Monitoring Recency",
+    description:
+      "Per-location monitoring recency for New Mexico — days since the last observation and active/stale status, served from GeoServer (WFS, die:nm_monitoring_recency).",
+    color: "#0891b2",
+    mt: "wells",
+    fields: {
+      include: [
+        "name",
+        "source",
+        "status",
+        "days_since_last",
+        "last_observation_datetime",
+        "first_observation_datetime",
+        "record_count",
+        "well_depth",
+      ],
+    },
+    mapProperties: mergeWellDepth,
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "active", "#16a34a",
+          "stale",  "#dc2626",
+          /* default */ "#9ca3af",
+        ],
+      },
+    },
+  },
+  {
+    typeName: "die:nm_waterlevel_change",
+    title: "Water Level Change",
+    description:
+      "Per-location water-level change over a multi-year window for New Mexico — rising/declining direction and net change in feet, served from GeoServer (WFS, die:nm_waterlevel_change).",
+    color: "#1d4ed8",
+    mt: "water_level",
+    fields: {
+      include: [
+        "name",
+        "source",
+        "direction",
+        "change_ft",
+        "window_years",
+        "dtw_start",
+        "dtw_end",
+        "end_date",
+        "observation_count",
+        "status",
+        "well_depth",
+      ],
+    },
+    mapProperties: mergeWellDepth,
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "match",
+          ["get", "direction"],
+          "rising",    "#2563eb",
+          "declining", "#dc2626",
+          /* default */ "#9ca3af",
+        ],
+      },
+    },
+  },
+  {
+    typeName: "die:nm_mcl_exceedance",
+    title: "MCL Exceedances",
+    description:
+      "Per-location drinking-water MCL exceedances for New Mexico — which analytes exceed primary/secondary limits, served from GeoServer (WFS, die:nm_mcl_exceedance).",
+    color: "#b91c1c",
+    mt: "water_quality",
+    fields: {
+      include: [
+        "name",
+        "source",
+        "any_exceedance",
+        "exceedance_count",
+        "exceeded_analytes",
+        "well_depth",
+      ],
+    },
+    // exceeded_analytes arrives as a stringified Python list,
+    // e.g. "['chloride' 'sulfate' 'tds']" — normalize to "chloride, sulfate, tds".
+    mapProperties: (props) => {
+      const raw = props.exceeded_analytes
+      const analytes =
+        typeof raw === "string"
+          ? (raw.match(/[A-Za-z0-9_]+/g) ?? []).join(", ") || "—"
+          : raw
+      return mergeWellDepth({ ...props, exceeded_analytes: analytes })
+    },
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "case",
+          ["get", "any_exceedance"], "#dc2626",
+          /* default */ "#16a34a",
+        ],
+      },
+    },
+  },
+  {
+    typeName: "die:nm_water_type",
+    title: "Water Type",
+    description:
+      "Per-location hydrochemical water type (Piper classification) for New Mexico — dominant cation/anion facies, served from GeoServer (WFS, die:nm_water_type).",
+    color: "#7c3aed",
+    mt: "water_quality",
+    fields: {
+      include: [
+        "name",
+        "source",
+        "water_type",
+        "dominant_cation",
+        "dominant_anion",
+        "well_depth",
+      ],
+    },
+    mapProperties: mergeWellDepth,
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "match",
+          ["get", "dominant_cation"],
+          "Ca",    "#2563eb",
+          "Mg",    "#16a34a",
+          "Na+K",  "#ea580c",
+          "mixed", "#7c3aed",
+          /* default */ "#9ca3af",
+        ],
+      },
+    },
   },
 ]
 
