@@ -36,6 +36,12 @@ interface LayerListProps {
   /** Layer id → whether "not enough data" points are hidden. */
   hideNoDataById?: Record<string, boolean>
   onHideNoDataChange?: (id: string, hide: boolean) => void
+  /** Layer id → free-text attribute filter (settings popover). */
+  attributeQueryById?: Record<string, string>
+  onAttributeQueryChange?: (id: string, q: string) => void
+  /** Layer id → selected values for that layer's facet (settings popover). */
+  facetValuesById?: Record<string, string[]>
+  onFacetChange?: (id: string, values: string[]) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -69,6 +75,7 @@ function toOption(layer: LayerConfig): LayerOption {
     description: layer.description,
     style: pointStyle(layer),
     supportsNoDataFilter: layer.id === "wfs-nm-waterlevel-trends",
+    facet: layer.facet,
   }
 }
 
@@ -95,7 +102,7 @@ const DEFAULT_OPEN = ["Integrated data products"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, colorById, onColorChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -190,6 +197,10 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
                 onOpacityChange={onOpacityChange}
                 hideNoDataById={hideNoDataById}
                 onHideNoDataChange={onHideNoDataChange}
+                attributeQueryById={attributeQueryById}
+                onAttributeQueryChange={onAttributeQueryChange}
+                facetValuesById={facetValuesById}
+                onFacetChange={onFacetChange}
                 colorById={colorById}
                 onColorChange={onColorChange}
                 onToggle={onToggle}

@@ -92,6 +92,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { FieldValue } from "./FieldValue"
 import { ActiveLayerChips } from "./ActiveLayerChips"
+import { MapLegend } from "./MapLegend"
 
 interface MapViewProps {
   /** Optional external ref so the parent can drive the map (e.g. fly-to). */
@@ -102,6 +103,10 @@ interface MapViewProps {
   opacityById?: Record<string, number>
   /** Layer id → whether "not enough data" points are hidden. */
   hideNoDataById?: Record<string, boolean>
+  /** Layer id → free-text attribute filter (settings popover). */
+  attributeQueryById?: Record<string, string>
+  /** Layer id → selected values for the layer's facet (settings popover). */
+  facetValuesById?: Record<string, string[]>
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   /** Ids of enabled layers hidden from the map via their chip (still listed). */
@@ -141,6 +146,8 @@ export function MapView({
   filters,
   opacityById,
   hideNoDataById,
+  attributeQueryById,
+  facetValuesById,
   colorById,
   hiddenLayerIds,
   onLayerCount,
@@ -408,6 +415,8 @@ export function MapView({
             filters={filters}
             opacity={opacityById?.[layer.id] ?? 1}
             hideNoData={hideNoDataById?.[layer.id] ?? false}
+            attributeQuery={attributeQueryById?.[layer.id]}
+            facetValues={facetValuesById?.[layer.id]}
             colorOverride={colorById?.[layer.id]}
             visible={!hiddenLayerIds?.includes(layer.id)}
             onCount={handleLayerCount}
@@ -508,6 +517,8 @@ export function MapView({
           onRemove={onToggleLayer}
         />
       )}
+
+      <MapLegend layers={layers} hiddenLayerIds={hiddenLayerIds} />
 
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
         <Popover>

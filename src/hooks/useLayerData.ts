@@ -193,6 +193,7 @@ export function useWfsLayer(layer: WfsLayer) {
   return useQuery({
     queryKey: wfsLayerKey(layer),
     queryFn: async () => {
+      let geo
       try {
         const fc = await wfsClient(layer.wfsBaseUrl).getAllFeatures(
           layer.typeName,
@@ -201,9 +202,21 @@ export function useWfsLayer(layer: WfsLayer) {
           undefined,
           (n) => setLoadProgress(layer.id, n)
         )
-        return wfsToGeoJSON(fc as FeatureCollection)
+        geo = wfsToGeoJSON(fc as FeatureCollection)
       } finally {
         clearLoadProgress(layer.id)
+      }
+      // Applied here (not just at render time) so the table and inspect
+      // panel — which read this hook directly — see the same transformed
+      // shape as the map, instead of raw GeoServer columns.
+      const map = layer.mapProperties
+      if (!map) return geo
+      return {
+        type: "FeatureCollection" as const,
+        features: geo.features.map((f) => ({
+          ...f,
+          properties: map((f.properties ?? {}) as Record<string, unknown>),
+        })),
       }
     },
     placeholderData: EMPTY,

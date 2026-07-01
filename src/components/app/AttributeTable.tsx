@@ -18,9 +18,9 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer } from "@/catalog/layers"
+import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer, AttributeFacet } from "@/catalog/layers"
 import { useFeaturesLayer, useStaLayer, useArcGisLayer, useWfsLayer } from "@/hooks/useLayerData"
-import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
+import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from "@/lib/filterFeatures"
 import { pointInAnyShape } from "@/lib/selection"
 import { selectFields, type FieldDisplay } from "@/lib/fields"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -40,12 +40,18 @@ interface AttributeTableProps {
   filters: FeatureFilters
   /** Drawn selection polygons; when present, the table is scoped to features inside them. */
   shapes?: Polygon[]
+  /** Per-layer free-text attribute filter, set from the layer's settings popover. */
+  attributeQuery?: string
+  /** Selected values for the layer's facet (settings popover). */
+  facetValues?: string[]
   selectedFeatureId?: string
   onSelect: (featureId: string) => void
   /** Clear the active filters/selection from the footer chips. */
   onClearText?: () => void
   onClearExtent?: () => void
   onClearShapes?: () => void
+  onClearAttributeQuery?: () => void
+  onClearFacet?: () => void
   /** Open the export flow for this layer's features (SPEC §T.T5). */
   onExport?: () => void
 }
@@ -76,33 +82,46 @@ function FilterChip({ label, onClear }: { label: string; onClear?: () => void })
 function TableView({
   fc,
   fields,
+  facet,
   format = (_k, v) => String(v ?? ""),
   loading,
   filters,
   shapes,
+  attributeQuery,
+  facetValues,
   selectedFeatureId,
   onSelect,
   onClearText,
   onClearExtent,
   onClearShapes,
+  onClearAttributeQuery,
+  onClearFacet,
   onExport,
 }: {
   fc: FeatureCollection
   fields?: FieldDisplay
+  facet?: AttributeFacet
   format?: (key: string, value: unknown) => string
   loading?: boolean
 } & Omit<AttributeTableProps, "layer">) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [dense, setDense] = useState(false)
 
-  // Apply the text/extent filters, then narrow to any drawn selection polygons.
+  // Apply the text/extent filters, the layer's own attribute filter and
+  // facet selection, then narrow to any drawn selection polygons.
   const rows = useMemo(() => {
     let features = filterFeatures(fc, filters).features
+    if (attributeQuery) {
+      features = features.filter((f) => matchesText(f, attributeQuery))
+    }
+    if (facet && facetValues && facetValues.length > 0) {
+      features = features.filter((f) => matchesValues(f, facet.field, facetValues))
+    }
     if (shapes && shapes.length > 0) {
       features = features.filter((f) => pointInAnyShape(f, shapes))
     }
     return features
-  }, [fc, filters, shapes])
+  }, [fc, filters, attributeQuery, facet, facetValues, shapes])
 
   const columns = useMemo<ColumnDef<Feature>[]>(() => {
     const keys = new Set<string>()
@@ -267,6 +286,15 @@ function TableView({
               <FilterChip label={`“${filters.q}”`} onClear={onClearText} />
             )}
             {filters.bbox && <FilterChip label="Map view" onClear={onClearExtent} />}
+            {attributeQuery && (
+              <FilterChip label={`“${attributeQuery}”`} onClear={onClearAttributeQuery} />
+            )}
+            {facet && facetValues && facetValues.length > 0 && (
+              <FilterChip
+                label={`${facet.label}: ${facetValues.join(", ")}`}
+                onClear={onClearFacet}
+              />
+            )}
             {shapes && shapes.length > 0 && (
               <FilterChip label="Selection" onClear={onClearShapes} />
             )}
@@ -303,22 +331,22 @@ function TableView({
 
 function FeaturesTable({ layer, ...rest }: { layer: FeaturesLayer } & Omit<AttributeTableProps, "layer">) {
   const { data, isFetching } = useFeaturesLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} loading={isFetching} {...rest} />
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
 }
 
 function StaTable({ layer, ...rest }: { layer: StaLayer } & Omit<AttributeTableProps, "layer">) {
   const { data, isFetching } = useStaLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} loading={isFetching} {...rest} />
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
 }
 
 function ArcGisTable({ layer, ...rest }: { layer: ArcGisLayer } & Omit<AttributeTableProps, "layer">) {
   const { data, isFetching } = useArcGisLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} loading={isFetching} {...rest} />
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
 }
 
 function WfsTable({ layer, ...rest }: { layer: WfsLayer } & Omit<AttributeTableProps, "layer">) {
   const { data, isFetching } = useWfsLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} format={layer.formatValue} loading={isFetching} {...rest} />
+  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
 }
 
 export function AttributeTable({ layer, ...rest }: AttributeTableProps) {

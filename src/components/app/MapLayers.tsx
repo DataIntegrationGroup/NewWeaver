@@ -16,7 +16,7 @@ import {
   useArcGisLayer,
   useWfsLayer,
 } from "@/hooks/useLayerData"
-import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
+import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from "@/lib/filterFeatures"
 
 /** Render-layer id (the MapLibre layer that receives feature clicks) for a layer. */
 export function renderLayerId(layer: LayerConfig): string {
@@ -57,6 +57,10 @@ interface LayerProps2 {
   visible?: boolean
   /** Hide features where trend_category === "not enough data". */
   hideNoData?: boolean
+  /** Per-layer free-text match against attribute values (settings popover). */
+  attributeQuery?: string
+  /** Selected values for the layer's facet (`layer.facet.field`); empty/undefined = all. */
+  facetValues?: string[]
   /** Override the layer's point color. */
   colorOverride?: string
   /** Reports the filtered feature count after rendering. */
@@ -137,6 +141,8 @@ function GeoSource({
   selectedFeatureId,
   opacity = 1,
   visible = true,
+  attributeQuery,
+  facetValues,
   colorOverride,
   onCount,
 }: {
@@ -145,9 +151,18 @@ function GeoSource({
   selectedFeatureId?: string
   opacity?: number
   visible?: boolean
+  attributeQuery?: string
+  facetValues?: string[]
   colorOverride?: string
   onCount?: (id: string, count: number) => void
 }) {
+  if (attributeQuery) {
+    fc = { ...fc, features: fc.features.filter((f) => matchesText(f, attributeQuery)) }
+  }
+  if (layer.facet && facetValues && facetValues.length > 0) {
+    const field = layer.facet.field
+    fc = { ...fc, features: fc.features.filter((f) => matchesValues(f, field, facetValues)) }
+  }
   const count = fc.features.length
   useEffect(() => {
     onCount?.(layer.id, count)
@@ -236,15 +251,13 @@ function ArcGisSource({ layer, filters, ...rest }: { layer: ArcGisLayer } & Omit
 }
 
 function WfsSource({ layer, filters, hideNoData, ...rest }: { layer: WfsLayer } & Omit<LayerProps2, "layer">) {
+  // useWfsLayer already applies layer.mapProperties, so `data` here is the
+  // same transformed shape the table and inspect panel see.
   const { data } = useWfsLayer(layer)
   if (!data) return null
   let fc = filterFeatures(data, filters)
   if (hideNoData) {
     fc = { ...fc, features: fc.features.filter((f) => f.properties?.trend_category !== "not enough data") }
-  }
-  if (layer.mapProperties) {
-    const mp = layer.mapProperties
-    fc = { ...fc, features: fc.features.map((f) => ({ ...f, properties: mp(f.properties ?? {}) })) }
   }
   return <GeoSource layer={layer} fc={fc} {...rest} />
 }

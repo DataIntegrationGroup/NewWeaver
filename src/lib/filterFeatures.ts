@@ -19,12 +19,18 @@ function firstPosition(f: Feature): Position | undefined {
   return Array.isArray(cur) ? (cur as Position) : undefined
 }
 
-function matchesText(f: Feature, q: string): boolean {
+export function matchesText(f: Feature, q: string): boolean {
   const needle = q.toLowerCase()
   const props = f.properties ?? {}
   return Object.values(props).some((v) =>
     String(v ?? "").toLowerCase().includes(needle)
   )
+}
+
+/** True if `field`'s value is one of `values` (empty selection = match all). */
+export function matchesValues(f: Feature, field: string, values: string[]): boolean {
+  if (values.length === 0) return true
+  return values.includes(String(f.properties?.[field]))
 }
 
 function inBounds(

@@ -3,6 +3,7 @@ import { Loader2, Settings } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
+import { Input } from "@/components/ui/input"
 import {
   Tooltip,
   TooltipContent,
@@ -78,6 +79,100 @@ function PointSwatch({
   )
 }
 
+/**
+ * AttributeFilterInput — the free-text field inside a layer's settings
+ * popover. Locally debounced (mirrors FilterControls) so filtering a dense
+ * layer doesn't re-run on every keystroke.
+ */
+function AttributeFilterInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const [text, setText] = React.useState(value)
+  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  React.useEffect(() => setText(value), [value])
+
+  const onType = (v: string) => {
+    setText(v)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => onChange(v), 250)
+  }
+
+  return (
+    <Input
+      type="search"
+      placeholder="Filter features…"
+      className="h-7 text-xs"
+      value={text}
+      data-testid={`layer-attribute-filter-${id}`}
+      aria-label="Filter features by attribute"
+      onChange={(e) => onType(e.target.value)}
+    />
+  )
+}
+
+/** A categorical property offered as multi-select chips in the settings popover. */
+export interface LayerFacet {
+  field: string
+  label: string
+  options: { value: string; label: string }[]
+}
+
+/**
+ * FacetChips — toggleable chips for a layer's categorical facet (e.g.
+ * Monitoring Recency's active/stale). Selecting one or more narrows the
+ * layer to matching features; none selected shows everything.
+ */
+function FacetChips({
+  id,
+  facet,
+  selected,
+  onChange,
+}: {
+  id: string
+  facet: LayerFacet
+  selected: string[]
+  onChange: (values: string[]) => void
+}) {
+  const toggle = (value: string) => {
+    onChange(
+      selected.includes(value)
+        ? selected.filter((v) => v !== value)
+        : [...selected, value]
+    )
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {facet.options.map((opt) => {
+        const active = selected.includes(opt.value)
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={active}
+            data-testid={`layer-facet-${id}-${opt.value}`}
+            onClick={() => toggle(opt.value)}
+            className={cn(
+              "rounded-full border px-2 py-0.5 text-xs transition-colors",
+              active
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export interface LayerOption {
   /** Stable layer id. */
   id: string
@@ -87,6 +182,8 @@ export interface LayerOption {
   style: PointStyle
   /** Shows a "hide no-data points" toggle in the settings popover. */
   supportsNoDataFilter?: boolean
+  /** Categorical facet; shown as multi-select chips instead of free text. */
+  facet?: LayerFacet
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -103,6 +200,13 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → whether "not enough data" points are hidden. */
   hideNoDataById?: Record<string, boolean>
   onHideNoDataChange?: (id: string, hide: boolean) => void
+  /** Layer id → free-text attribute filter, shown in the settings popover.
+   *  Ignored for a layer with a `facet` — chips replace free text there. */
+  attributeQueryById?: Record<string, string>
+  onAttributeQueryChange?: (id: string, q: string) => void
+  /** Layer id → selected values for that layer's facet. */
+  facetValuesById?: Record<string, string[]>
+  onFacetChange?: (id: string, values: string[]) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -123,6 +227,10 @@ function LayerSelector({
   onOpacityChange,
   hideNoDataById,
   onHideNoDataChange,
+  attributeQueryById,
+  onAttributeQueryChange,
+  facetValuesById,
+  onFacetChange,
   colorById,
   onColorChange,
   onToggle,
@@ -223,7 +331,7 @@ function LayerSelector({
                           <Settings className="size-4" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-48" side="left" align="center">
+                      <PopoverContent className="w-56" side="left" align="center">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs text-muted-foreground">Opacity</span>
                           <span className="text-xs tabular-nums">{Math.round(opacity * 100)}%</span>
@@ -238,6 +346,28 @@ function LayerSelector({
                           onChange={(e) => onOpacityChange(option.id, Number(e.target.value) / 100)}
                           className="h-1 w-full cursor-pointer accent-primary"
                         />
+                        {option.facet && onFacetChange ? (
+                          <div className="mt-2 pt-2 border-t space-y-1">
+                            <span className="text-xs text-muted-foreground">{option.facet.label}</span>
+                            <FacetChips
+                              id={option.id}
+                              facet={option.facet}
+                              selected={facetValuesById?.[option.id] ?? []}
+                              onChange={(values) => onFacetChange(option.id, values)}
+                            />
+                          </div>
+                        ) : (
+                          onAttributeQueryChange && (
+                            <div className="mt-2 pt-2 border-t space-y-1">
+                              <span className="text-xs text-muted-foreground">Filter features</span>
+                              <AttributeFilterInput
+                                id={option.id}
+                                value={attributeQueryById?.[option.id] ?? ""}
+                                onChange={(v) => onAttributeQueryChange(option.id, v)}
+                              />
+                            </div>
+                          )
+                        )}
                         {option.supportsNoDataFilter && onHideNoDataChange && (
                           <div className="flex items-center justify-between mt-2 pt-2 border-t">
                             <span className="text-xs text-muted-foreground">Hide no-data points</span>

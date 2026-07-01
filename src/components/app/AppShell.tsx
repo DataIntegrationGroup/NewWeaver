@@ -80,6 +80,8 @@ export function AppShell() {
   const [fitRequest, setFitRequest] = useState<{ ids: string[]; nonce: number } | null>(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
   const [hideNoDataById, setHideNoDataById] = useState<Record<string, boolean>>({})
+  const [attributeQueryById, setAttributeQueryById] = useState<Record<string, string>>({})
+  const [facetValuesById, setFacetValuesById] = useState<Record<string, string[]>>({})
   const [colorById, setColorById] = useState<Record<string, string>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
@@ -381,6 +383,14 @@ export function AppShell() {
             onHideNoDataChange={(id, hide) =>
               setHideNoDataById((m) => ({ ...m, [id]: hide }))
             }
+            attributeQueryById={attributeQueryById}
+            onAttributeQueryChange={(id, q) =>
+              setAttributeQueryById((m) => ({ ...m, [id]: q }))
+            }
+            facetValuesById={facetValuesById}
+            onFacetChange={(id, values) =>
+              setFacetValuesById((m) => ({ ...m, [id]: values }))
+            }
             colorById={colorById}
             onColorChange={(id, color) =>
               setColorById((m) => ({ ...m, [id]: color }))
@@ -410,6 +420,8 @@ export function AppShell() {
               filters={filters}
               opacityById={opacityById}
               hideNoDataById={hideNoDataById}
+              attributeQueryById={attributeQueryById}
+              facetValuesById={facetValuesById}
               colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}
@@ -451,9 +463,17 @@ export function AppShell() {
                 layer={activeLayer}
                 filters={filters}
                 shapes={shapes}
+                attributeQuery={attributeQueryById[activeLayer.id]}
+                facetValues={facetValuesById[activeLayer.id]}
                 onClearText={() => setQuery("")}
                 onClearExtent={() => setBbox(false)}
                 onClearShapes={() => setShapes([])}
+                onClearAttributeQuery={() =>
+                  setAttributeQueryById((m) => ({ ...m, [activeLayer.id]: "" }))
+                }
+                onClearFacet={() =>
+                  setFacetValuesById((m) => ({ ...m, [activeLayer.id]: [] }))
+                }
                 onExport={() => setExportOpen(true)}
                 selectedFeatureId={
                   selection?.layerId === activeLayer.id ? selection.featureId : undefined

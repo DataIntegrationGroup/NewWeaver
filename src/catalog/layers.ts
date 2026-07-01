@@ -41,6 +41,19 @@ export type MeasurementType =
   | "weather"
   | "geochemistry"
 
+/**
+ * A categorical feature property offered as a multi-select in the layer's
+ * settings popover, e.g. Monitoring Recency's `status` (active/stale). Chips
+ * are OR'd together; no chips selected shows every feature.
+ */
+export interface AttributeFacet {
+  /** Feature property this facet reads (compared via String(value)). */
+  field: string
+  /** Label shown above the chip row, e.g. "Status". */
+  label: string
+  options: { value: string; label: string }[]
+}
+
 interface BaseLayer {
   id: string
   title: string
@@ -75,6 +88,11 @@ interface BaseLayer {
   clusterRadius?: number
   /** Stop clustering above this zoom (default 18, matching Weaver). */
   clusterMaxZoom?: number
+  /** Multi-select attribute filter shown in the layer's settings popover. */
+  facet?: AttributeFacet
+  /** Swatch/label pairs for the map legend, when points are categorically
+   *  color-mapped (e.g. trend direction). Omit for a single-color layer. */
+  legend?: { label: string; color: string }[]
   style: LayerStyle
 }
 
@@ -512,6 +530,32 @@ function mergeWellDepth(props: Record<string, unknown>): Record<string, unknown>
   return { ...rest, well_depth: depth }
 }
 
+// MCL Exceedances carries value/mcl/mcl_type/exceeds as four separate columns
+// per analyte (e.g. chloride, chloride_mcl, chloride_mcl_type, chloride_exceeds).
+// Collapse those into one display row per analyte that actually exceeds —
+// "chloride" → "794 (MCL 250, secondary)" — instead of 28 mostly-empty columns.
+const MCL_ANALYTES = ["arsenic", "chloride", "fluoride", "nitrate", "sulfate", "tds", "uranium"]
+
+function expandMclExceedances(props: Record<string, unknown>): Record<string, unknown> {
+  const drop = new Set(["exceeded_analytes"])
+  for (const a of MCL_ANALYTES) {
+    drop.add(a)
+    drop.add(`${a}_mcl`)
+    drop.add(`${a}_mcl_type`)
+    drop.add(`${a}_exceeds`)
+  }
+  const rest: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(props)) {
+    if (!drop.has(k)) rest[k] = v
+  }
+  for (const a of MCL_ANALYTES) {
+    if (props[`${a}_exceeds`]) {
+      rest[a] = `${props[a]} (MCL ${props[`${a}_mcl`]}, ${props[`${a}_mcl_type`]})`
+    }
+  }
+  return mergeWellDepth(rest)
+}
+
 const WFS_LAYERS: {
   typeName: string
   title: string
@@ -520,6 +564,8 @@ const WFS_LAYERS: {
   mt: MeasurementType
   style?: LayerStyle
   fields?: FieldDisplay
+  facet?: AttributeFacet
+  legend?: { label: string; color: string }[]
   mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
 }[] = [
   {
@@ -557,6 +603,12 @@ const WFS_LAYERS: {
       include: ["name", "trend_category", "well_depth", "slope_ft_per_year", "span_years", "record_count", "source"],
     },
     mapProperties: mergeWellDepth,
+    legend: [
+      { label: "Increasing", color: "#dc2626" },
+      { label: "Decreasing", color: "#16a34a" },
+      { label: "Stable", color: "#6b7280" },
+      { label: "Not enough data", color: "#9ca3af" },
+    ],
     style: {
       type: "circle",
       paint: {
@@ -602,6 +654,18 @@ const WFS_LAYERS: {
       ],
     },
     mapProperties: mergeWellDepth,
+    facet: {
+      field: "status",
+      label: "Status",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "stale", label: "Stale" },
+      ],
+    },
+    legend: [
+      { label: "Active", color: "#16a34a" },
+      { label: "Stale", color: "#dc2626" },
+    ],
     style: {
       type: "circle",
       paint: {
@@ -641,6 +705,18 @@ const WFS_LAYERS: {
       ],
     },
     mapProperties: mergeWellDepth,
+    facet: {
+      field: "direction",
+      label: "Direction",
+      options: [
+        { value: "rising", label: "Rising" },
+        { value: "declining", label: "Declining" },
+      ],
+    },
+    legend: [
+      { label: "Rising", color: "#2563eb" },
+      { label: "Declining", color: "#dc2626" },
+    ],
     style: {
       type: "circle",
       paint: {
@@ -664,26 +740,24 @@ const WFS_LAYERS: {
       "Per-location drinking-water MCL exceedances for New Mexico — which analytes exceed primary/secondary limits, served from GeoServer (WFS, die:nm_mcl_exceedance).",
     color: "#b91c1c",
     mt: "water_quality",
-    fields: {
-      include: [
-        "name",
-        "source",
-        "any_exceedance",
-        "exceedance_count",
-        "exceeded_analytes",
-        "well_depth",
+    // "id" stays in properties (map selection/highlight reads it) but isn't
+    // worth showing; everything else surviving expandMclExceedances is shown,
+    // in the order it builds: name, source, any_exceedance, exceedance_count,
+    // well_depth, then one row per exceeded analyte.
+    fields: { exclude: ["id"] },
+    mapProperties: expandMclExceedances,
+    facet: {
+      field: "any_exceedance",
+      label: "MCL status",
+      options: [
+        { value: "true", label: "Exceeds MCL" },
+        { value: "false", label: "No exceedance" },
       ],
     },
-    // exceeded_analytes arrives as a stringified Python list,
-    // e.g. "['chloride' 'sulfate' 'tds']" — normalize to "chloride, sulfate, tds".
-    mapProperties: (props) => {
-      const raw = props.exceeded_analytes
-      const analytes =
-        typeof raw === "string"
-          ? (raw.match(/[A-Za-z0-9_]+/g) ?? []).join(", ") || "—"
-          : raw
-      return mergeWellDepth({ ...props, exceeded_analytes: analytes })
-    },
+    legend: [
+      { label: "Exceeds MCL", color: "#dc2626" },
+      { label: "No exceedance", color: "#16a34a" },
+    ],
     style: {
       type: "circle",
       paint: {
@@ -716,6 +790,22 @@ const WFS_LAYERS: {
       ],
     },
     mapProperties: mergeWellDepth,
+    facet: {
+      field: "dominant_cation",
+      label: "Dominant cation",
+      options: [
+        { value: "Ca", label: "Ca" },
+        { value: "Mg", label: "Mg" },
+        { value: "Na+K", label: "Na+K" },
+        { value: "mixed", label: "Mixed" },
+      ],
+    },
+    legend: [
+      { label: "Ca", color: "#2563eb" },
+      { label: "Mg", color: "#16a34a" },
+      { label: "Na+K", color: "#ea580c" },
+      { label: "Mixed", color: "#7c3aed" },
+    ],
     style: {
       type: "circle",
       paint: {
@@ -748,6 +838,8 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
   cluster: true,
   style: w.style ?? staPoint(w.color),
   ...(w.fields && { fields: w.fields }),
+  ...(w.facet && { facet: w.facet }),
+  ...(w.legend && { legend: w.legend }),
   ...(w.mapProperties && { mapProperties: w.mapProperties }),
 }))
 
@@ -764,7 +856,7 @@ export const LAYER_CATALOG: LayerConfig[] = [
  * renamed fields, etc.) so the IndexedDB cache busts instead of replaying a
  * stale shape. Used as the persist `buster` in main.tsx.
  */
-export const CATALOG_VERSION = "1"
+export const CATALOG_VERSION = "2"
 
 /**
  * WFS typeNames whose fetched FeatureCollections are persisted to IndexedDB —
