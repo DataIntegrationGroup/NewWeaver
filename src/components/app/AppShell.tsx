@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Download, Layers, Share2, Table2 } from "lucide-react"
 import type { Polygon } from "geojson"
+import { useQueryClient } from "@tanstack/react-query"
 import { usePostHog } from "posthog-js/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -28,8 +29,12 @@ import { useViewState } from "@/hooks/useViewState"
 import type { Selection } from "@/lib/urlState"
 import { LayerList } from "./LayerList"
 import { LocationSearch } from "./LocationSearch"
+import { RegionSelector, type RegionChip } from "./RegionSelector"
 import { MeasurementFacet } from "./MeasurementFacet"
 import type { GeocodeResult } from "@/lib/geocode"
+import { REGION_CATALOG, type RegionKind } from "@/catalog/regions"
+import { useRegionFeatures } from "@/hooks/useRegions"
+import { regionPolygons, polygonsBbox, regionCoverage } from "@/lib/regions"
 import { MapView } from "./MapView"
 import { InspectPanel } from "./InspectPanel"
 import { AttributeTable } from "./AttributeTable"
@@ -51,6 +56,7 @@ export function AppShell() {
   const {
     search,
     selection,
+    regions,
     toggleLayer,
     enableLayers,
     setView,
@@ -58,7 +64,11 @@ export function AppShell() {
     clearSelection,
     setBbox,
     setQuery,
+    addRegion,
+    removeRegion,
+    clearRegions,
   } = useViewState()
+  const queryClient = useQueryClient()
 
   useDocumentTitle("Weaver — Map")
   const mapRef = useRef<MapRef | null>(null)
@@ -121,8 +131,42 @@ export function AppShell() {
   }
 
   const layerIds = search.layers ?? []
-  const visibleLayers = LAYER_CATALOG.filter((l) => layerIds.includes(l.id))
+  // Stable reference across renders unless the visible-layer set actually
+  // changes — a fresh array here would force every CatalogLayer to re-key and
+  // every source to re-filter on any unrelated re-render (e.g. a map pan).
+  const layerIdsKey = layerIds.join(",")
+  const visibleLayers = useMemo(
+    () => LAYER_CATALOG.filter((l) => layerIds.includes(l.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the joined id string, not the array identity
+    [layerIdsKey]
+  )
   const selectedLayer = selection ? getLayer(selection.layerId) : undefined
+
+  // Regions of interest (county/PWS/basin), resolved from the URL — 0 or more.
+  // Their combined polygons restrict the map/table/export via
+  // `filters.regionPolygons` (lib/filterFeatures.ts) — narrower than a drawn
+  // shape, which only ever widens (lib/selection.ts).
+  const regionFeatureQueries = useRegionFeatures(regions)
+  const regionChips: RegionChip[] = regions.map((r, i) => {
+    const q = regionFeatureQueries[i]
+    return {
+      kind: r.kind,
+      id: r.id,
+      name: q.data?.properties?.[REGION_CATALOG[r.kind].nameField] as string | undefined,
+      loading: q.isLoading,
+    }
+  })
+  const allRegionPolys = useMemo(
+    () => regionFeatureQueries.flatMap((q) => (q.data ? regionPolygons(q.data) : [])),
+    [regionFeatureQueries]
+  )
+  const regionCov = useMemo(
+    () =>
+      allRegionPolys.length
+        ? regionCoverage(allRegionPolys, visibleLayers, queryClient)
+        : null,
+    [allRegionPolys, visibleLayers, queryClient]
+  )
 
   // Active layer for the table: the selected layer, else the first visible
   // table-eligible layer. Dense default-on context layers (e.g. statewide wells
@@ -135,7 +179,21 @@ export function AppShell() {
     tableCandidates[0] ??
     visibleLayers[0]
 
-  const filters = { q: search.q, bbox: search.bbox, bounds }
+  // Only pull `bounds` in when the "filter to map view" toggle is actually on
+  // — otherwise `bounds` (which changes on every pan/zoom) would invalidate
+  // `filters`' identity on every map move even though nothing filterable
+  // changed, forcing every layer (region-filtered ones especially — a
+  // per-feature point-in-polygon test) to re-filter on every drag frame.
+  const boundsForFilter = search.bbox ? bounds : undefined
+  const filters = useMemo(
+    () => ({
+      q: search.q,
+      bbox: search.bbox,
+      bounds: boundsForFilter,
+      regionPolygons: allRegionPolys.length ? allRegionPolys : undefined,
+    }),
+    [search.q, search.bbox, boundsForFilter, allRegionPolys]
+  )
 
   // Empty state: a text filter is active, every visible layer has reported its
   // filtered count, and they all came back empty.
@@ -214,6 +272,39 @@ export function AppShell() {
       zoom: Math.max(map.getZoom(), 13),
       duration: 600,
     })
+  }
+
+  // The region set just changed (added/removed, or restored from a shared
+  // URL) and geometry has landed — fit the map to their combined extent, once
+  // per distinct region set. `useQueries` hands back a new array each render
+  // regardless of whether the data changed, so this guards with a ref keyed
+  // on `regionsKey` rather than trusting `allRegionPolys`' identity — fitBounds
+  // triggers onMove → a URL patch → re-render, which would otherwise re-fire
+  // the effect and loop.
+  const regionsKey = regions.map((r) => `${r.kind}:${r.id}`).join(",")
+  const firedRegionsKey = useRef<string | null>(null)
+  useEffect(() => {
+    if (firedRegionsKey.current === regionsKey) return
+    if (allRegionPolys.length === 0) return
+    const bbox = polygonsBbox(allRegionPolys)
+    if (!bbox) return
+    firedRegionsKey.current = regionsKey
+    mapRef.current?.fitBounds(
+      [
+        [bbox[0], bbox[1]],
+        [bbox[2], bbox[3]],
+      ],
+      { padding: 60, duration: 600 }
+    )
+  }, [regionsKey, allRegionPolys])
+
+  const handleAddRegion = (kind: RegionKind, id: string) => {
+    addRegion(kind, id)
+    posthog.capture("region_selected", { region_kind: kind })
+  }
+  const handleRemoveRegion = (kind: RegionKind, id: string) => {
+    removeRegion(kind, id)
+    posthog.capture("region_removed", { region_kind: kind })
   }
 
   // Location search located (or cleared) a place: drop/clear the pin and fly to it.
@@ -375,6 +466,14 @@ export function AppShell() {
             onLocate={handleLocate}
             onExport={() => setExportOpen(true)}
           />
+          <RegionSelector
+            chips={regionChips}
+            coverage={regionCov}
+            onAdd={handleAddRegion}
+            onRemove={handleRemoveRegion}
+            onClearAll={clearRegions}
+            onExport={() => setExportOpen(true)}
+          />
           {viewActions}
           <MeasurementFacet onSelect={handleMeasurement} />
           {filterControls}
@@ -465,6 +564,7 @@ export function AppShell() {
                 setView(lng, lat, z)
               }}
               onShapesChange={setShapes}
+              region={allRegionPolys.length ? { polygons: allRegionPolys } : undefined}
             />
           </div>
           {tableOpen && activeLayer && (
@@ -478,6 +578,7 @@ export function AppShell() {
                 onClearText={() => setQuery("")}
                 onClearExtent={() => setBbox(false)}
                 onClearShapes={() => setShapes([])}
+                onClearRegions={clearRegions}
                 onClearAttributeQuery={() =>
                   setAttributeQueryById((m) => ({ ...m, [activeLayer.id]: "" }))
                 }

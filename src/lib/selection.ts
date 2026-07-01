@@ -6,11 +6,12 @@
  * map renders, via the React Query client, so no data is fetched twice.
  */
 import type { QueryClient } from "@tanstack/react-query"
-import type { Feature, FeatureCollection, Polygon, Position } from "geojson"
+import type { Feature, FeatureCollection, Polygon } from "geojson"
 
 import type { LayerConfig, StaLayer } from "@/catalog/layers"
 import { staLayerKey, featuresLayerKey, arcgisLayerKey, wfsLayerKey } from "@/hooks/useLayerData"
 import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
+import { firstPosition, pointInAnyShape } from "@/lib/geo"
 
 /** A monitoring location chosen for export (STA source). */
 export interface SelectedLocation {
@@ -33,42 +34,6 @@ export interface Selection {
   locations: SelectedLocation[]
   features: SelectedFeature[]
   counts: { filtered: number; drawn: number; total: number }
-}
-
-/** First [lng, lat] of a feature, regardless of geometry nesting. */
-function firstPosition(f: Feature): Position | undefined {
-  const g = f.geometry
-  if (!g || g.type === "GeometryCollection") return undefined
-  let cur: unknown = (g as { coordinates: unknown }).coordinates
-  while (Array.isArray(cur) && Array.isArray(cur[0])) cur = cur[0]
-  return Array.isArray(cur) ? (cur as Position) : undefined
-}
-
-/** Ray-casting point-in-ring test. */
-function pointInRing([x, y]: Position, ring: Position[]): boolean {
-  let inside = false
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [xi, yi] = ring[i]
-    const [xj, yj] = ring[j]
-    const intersects =
-      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
-    if (intersects) inside = !inside
-  }
-  return inside
-}
-
-/** Point inside a polygon = inside its outer ring and outside every hole. */
-export function pointInPolygon(p: Position, poly: Polygon): boolean {
-  const [outer, ...holes] = poly.coordinates
-  if (!outer || !pointInRing(p, outer)) return false
-  return !holes.some((hole) => pointInRing(p, hole))
-}
-
-/** True when a feature's first point falls inside any of the drawn shapes. */
-export function pointInAnyShape(f: Feature, shapes: Polygon[]): boolean {
-  const p = firstPosition(f)
-  if (!p) return false
-  return shapes.some((s) => pointInPolygon(p, s))
 }
 
 const featureId = (f: Feature): string => String(f.id ?? f.properties?.id ?? "")

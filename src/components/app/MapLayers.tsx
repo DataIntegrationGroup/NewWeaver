@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import type { FeatureCollection } from "geojson"
 
 import { Source, Layer } from "@/components/ui/map"
@@ -164,14 +164,20 @@ function GeoSource({
   colorOverride?: string
   onCount?: (id: string, count: number) => void
 }) {
-  if (attributeQuery) {
-    fc = { ...fc, features: fc.features.filter((f) => matchesText(f, attributeQuery)) }
-  }
-  if (layer.facet && facetValues && facetValues.length > 0) {
-    const field = layer.facet.field
-    fc = { ...fc, features: fc.features.filter((f) => matchesValues(f, field, facetValues)) }
-  }
-  const count = fc.features.length
+  const facetField = layer.facet?.field
+  const facetKey = facetValues?.join(",")
+  const filteredFc = useMemo(() => {
+    let out = fc
+    if (attributeQuery) {
+      out = { ...out, features: out.features.filter((f) => matchesText(f, attributeQuery)) }
+    }
+    if (facetField && facetValues && facetValues.length > 0) {
+      out = { ...out, features: out.features.filter((f) => matchesValues(f, facetField, facetValues)) }
+    }
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues compared via facetKey, not identity
+  }, [fc, attributeQuery, facetField, facetKey])
+  const count = filteredFc.features.length
   useEffect(() => {
     onCount?.(layer.id, count)
   }, [onCount, layer.id, count])
@@ -192,7 +198,7 @@ function GeoSource({
   // clustering switch actually takes effect on the map.
   if (!clustered) {
     return (
-      <Source key={`${layer.id}:flat`} id={layer.id} type="geojson" data={fc}>
+      <Source key={`${layer.id}:flat`} id={layer.id} type="geojson" data={filteredFc}>
         <Layer
           {...({
             id: renderLayerId(layer),
@@ -214,7 +220,7 @@ function GeoSource({
       {...({
         id: layer.id,
         type: "geojson",
-        data: fc,
+        data: filteredFc,
         cluster: true,
         // maxzoom must exceed clusterMaxZoom, or MapLibre warns on every tile.
         maxzoom: (layer.clusterMaxZoom ?? 18) + 1,
@@ -249,31 +255,38 @@ function GeoSource({
 
 function StaSource({ layer, filters, ...rest }: { layer: StaLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useStaLayer(layer)
-  if (!data) return null
-  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
+  const fc = useMemo(() => (data ? filterFeatures(data, filters) : undefined), [data, filters])
+  if (!fc) return null
+  return <GeoSource layer={layer} fc={fc} {...rest} />
 }
 
 function FeaturesSource({ layer, filters, ...rest }: { layer: FeaturesLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useFeaturesLayer(layer)
-  if (!data) return null
-  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
+  const fc = useMemo(() => (data ? filterFeatures(data, filters) : undefined), [data, filters])
+  if (!fc) return null
+  return <GeoSource layer={layer} fc={fc} {...rest} />
 }
 
 function ArcGisSource({ layer, filters, ...rest }: { layer: ArcGisLayer } & Omit<LayerProps2, "layer">) {
   const { data } = useArcGisLayer(layer)
-  if (!data) return null
-  return <GeoSource layer={layer} fc={filterFeatures(data, filters)} {...rest} />
+  const fc = useMemo(() => (data ? filterFeatures(data, filters) : undefined), [data, filters])
+  if (!fc) return null
+  return <GeoSource layer={layer} fc={fc} {...rest} />
 }
 
 function WfsSource({ layer, filters, hideNoData, ...rest }: { layer: WfsLayer } & Omit<LayerProps2, "layer">) {
   // useWfsLayer already applies layer.mapProperties, so `data` here is the
   // same transformed shape the table and inspect panel see.
   const { data } = useWfsLayer(layer)
-  if (!data) return null
-  let fc = filterFeatures(data, filters)
-  if (hideNoData) {
-    fc = { ...fc, features: fc.features.filter((f) => f.properties?.trend_category !== "not enough data") }
-  }
+  const fc = useMemo(() => {
+    if (!data) return undefined
+    let out = filterFeatures(data, filters)
+    if (hideNoData) {
+      out = { ...out, features: out.features.filter((f) => f.properties?.trend_category !== "not enough data") }
+    }
+    return out
+  }, [data, filters, hideNoData])
+  if (!fc) return null
   return <GeoSource layer={layer} fc={fc} {...rest} />
 }
 

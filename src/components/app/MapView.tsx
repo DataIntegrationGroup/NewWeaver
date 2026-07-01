@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { Layers, Maximize } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import type { Map as MaplibreMap, GeoJSONSource } from "maplibre-gl"
@@ -7,6 +7,8 @@ import {
   Map,
   Marker,
   Popup,
+  Source,
+  Layer,
   type MapRef,
   type MapLayerMouseEvent,
 } from "@/components/ui/map"
@@ -136,6 +138,8 @@ interface MapViewProps {
   onClearSelection: () => void
   onMove: (lng: number, lat: number, z: number, bounds: [number, number, number, number]) => void
   onShapesChange: (shapes: Polygon[]) => void
+  /** Selected region of interest (county/PWS/basin), drawn as a boundary. */
+  region?: { polygons: Polygon[] }
 }
 
 /**
@@ -169,6 +173,7 @@ export function MapView({
   onClearSelection,
   onMove,
   onShapesChange,
+  region,
 }: MapViewProps) {
   const internalMapRef = useRef<MapRef | null>(null)
   const mapRef = externalMapRef ?? internalMapRef
@@ -238,8 +243,9 @@ export function MapView({
     tryAutoFit()
     tryPendingFit()
   }
-  const interactiveLayerIds = layers.flatMap((l) =>
-    interactiveLayerIdsFor(l, clusterById?.[l.id])
+  const interactiveLayerIds = useMemo(
+    () => layers.flatMap((l) => interactiveLayerIdsFor(l, clusterById?.[l.id])),
+    [layers, clusterById]
   )
   const clusterLayerIds = new Set(
     layers.filter((l) => isClustered(l, clusterById?.[l.id])).map(clusterLayerId)
@@ -412,6 +418,31 @@ export function MapView({
               data-testid="search-marker"
             />
           </Marker>
+        )}
+        {region && region.polygons.length > 0 && (
+          <Source
+            id="region-boundary"
+            type="geojson"
+            data={{
+              type: "FeatureCollection",
+              features: region.polygons.map((p) => ({
+                type: "Feature" as const,
+                geometry: p,
+                properties: {},
+              })),
+            }}
+          >
+            <Layer
+              id="region-boundary-fill"
+              type="fill"
+              paint={{ "fill-color": "#d97706", "fill-opacity": 0.08 }}
+            />
+            <Layer
+              id="region-boundary-line"
+              type="line"
+              paint={{ "line-color": "#d97706", "line-width": 2 }}
+            />
+          </Source>
         )}
         {layers.map((layer) => (
           <CatalogLayer

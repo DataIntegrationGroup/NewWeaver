@@ -1,4 +1,5 @@
-import type { Feature, FeatureCollection, Position } from "geojson"
+import type { Feature, FeatureCollection, Polygon } from "geojson"
+import { firstPosition, pointInAnyShape } from "@/lib/geo"
 
 export interface FeatureFilters {
   /** Free-text match against attribute values. */
@@ -7,16 +8,12 @@ export interface FeatureFilters {
   bbox?: boolean
   /** [west, south, east, north] current map extent. */
   bounds?: [number, number, number, number]
-}
-
-function firstPosition(f: Feature): Position | undefined {
-  const g = f.geometry
-  if (!g || g.type === "GeometryCollection") return undefined
-  const c = (g as { coordinates: unknown }).coordinates
-  // Walk to the first [lng, lat] pair regardless of geometry depth.
-  let cur: unknown = c
-  while (Array.isArray(cur) && Array.isArray(cur[0])) cur = cur[0]
-  return Array.isArray(cur) ? (cur as Position) : undefined
+  /**
+   * Selected region(s) of interest (county/PWS/basin) — when present, keep
+   * only features inside at least one of them. Restrictive (unlike a manual
+   * drawn shape, which widens the export selection additively — lib/selection.ts).
+   */
+  regionPolygons?: Polygon[]
 }
 
 export function matchesText(f: Feature, q: string): boolean {
@@ -53,6 +50,10 @@ export function filterFeatures(
   if (filters.bbox && filters.bounds) {
     const b = filters.bounds
     features = features.filter((f) => inBounds(f, b))
+  }
+  if (filters.regionPolygons && filters.regionPolygons.length > 0) {
+    const polys = filters.regionPolygons
+    features = features.filter((f) => pointInAnyShape(f, polys))
   }
   return { type: "FeatureCollection", features }
 }

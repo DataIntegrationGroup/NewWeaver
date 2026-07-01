@@ -1,8 +1,11 @@
 import { useSearch, useNavigate } from "@tanstack/react-router"
 
+import type { RegionKind } from "@/catalog/regions"
 import {
   decodeSelection,
   encodeSelection,
+  decodeRegionRefs,
+  encodeRegionRef,
   type Selection,
   type WeaverSearch,
 } from "@/lib/urlState"
@@ -25,10 +28,12 @@ export function useViewState() {
     })
 
   const selection = decodeSelection(search.sel)
+  const regions = decodeRegionRefs(search.regions)
 
   return {
     search,
     selection,
+    regions,
     toggleLayer(id: string) {
       const current = search.layers ?? []
       const layers = current.includes(id)
@@ -56,6 +61,21 @@ export function useViewState() {
     },
     setQuery(q: string) {
       patch({ q: q || undefined })
+    },
+    /** Add a region to the selection (no-op if already selected). */
+    addRegion(kind: RegionKind, id: string) {
+      const token = encodeRegionRef(kind, id)
+      const current = search.regions ?? []
+      if (current.includes(token)) return
+      patch({ regions: [...current, token] })
+    },
+    removeRegion(kind: RegionKind, id: string) {
+      const token = encodeRegionRef(kind, id)
+      const current = search.regions ?? []
+      patch({ regions: current.filter((t) => t !== token) })
+    },
+    clearRegions() {
+      patch({ regions: undefined })
     },
   }
 }

@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils"
 import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer, AttributeFacet } from "@/catalog/layers"
 import { useFeaturesLayer, useStaLayer, useArcGisLayer, useWfsLayer } from "@/hooks/useLayerData"
 import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from "@/lib/filterFeatures"
-import { pointInAnyShape } from "@/lib/selection"
+import { pointInAnyShape } from "@/lib/geo"
 import { selectFields, type FieldDisplay } from "@/lib/fields"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FieldValue } from "./FieldValue"
@@ -50,6 +50,7 @@ interface AttributeTableProps {
   onClearText?: () => void
   onClearExtent?: () => void
   onClearShapes?: () => void
+  onClearRegions?: () => void
   onClearAttributeQuery?: () => void
   onClearFacet?: () => void
   /** Open the export flow for this layer's features (SPEC §T.T5). */
@@ -94,6 +95,7 @@ function TableView({
   onClearText,
   onClearExtent,
   onClearShapes,
+  onClearRegions,
   onClearAttributeQuery,
   onClearFacet,
   onExport,
@@ -286,6 +288,9 @@ function TableView({
               <FilterChip label={`“${filters.q}”`} onClear={onClearText} />
             )}
             {filters.bbox && <FilterChip label="Map view" onClear={onClearExtent} />}
+            {filters.regionPolygons && filters.regionPolygons.length > 0 && (
+              <FilterChip label="Region" onClear={onClearRegions} />
+            )}
             {attributeQuery && (
               <FilterChip label={`“${attributeQuery}”`} onClear={onClearAttributeQuery} />
             )}

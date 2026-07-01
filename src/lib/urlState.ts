@@ -4,6 +4,7 @@
  * (weaver-replacement-plan §4 "State in the URL").
  */
 import { LAYER_CATALOG } from "@/catalog/layers"
+import { REGION_KINDS, type RegionKind } from "@/catalog/regions"
 
 export interface Selection {
   layerId: string
@@ -23,6 +24,13 @@ export interface WeaverSearch {
   bbox?: boolean
   /** Free-text attribute filter. */
   q?: string
+  /** Selected regions of interest, each encoded "<kind>:<id>". */
+  regions?: string[]
+}
+
+export interface RegionRef {
+  kind: RegionKind
+  id: string
 }
 
 const DEFAULT_LAYERS = LAYER_CATALOG.filter((l) => l.defaultVisible).map(
@@ -49,6 +57,15 @@ export function validateSearch(raw: Record<string, unknown>): WeaverSearch {
     layers = DEFAULT_LAYERS
   }
 
+  let regions: string[]
+  if (Array.isArray(raw.regions)) {
+    regions = raw.regions.filter((x): x is string => typeof x === "string")
+  } else if (typeof raw.regions === "string") {
+    regions = raw.regions.split(",").filter(Boolean)
+  } else {
+    regions = []
+  }
+
   return {
     layers,
     lng: asNumber(raw.lng),
@@ -57,6 +74,7 @@ export function validateSearch(raw: Record<string, unknown>): WeaverSearch {
     sel: asString(raw.sel),
     bbox: raw.bbox === true || raw.bbox === "true",
     q: asString(raw.q),
+    regions,
   }
 }
 
@@ -69,4 +87,33 @@ export function decodeSelection(sel: string | undefined): Selection | undefined 
   const i = sel.indexOf("~")
   if (i < 0) return undefined
   return { layerId: sel.slice(0, i), featureId: sel.slice(i + 1) }
+}
+
+export function encodeRegionRef(kind: RegionKind, id: string): string {
+  return `${kind}:${id}`
+}
+
+function decodeRegionRef(token: string): RegionRef | undefined {
+  const i = token.indexOf(":")
+  if (i < 0) return undefined
+  const kind = token.slice(0, i) as RegionKind
+  const id = token.slice(i + 1)
+  if (!REGION_KINDS.includes(kind) || !id) return undefined
+  return { kind, id }
+}
+
+/** Decode the URL's region tokens, dropping duplicates and malformed entries. */
+export function decodeRegionRefs(regions: string[] | undefined): RegionRef[] {
+  if (!regions?.length) return []
+  const seen = new Set<string>()
+  const out: RegionRef[] = []
+  for (const token of regions) {
+    const ref = decodeRegionRef(token)
+    if (!ref) continue
+    const key = encodeRegionRef(ref.kind, ref.id)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(ref)
+  }
+  return out
 }
