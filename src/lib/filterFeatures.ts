@@ -16,12 +16,26 @@ export interface FeatureFilters {
   regionPolygons?: Polygon[]
 }
 
-export function matchesText(f: Feature, q: string): boolean {
-  const needle = q.toLowerCase()
+// Building the lowercase, space-joined attribute blob is the expensive part
+// of a text filter (every property of every feature, stringified). Cache it
+// per feature so re-filtering on a new/narrowed query — the debounced text
+// box fires on every keystroke pause — doesn't re-stringify unchanged data.
+const searchTextCache = new WeakMap<Feature, string>()
+
+function searchableText(f: Feature): string {
+  const cached = searchTextCache.get(f)
+  if (cached !== undefined) return cached
   const props = f.properties ?? {}
-  return Object.values(props).some((v) =>
-    String(v ?? "").toLowerCase().includes(needle)
-  )
+  const text = Object.values(props)
+    .map((v) => String(v ?? ""))
+    .join(" ")
+    .toLowerCase()
+  searchTextCache.set(f, text)
+  return text
+}
+
+export function matchesText(f: Feature, q: string): boolean {
+  return searchableText(f).includes(q.toLowerCase())
 }
 
 /** True if `field`'s value is one of `values` (empty selection = match all). */

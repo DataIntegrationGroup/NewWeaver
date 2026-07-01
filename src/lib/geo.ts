@@ -28,8 +28,40 @@ function pointInRing([x, y]: Position, ring: Position[]): boolean {
   return inside
 }
 
+type Bbox = [number, number, number, number]
+
+// Region/county/basin polygons can carry thousands of ring vertices; a point
+// far outside one still costs a full ray-cast without this. Cached per
+// polygon object (regionPolygons/allRegionPolys are memoized upstream, so the
+// same Polygon reference is reused across a filter's many pointInPolygon
+// calls) rather than recomputed per point.
+const bboxCache = new WeakMap<Polygon, Bbox>()
+
+function polygonBbox(poly: Polygon): Bbox {
+  const cached = bboxCache.get(poly)
+  if (cached) return cached
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const ring of poly.coordinates) {
+    for (const [x, y] of ring) {
+      if (x < minX) minX = x
+      if (y < minY) minY = y
+      if (x > maxX) maxX = x
+      if (y > maxY) maxY = y
+    }
+  }
+  const bbox: Bbox = [minX, minY, maxX, maxY]
+  bboxCache.set(poly, bbox)
+  return bbox
+}
+
 /** Point inside a polygon = inside its outer ring and outside every hole. */
 export function pointInPolygon(p: Position, poly: Polygon): boolean {
+  const [x, y] = p
+  const [minX, minY, maxX, maxY] = polygonBbox(poly)
+  if (x < minX || x > maxX || y < minY || y > maxY) return false
   const [outer, ...holes] = poly.coordinates
   if (!outer || !pointInRing(p, outer)) return false
   return !holes.some((hole) => pointInRing(p, hole))

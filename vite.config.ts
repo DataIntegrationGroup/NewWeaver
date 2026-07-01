@@ -14,6 +14,10 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      // Preview tooling spawns multiple concurrent dev servers against this
+      // repo and assigns each a free port via PORT; fall back to the default
+      // when unset (plain `pnpm dev`).
+      port: process.env.PORT ? Number(process.env.PORT) : undefined,
       proxy: {
         // GeoServer WFS — same-origin proxy (mirrored by nginx in prod) because
         // the upstream sends no CORS headers. /geoserver/wfs?… forwards as-is.
