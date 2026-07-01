@@ -42,6 +42,9 @@ interface LayerListProps {
   /** Layer id → selected values for that layer's facet (settings popover). */
   facetValuesById?: Record<string, string[]>
   onFacetChange?: (id: string, values: string[]) => void
+  /** Layer id → whether clustering is on (settings popover). */
+  clusterById?: Record<string, boolean>
+  onClusterChange?: (id: string, cluster: boolean) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -76,6 +79,9 @@ function toOption(layer: LayerConfig): LayerOption {
     style: pointStyle(layer),
     supportsNoDataFilter: layer.id === "wfs-nm-waterlevel-trends",
     facet: layer.facet,
+    // Cluster toggle is for color-mapped ("legend") layers, where clustering
+    // hides the per-point category color behind a flat bubble.
+    supportsClusterToggle: !!layer.legend,
   }
 }
 
@@ -102,7 +108,7 @@ const DEFAULT_OPEN = ["Integrated data products"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, colorById, onColorChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -201,6 +207,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
                 onAttributeQueryChange={onAttributeQueryChange}
                 facetValuesById={facetValuesById}
                 onFacetChange={onFacetChange}
+                clusterById={clusterById}
+                onClusterChange={onClusterChange}
                 colorById={colorById}
                 onColorChange={onColorChange}
                 onToggle={onToggle}

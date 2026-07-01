@@ -82,6 +82,11 @@ export function AppShell() {
   const [hideNoDataById, setHideNoDataById] = useState<Record<string, boolean>>({})
   const [attributeQueryById, setAttributeQueryById] = useState<Record<string, string>>({})
   const [facetValuesById, setFacetValuesById] = useState<Record<string, string[]>>({})
+  // Color-mapped ("legend") layers default to unclustered so their per-point
+  // category color is visible; the settings popover lets a user cluster back.
+  const [clusterById, setClusterById] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(LAYER_CATALOG.filter((l) => l.legend).map((l) => [l.id, false]))
+  )
   const [colorById, setColorById] = useState<Record<string, string>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
@@ -391,6 +396,10 @@ export function AppShell() {
             onFacetChange={(id, values) =>
               setFacetValuesById((m) => ({ ...m, [id]: values }))
             }
+            clusterById={clusterById}
+            onClusterChange={(id, cluster) =>
+              setClusterById((m) => ({ ...m, [id]: cluster }))
+            }
             colorById={colorById}
             onColorChange={(id, color) =>
               setColorById((m) => ({ ...m, [id]: color }))
@@ -422,6 +431,7 @@ export function AppShell() {
               hideNoDataById={hideNoDataById}
               attributeQueryById={attributeQueryById}
               facetValuesById={facetValuesById}
+              clusterById={clusterById}
               colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}

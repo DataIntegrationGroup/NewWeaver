@@ -184,6 +184,8 @@ export interface LayerOption {
   supportsNoDataFilter?: boolean
   /** Categorical facet; shown as multi-select chips instead of free text. */
   facet?: LayerFacet
+  /** Shows a "cluster points" toggle in the settings popover. */
+  supportsClusterToggle?: boolean
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -207,6 +209,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → selected values for that layer's facet. */
   facetValuesById?: Record<string, string[]>
   onFacetChange?: (id: string, values: string[]) => void
+  /** Layer id → whether clustering is on (settings popover). */
+  clusterById?: Record<string, boolean>
+  onClusterChange?: (id: string, cluster: boolean) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -231,6 +236,8 @@ function LayerSelector({
   onAttributeQueryChange,
   facetValuesById,
   onFacetChange,
+  clusterById,
+  onClusterChange,
   colorById,
   onColorChange,
   onToggle,
@@ -375,6 +382,16 @@ function LayerSelector({
                               checked={hideNoDataById?.[option.id] ?? false}
                               onCheckedChange={(v) => onHideNoDataChange(option.id, v)}
                               aria-label="Hide no-data points"
+                            />
+                          </div>
+                        )}
+                        {option.supportsClusterToggle && onClusterChange && (
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                            <span className="text-xs text-muted-foreground">Cluster points</span>
+                            <Switch
+                              checked={clusterById?.[option.id] ?? false}
+                              onCheckedChange={(v) => onClusterChange(option.id, v)}
+                              aria-label="Cluster points"
                             />
                           </div>
                         )}

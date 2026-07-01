@@ -107,6 +107,8 @@ interface MapViewProps {
   attributeQueryById?: Record<string, string>
   /** Layer id → selected values for the layer's facet (settings popover). */
   facetValuesById?: Record<string, string[]>
+  /** Layer id → clustering override (settings popover). */
+  clusterById?: Record<string, boolean>
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   /** Ids of enabled layers hidden from the map via their chip (still listed). */
@@ -148,6 +150,7 @@ export function MapView({
   hideNoDataById,
   attributeQueryById,
   facetValuesById,
+  clusterById,
   colorById,
   hiddenLayerIds,
   onLayerCount,
@@ -235,9 +238,11 @@ export function MapView({
     tryAutoFit()
     tryPendingFit()
   }
-  const interactiveLayerIds = layers.flatMap(interactiveLayerIdsFor)
+  const interactiveLayerIds = layers.flatMap((l) =>
+    interactiveLayerIdsFor(l, clusterById?.[l.id])
+  )
   const clusterLayerIds = new Set(
-    layers.filter(isClustered).map(clusterLayerId)
+    layers.filter((l) => isClustered(l, clusterById?.[l.id])).map(clusterLayerId)
   )
   const [drawMap, setDrawMap] = useState<MaplibreMap | null>(null)
 
@@ -417,6 +422,7 @@ export function MapView({
             hideNoData={hideNoDataById?.[layer.id] ?? false}
             attributeQuery={attributeQueryById?.[layer.id]}
             facetValues={facetValuesById?.[layer.id]}
+            clusterOverride={clusterById?.[layer.id]}
             colorOverride={colorById?.[layer.id]}
             visible={!hiddenLayerIds?.includes(layer.id)}
             onCount={handleLayerCount}

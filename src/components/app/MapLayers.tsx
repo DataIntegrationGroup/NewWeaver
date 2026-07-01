@@ -31,8 +31,12 @@ export function clusterLayerId(layer: LayerConfig): string {
 /**
  * Whether a layer renders clustered. ArcGIS layers cluster by default; any
  * other layer opts in with `cluster: true` (e.g. the dense NWIS sites).
+ * `override` — from the layer's settings popover — wins when given, letting a
+ * color-mapped layer (e.g. Monitoring Recency) turn clustering on/off so its
+ * categorical colors stay visible at the point level.
  */
-export function isClustered(layer: LayerConfig): boolean {
+export function isClustered(layer: LayerConfig, override?: boolean): boolean {
+  if (override !== undefined) return override
   return layer.source === "arcgis" ? layer.cluster !== false : layer.cluster === true
 }
 
@@ -41,8 +45,8 @@ export function isClustered(layer: LayerConfig): boolean {
  * layer: its feature layer, plus the cluster-circle layer when clustered (so a
  * click can expand the cluster).
  */
-export function interactiveLayerIdsFor(layer: LayerConfig): string[] {
-  return isClustered(layer)
+export function interactiveLayerIdsFor(layer: LayerConfig, clusterOverride?: boolean): string[] {
+  return isClustered(layer, clusterOverride)
     ? [renderLayerId(layer), clusterLayerId(layer)]
     : [renderLayerId(layer)]
 }
@@ -61,6 +65,8 @@ interface LayerProps2 {
   attributeQuery?: string
   /** Selected values for the layer's facet (`layer.facet.field`); empty/undefined = all. */
   facetValues?: string[]
+  /** Override the layer's default clustering (settings popover). */
+  clusterOverride?: boolean
   /** Override the layer's point color. */
   colorOverride?: string
   /** Reports the filtered feature count after rendering. */
@@ -143,6 +149,7 @@ function GeoSource({
   visible = true,
   attributeQuery,
   facetValues,
+  clusterOverride,
   colorOverride,
   onCount,
 }: {
@@ -153,6 +160,7 @@ function GeoSource({
   visible?: boolean
   attributeQuery?: string
   facetValues?: string[]
+  clusterOverride?: boolean
   colorOverride?: string
   onCount?: (id: string, count: number) => void
 }) {
@@ -176,9 +184,15 @@ function GeoSource({
   // keeping the source loaded, so its chip and count survive a hide toggle.
   const vis = visible === false ? "none" : "visible"
 
-  if (!isClustered(layer)) {
+  const clustered = isClustered(layer, clusterOverride)
+  // react-map-gl's <Source> only calls setData() when props change on an
+  // existing geojson source — `cluster`/`clusterRadius` are frozen at first
+  // creation and silently ignored after that. Keying on `clustered` forces a
+  // full unmount/remount (removeSource → addSource) so toggling the
+  // clustering switch actually takes effect on the map.
+  if (!clustered) {
     return (
-      <Source id={layer.id} type="geojson" data={fc}>
+      <Source key={`${layer.id}:flat`} id={layer.id} type="geojson" data={fc}>
         <Layer
           {...({
             id: renderLayerId(layer),
@@ -196,6 +210,7 @@ function GeoSource({
   const color = colorOverride ?? (typeof rawColor === "string" ? rawColor : "#6b7280")
   return (
     <Source
+      key={`${layer.id}:clustered`}
       {...({
         id: layer.id,
         type: "geojson",
