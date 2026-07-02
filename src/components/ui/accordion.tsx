@@ -61,7 +61,10 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up"
+      // overflow-hidden is only needed while the open/close height animation
+      // runs; once open, drop it so content that needs to escape the item's
+      // box (e.g. an absolutely-positioned suggestion dropdown) isn't clipped.
+      className="overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up data-[state=open]:overflow-visible"
       {...props}
     >
       <div

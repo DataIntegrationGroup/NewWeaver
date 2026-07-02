@@ -17,6 +17,7 @@ const POLY_ALPHA = {
 }
 
 async function enableBbox(world: BrowserWorld) {
+  await world.openSearchSection("filter")
   const sw = world.page.locator('[data-testid="filter-bbox"]:visible')
   if ((await sw.getAttribute("data-state")) !== "checked") await sw.click()
 }

@@ -6,7 +6,7 @@
  * different, narrower semantic than a drawn shape's additive widening.
  */
 import { useMemo, useRef, useState } from "react"
-import { Download, MapPinned, X } from "lucide-react"
+import { Download, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -85,10 +85,6 @@ export function RegionSelector({
 
   return (
     <section aria-label="Select regions of interest" data-testid="region-selector">
-      <p className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
-        <MapPinned className="size-4 text-muted-foreground" />
-        Regions of interest
-      </p>
       <div className="flex gap-2">
         <Select value={kind ?? ""} onValueChange={(v) => changeKind(v as RegionKind)}>
           <SelectTrigger

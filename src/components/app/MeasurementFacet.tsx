@@ -18,9 +18,6 @@ export function MeasurementFacet({ onSelect }: MeasurementFacetProps) {
   if (MEASUREMENT_CATEGORIES.length === 0) return null
   return (
     <section aria-label="Browse by what's measured" data-testid="measurement-facet">
-      <h2 className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Browse by what’s measured
-      </h2>
       <div className="flex flex-wrap gap-1.5">
         {MEASUREMENT_CATEGORIES.map((c) => (
           <Button

@@ -28,9 +28,8 @@ import {
 import { useViewState } from "@/hooks/useViewState"
 import type { Selection } from "@/lib/urlState"
 import { LayerList } from "./LayerList"
-import { LocationSearch } from "./LocationSearch"
-import { RegionSelector, type RegionChip } from "./RegionSelector"
-import { MeasurementFacet } from "./MeasurementFacet"
+import { SearchWidgets } from "./SearchWidgets"
+import type { RegionChip } from "./RegionSelector"
 import type { GeocodeResult } from "@/lib/geocode"
 import { REGION_CATALOG, type RegionKind } from "@/catalog/regions"
 import { useRegionFeatures } from "@/hooks/useRegions"
@@ -38,7 +37,6 @@ import { regionPolygons, polygonsBbox, regionCoverage } from "@/lib/regions"
 import { MapView } from "./MapView"
 import { InspectPanel } from "./InspectPanel"
 import { AttributeTable } from "./AttributeTable"
-import { FilterControls } from "./FilterControls"
 import { ExportDialog } from "./ExportDialog"
 import { OnboardingTour } from "./OnboardingTour"
 
@@ -88,6 +86,11 @@ export function AppShell() {
   const [searchMarker, setSearchMarker] = useState<{ lng: number; lat: number } | null>(null)
   // Measurement-facet fit request (SPEC §T.T4); nonce retriggers the same ids.
   const [fitRequest, setFitRequest] = useState<{ ids: string[]; nonce: number } | null>(null)
+  // Forces open a collapsed SearchWidgets accordion section (e.g. the
+  // #find/#measure doorway hash below); nonce retriggers the same section.
+  const [openSearchRequest, setOpenSearchRequest] = useState<
+    { section: "location" | "regions" | "measure" | "filter"; nonce: number } | null
+  >(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
   const [hideNoDataById, setHideNoDataById] = useState<Record<string, boolean>>({})
   const [attributeQueryById, setAttributeQueryById] = useState<Record<string, string>>({})
@@ -234,6 +237,7 @@ export function AppShell() {
     }
     if (hash !== "find" && hash !== "measure") return
     setSidebarOpen(true)
+    setOpenSearchRequest({ section: hash === "find" ? "location" : "measure", nonce: Date.now() })
     const t = setTimeout(() => {
       if (hash === "find") {
         document.getElementById("location-search-input")?.focus()
@@ -360,17 +364,10 @@ export function AppShell() {
     }
   }
 
-  const filterControls = (
-    <FilterControls
-      bbox={!!search.bbox}
-      q={search.q ?? ""}
-      onBboxChange={(v) => {
-        posthog.capture("filter_to_extent_toggled", { enabled: v })
-        setBbox(v)
-      }}
-      onQueryChange={setQuery}
-    />
-  )
+  const handleBboxChange = (v: boolean) => {
+    posthog.capture("filter_to_extent_toggled", { enabled: v })
+    setBbox(v)
+  }
 
   // View actions (table / share / download) — live in the sidebar so the
   // top navigation stays identical to the content pages.
@@ -461,22 +458,23 @@ export function AppShell() {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
-          <LocationSearch
+          <SearchWidgets
             layers={visibleLayers}
             onLocate={handleLocate}
             onExport={() => setExportOpen(true)}
-          />
-          <RegionSelector
-            chips={regionChips}
-            coverage={regionCov}
-            onAdd={handleAddRegion}
-            onRemove={handleRemoveRegion}
-            onClearAll={clearRegions}
-            onExport={() => setExportOpen(true)}
+            regionChips={regionChips}
+            regionCoverage={regionCov}
+            onAddRegion={handleAddRegion}
+            onRemoveRegion={handleRemoveRegion}
+            onClearRegions={clearRegions}
+            onMeasurementSelect={handleMeasurement}
+            bbox={!!search.bbox}
+            q={search.q ?? ""}
+            onBboxChange={handleBboxChange}
+            onQueryChange={setQuery}
+            openRequest={openSearchRequest ?? undefined}
           />
           {viewActions}
-          <MeasurementFacet onSelect={handleMeasurement} />
-          {filterControls}
           <LayerList
             visible={layerIds}
             opacityById={opacityById}

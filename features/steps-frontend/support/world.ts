@@ -189,6 +189,16 @@ export class BrowserWorld extends World {
     await this.page.goto(`${baseURL}${path}`)
   }
 
+  /** Expand a collapsed SearchWidgets accordion section (location/regions/
+   *  measure/filter) if it isn't already open, so its controls are usable —
+   *  the sidebar sections are collapsed by default. */
+  async openSearchSection(section: "location" | "regions" | "measure" | "filter") {
+    const trigger = this.page.getByTestId(`search-widget-${section}-trigger`)
+    if ((await trigger.getAttribute("aria-expanded")) === "false") {
+      await trigger.click()
+    }
+  }
+
   /** Inject drawn shapes via the app's test seam (no terra-draw canvas). */
   async setShapes(polygons: unknown[]) {
     await this.page.evaluate(

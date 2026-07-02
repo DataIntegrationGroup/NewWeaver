@@ -9,6 +9,7 @@ When(
   async function (this: BrowserWorld, label: string) {
     const cat = MEASUREMENT_CATEGORIES.find((c) => c.label === label)
     if (!cat) throw new Error(`No measurement category labelled "${label}"`)
+    await this.openSearchSection("measure")
     await this.page.getByTestId(`facet-${cat.type}`).click()
   }
 )

@@ -20,9 +20,8 @@ async function tableCount(world: BrowserWorld): Promise<number> {
   return Number(text.match(/(\d+)/)?.[1] ?? "-1")
 }
 
-// Filter controls render twice (header at lg+, sidebar below lg); target the
-// visible instance so the locator is unambiguous.
 async function setSwitch(world: BrowserWorld, on: boolean) {
+  await world.openSearchSection("filter")
   const sw = world.page.locator('[data-testid="filter-bbox"]:visible')
   if (((await sw.getAttribute("data-state")) === "checked") !== on) await sw.click()
 }
@@ -74,6 +73,7 @@ Then("data outside the current extent is shown again", async function (this: Bro
 
 When("the user types a search term into the feature filter", async function (this: BrowserWorld) {
   await ensureTableOpen(this)
+  await this.openSearchSection("filter")
   ;(this as unknown as { totalBefore: number }).totalBefore = await tableCount(this)
   await this.page.locator('[data-testid="filter-text"]:visible').fill("Summary 1")
 })
@@ -92,6 +92,7 @@ Then("only features whose attributes match the term remain visible", async funct
 
 When("the user types a search term that matches no features", async function (this: BrowserWorld) {
   await ensureTableOpen(this)
+  await this.openSearchSection("filter")
   await this.page.locator('[data-testid="filter-text"]:visible').fill("zzzzzznomatch")
 })
 
@@ -113,6 +114,7 @@ Then("the map shows an empty-filter message", async function (this: BrowserWorld
 })
 
 When("the user focuses the filter info button", async function (this: BrowserWorld) {
+  await this.openSearchSection("filter")
   await this.page.locator('[data-testid="filter-info"]:visible').focus()
 })
 

@@ -5,6 +5,7 @@ import type { BrowserWorld } from "./support/world"
 When(
   "the user searches for the location {string}",
   async function (this: BrowserWorld, address: string) {
+    await this.openSearchSection("location")
     await this.page.getByTestId("location-search-input").fill(address)
     await this.page.getByTestId("location-search-submit").click()
   }
@@ -13,6 +14,7 @@ When(
 When(
   "the user types {string} into the location search",
   async function (this: BrowserWorld, text: string) {
+    await this.openSearchSection("location")
     await this.page.getByTestId("location-search-input").fill(text)
   }
 )
