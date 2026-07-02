@@ -23,7 +23,7 @@ import {
 
 /** The upstream service a dataset is read from, named for a human. */
 export interface DatasetService {
-  /** Plain-language service name (e.g. "Ocotillo data products"). */
+  /** Plain-language service name (e.g. "NM Water Data integrated products"). */
   name: string
   /** Standards protocol (e.g. "OGC API Features"). */
   protocol: string
@@ -59,19 +59,19 @@ function serviceFor(layer: LayerConfig): DatasetService {
     const base = layer.staBaseUrl ?? STA_BASE_URL
     const url = `${base}/Locations?$count=true&$top=10`
     return layer.staBaseUrl === STA_ST2_BASE_URL
-      ? { name: "NM agency monitoring networks (FROST)", protocol: "OGC SensorThings", url }
-      : { name: "NM Water Data SensorThings (FROST)", protocol: "OGC SensorThings", url }
+      ? { name: "NM agency monitoring networks", protocol: "OGC SensorThings", url }
+      : { name: "NM Water Data monitoring locations", protocol: "OGC SensorThings", url }
   }
   if (layer.source === "arcgis") {
     return {
-      name: "NM OSE GIS (ArcGIS REST)",
+      name: "NM Office of the State Engineer GIS",
       protocol: "ArcGIS REST",
       url: `${layer.serviceUrl}/query?where=1%3D1&outFields=*&f=geojson&resultRecordCount=10`,
     }
   }
   if (layer.source === "wfs") {
     return {
-      name: "NM Water Data GeoServer",
+      name: "NM Water Data integrated products",
       protocol: "OGC WFS",
       url: `${layer.wfsBaseUrl}/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=${encodeURIComponent(
         layer.typeName
@@ -81,12 +81,12 @@ function serviceFor(layer: LayerConfig): DatasetService {
   // source === "features"
   const url = `${layer.featuresBaseUrl}/collections/${layer.collectionId}/items?f=json&limit=10`
   if (layer.featuresBaseUrl === OCOTILLO_FEATURES_BASE_URL) {
-    return { name: "Ocotillo integrated data products", protocol: "OGC API Features", url }
+    return { name: "NM Bureau of Geology & Mineral Resources", protocol: "OGC API Features", url }
   }
   if (layer.featuresBaseUrl === USGS_OGC_BASE_URL) {
     return { name: "USGS Water Data for the Nation", protocol: "OGC API Features", url }
   }
-  return { name: "DIE data exchange (pygeoapi)", protocol: "OGC API Features", url }
+  return { name: "NM Water Data exchange", protocol: "OGC API Features", url }
 }
 
 function toMeta(layer: LayerConfig): DatasetMeta {

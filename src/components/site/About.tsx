@@ -29,18 +29,22 @@ export function About() {
         <section>
           <h2 className="!text-2xl text-primary">How it works</h2>
           <p className="mt-2 text-muted-foreground">
-            Weaver is a display surface only — it reads public data through two
+            Weaver is a display surface only — it reads public data through
             open, standards-based interfaces and never stores or edits anything:
           </p>
           <ul className="mt-3 list-disc space-y-2 pl-6 text-muted-foreground">
             <li>
               <strong>OGC API Features</strong> — vector / integrated layers
-              (e.g. water-level summaries) published by the Data Integration
-              Engine.
+              (e.g. water-level summaries) published by New Mexico Water Data,
+              plus USGS Water Data for the Nation.
             </li>
             <li>
               <strong>OGC SensorThings API (STA)</strong> — monitoring locations
-              and time-series observations served by the FROST server.
+              and time-series observations from participating agencies.
+            </li>
+            <li>
+              <strong>OGC WFS &amp; ArcGIS REST</strong> — integrated summary
+              products and Office of the State Engineer GIS datasets.
             </li>
           </ul>
         </section>

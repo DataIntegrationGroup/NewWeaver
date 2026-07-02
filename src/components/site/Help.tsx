@@ -263,14 +263,14 @@ export function Help() {
               <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
                 <li>
                   <strong>OGC API Features</strong> — vector / integrated layers
-                  published by the Data Integration Engine (the Ocotillo
-                  pygeoapi: wells, springs, surface water, chemistry, and more).
+                  published by New Mexico Water Data (wells, springs, surface
+                  water, chemistry, and more).
                 </li>
                 <li>
                   <strong>OGC SensorThings API (STA)</strong> — monitoring
-                  locations and time series from the FROST server, including
-                  multiple agency networks (e.g. City of Albuquerque, Bernalillo
-                  County, NM Office of the State Engineer).
+                  locations and time series, including multiple agency networks
+                  (e.g. City of Albuquerque, Bernalillo County, NM Office of the
+                  State Engineer).
                 </li>
                 <li>
                   <strong>ArcGIS REST (OSE GIS)</strong> — the Office of the State
@@ -293,9 +293,9 @@ export function Help() {
                   Weaver-only backend. Use them in your own tools.
                 </p>
                 <ul className="list-disc space-y-1.5 pl-6 text-sm text-muted-foreground">
-                  <ApiRow label="OGC API Features (Ocotillo)" url={OGC_LANDING_URL} />
-                  <ApiRow label="SensorThings — FROST (primary)" url={STA_BASE_URL} />
-                  <ApiRow label="SensorThings — FROST (st2 / agencies)" url={STA_ST2_BASE_URL} />
+                  <ApiRow label="OGC API Features — integrated collections" url={OGC_LANDING_URL} />
+                  <ApiRow label="SensorThings — NM Water Data (primary)" url={STA_BASE_URL} />
+                  <ApiRow label="SensorThings — agency networks" url={STA_ST2_BASE_URL} />
                   <ApiRow label="OSE ArcGIS REST — Points of Diversion" url={OSE_POD_URL} />
                   <ApiRow label="OSE ArcGIS REST — Aquifer Test Wells" url={OSE_AQUIFER_URL} />
                   <ApiRow label="USGS Water Data for the Nation" url={USGS_LANDING_URL} />
@@ -362,12 +362,12 @@ export function Help() {
                 </h3>
                 <ul className="space-y-1.5 text-sm text-muted-foreground">
                   <li>
-                    <strong>Ocotillo landing page</strong> —{" "}
+                    <strong>OGC API landing page</strong> —{" "}
                     <A href={OGC_LANDING_URL}>{OGC_LANDING_URL}</A> (use as the OGC
                     API server connection URL).
                   </li>
                   <li>
-                    <strong>Ocotillo collections</strong> —{" "}
+                    <strong>Available collections</strong> —{" "}
                     <A href={OGC_COLLECTIONS_URL}>{OGC_COLLECTIONS_URL}</A> (review
                     what’s published before connecting).
                   </li>

@@ -27,10 +27,10 @@ function Hero() {
           Weaver
         </h1>
         <p className="mt-3 text-3xl font-bold tracking-tight text-secondary">
-          Explore • Connect • Interact
+          Weaving Together New Mexico Water Data
         </p>
         <p className="mt-3 text-2xl font-semibold leading-tight text-secondary">
-          Weaving Together New Mexico Water Data
+          Water Levels • Water Quality • Wells • Streams
         </p>
         <p className="mt-4 max-w-md text-muted-foreground">
           Weaver brings public water data from across New Mexico together on one

@@ -28,7 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { selectFields, type FieldDisplay } from "@/lib/fields"
+import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { DatastreamChart } from "./DatastreamChart"
 import { FieldValue } from "./FieldValue"
 
@@ -180,7 +180,9 @@ function PanelShell({
  * values (e.g. STA `{ value, unit }` or nested metadata) get a readable form
  * instead of "[object Object]".
  */
-function defaultFormat(_key: string, value: unknown): string {
+function defaultFormat(key: string, value: unknown): string {
+  const rounded = roundedFieldValue(key, value)
+  if (rounded !== undefined) return rounded
   if (value === null || value === undefined) return ""
   if (typeof value === "object") {
     const o = value as Record<string, unknown>
@@ -224,9 +226,9 @@ function AttributeList({
 function whoMeasures(layer: LayerConfig): string {
   if (layer.source === "sta") return layer.title
   if (layer.source === "arcgis") return "the NM Office of the State Engineer"
-  if (layer.source === "wfs") return "New Mexico Water Data (GeoServer)"
+  if (layer.source === "wfs") return "New Mexico Water Data (integrated products)"
   if (layer.section === "NWIS") return "the U.S. Geological Survey (USGS)"
-  return "New Mexico Water Data (Ocotillo)"
+  return "the NM Bureau of Geology & Mineral Resources"
 }
 
 /** What kind of thing this feature is, in plain language (SPEC §V.V6). */

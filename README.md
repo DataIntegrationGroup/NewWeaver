@@ -1,10 +1,15 @@
 # Weaver (NewWeaver)
 
 A modern, public, read-only web app that displays New Mexico water data through
-two standards-based service layers — no source-specific code.
+standards-based service layers — no source-specific code.
 
-- **OGC API Features** (DIE's pygeoapi) — vector / integrated collections
-- **OGC SensorThings API** (FROST) — monitoring locations + time series
+- **OGC API Features** (pygeoapi; also USGS Water Data for the Nation) —
+  vector / integrated collections
+- **OGC SensorThings API** (FROST) — monitoring locations + time series,
+  spanning a primary server and the `st2` agency-networks server
+- **OGC WFS** (GeoServer) — per-location integrated summary products
+- **ArcGIS REST** (Esri Feature Services) — OSE Points of Diversion and
+  Aquifer Test Wells
 
 This is a display surface only: no authentication, no accounts, no private
 data, no editing/ingest. See `weaver-replacement-plan` for full scope.
@@ -22,22 +27,25 @@ data, no editing/ingest. See `weaver-replacement-plan` for full scope.
 | Tables | TanStack Table |
 | Map | MapLibre GL via react-map-gl (token-free basemap) |
 | Charts | ECharts (datastream observation plots) |
-| Data clients | thin typed OGC API Features + SensorThings clients |
+| Data clients | thin typed OGC API Features, SensorThings, WFS, and ArcGIS REST clients |
 
 ## Architecture
 
-Two data adapters, one map, a config-driven layer catalog, detail/inspect views.
+Four data adapters, one map, a config-driven layer catalog, detail/inspect views.
 
-- `src/clients/ogcFeatures.ts` — `OgcFeaturesClient` (DIE pygeoapi)
+- `src/clients/ogcFeatures.ts` — `OgcFeaturesClient` (pygeoapi, USGS OGC API)
 - `src/clients/sensorThings.ts` — `SensorThingsClient` (FROST STA)
+- `src/clients/wfsClient.ts` — `WfsClient` (GeoServer WFS summary products)
+- `src/clients/arcGisRest.ts` — ArcGIS REST client (OSE Feature Services)
 - `src/catalog/layers.ts` — the layer registry; adding a dataset = a new entry
 - `src/components/app/` — app shell, map view, layer list, panels
 - `src/config.ts` — upstream endpoints (override via `VITE_*` env vars). STA
   is one protocol but may span multiple FROST servers (primary FROST + the
   `st2` server hosting CABQ); a catalog layer targets one via `staBaseUrl`.
 
-No backend of its own: static hosting + the two upstream APIs (both must have
-CORS enabled for the public origin).
+No backend of its own: static hosting + the upstream APIs (all must have CORS
+enabled for the public origin; the GeoServer WFS is proxied same-origin because
+it sends no CORS headers — see `vite.config.ts` / nginx).
 
 ### Design system
 

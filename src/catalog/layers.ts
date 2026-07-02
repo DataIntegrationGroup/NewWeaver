@@ -11,7 +11,7 @@ import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
 import type { ArcGisQuery } from "@/clients/arcGisRest"
 import type { WfsQuery } from "@/clients/wfsClient"
-import type { FieldDisplay } from "@/lib/fields"
+import { fixed2, type FieldDisplay } from "@/lib/fields"
 import { formatOseValue } from "@/lib/oseCodes"
 import {
   GEOSERVER_WFS_BASE_URL,
@@ -198,7 +198,7 @@ const ST2_AGENCIES: { code: string; title: string; color: string }[] = [
 const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
   id: `st2-${a.code.toLowerCase()}`,
   title: a.title,
-  description: `${a.title} monitoring locations from the st2 FROST server (agency=${a.code}).`,
+  description: `Monitoring locations operated by ${a.title}, with time-series measurements at each site.`,
   source: "sta",
   staBaseUrl: STA_ST2_BASE_URL,
   defaultVisible: false,
@@ -273,7 +273,7 @@ const ocotilloLayers: FeaturesLayer[] = OCOTILLO_COLLECTIONS.map((c) => ({
   title: c.title,
   description:
     c.description ??
-    `${c.title} from the Ocotillo OGC API Features service (collection ${c.id}).`,
+    `${c.title} across New Mexico, from the NM Bureau of Geology & Mineral Resources integrated datasets.`,
   source: "features",
   featuresBaseUrl: OCOTILLO_FEATURES_BASE_URL,
   collectionId: c.id,
@@ -386,7 +386,7 @@ const oseGisLayers: ArcGisLayer[] = [
     id: "ose-pods",
     title: "OSE Points of Diversion",
     description:
-      "Points of Diversion from the OSE WATERS database (ArcGIS REST). Carries water-right status, POD status, use, well depth, depth to water, and well-log date for filtering.",
+      "Points of Diversion from the OSE WATERS database — water-right status, POD status, use, well depth, depth to water, and well-log date, all filterable.",
     source: "arcgis",
     serviceUrl: `${OSE_ARCGIS_BASE_URL}/OSE_Points_of_Diversion/FeatureServer/0`,
     idField: "pod_file",
@@ -404,7 +404,7 @@ const oseGisLayers: ArcGisLayer[] = [
     id: "ose-aquifer-tests",
     title: "OSE Aquifer Test Wells",
     description:
-      "Wells in the OSE Aquifer Test database (ArcGIS REST), where pump-test data is available.",
+      "Wells in the OSE Aquifer Test database, where pump-test data is available.",
     source: "arcgis",
     serviceUrl: `${OSE_ARCGIS_BASE_URL}/OSE_Aquifer_Test_Wells_view_pub/FeatureServer/0`,
     idField: "objectid",
@@ -484,7 +484,7 @@ const nwisLayers: FeaturesLayer[] = [
     id: "nwis-groundwater",
     title: "Groundwater Sites",
     description:
-      "USGS NWIS groundwater monitoring locations (wells) in New Mexico, from the Water Data for the Nation OGC API (monitoring-locations, site_type_code=GW).",
+      "USGS groundwater monitoring wells in New Mexico, from Water Data for the Nation.",
     source: "features",
     featuresBaseUrl: USGS_OGC_BASE_URL,
     collectionId: "monitoring-locations",
@@ -499,7 +499,7 @@ const nwisLayers: FeaturesLayer[] = [
     (v): FeaturesLayer => ({
       id: v.id,
       title: v.title,
-      description: `USGS ${v.title} for New Mexico, from the Water Data for the Nation OGC API (${v.collectionId}).${v.capped ? ` Open-ended time series — limited to the first ${NWIS_VALUE_CAP.toLocaleString()} features.` : ""}`,
+      description: `USGS ${v.title.toLowerCase()} for New Mexico, from Water Data for the Nation.${v.capped ? ` Open-ended time series — limited to the first ${NWIS_VALUE_CAP.toLocaleString()} features.` : ""}`,
       source: "features",
       featuresBaseUrl: USGS_OGC_BASE_URL,
       collectionId: v.collectionId,
@@ -567,12 +567,13 @@ const WFS_LAYERS: {
   facet?: AttributeFacet
   legend?: { label: string; color: string }[]
   mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
+  formatValue?: (key: string, value: unknown) => string
 }[] = [
   {
     typeName: "die:nm_arsenic_summary",
     title: "Arsenic Summary",
     description:
-      "Per-location arsenic summary for New Mexico, served from GeoServer (WFS, die:nm_arsenic_summary).",
+      "Per-location arsenic summary for New Mexico.",
     color: "#b91c1c",
     mt: "water_quality",
   },
@@ -580,15 +581,23 @@ const WFS_LAYERS: {
     typeName: "die:nm_waterlevels_summary",
     title: "Water Levels Summary",
     description:
-      "Per-location water-level summary for New Mexico, served from GeoServer (WFS, die:nm_waterlevels_summary).",
+      "Per-location water-level summary for New Mexico.",
     color: "#1d4ed8",
     mt: "water_level",
+    // Shares GeoServer's generic min/max/mean/latest_value summary schema
+    // with the TDS/arsenic layers above, so these can't be rounded by field
+    // name alone (lib/fields.ts's roundedFieldValue) without also rounding
+    // water-quality concentrations — round explicitly here instead.
+    formatValue: (key, value) =>
+      (["min", "max", "mean", "earliest_value", "latest_value"].includes(key)
+        ? fixed2(value)
+        : undefined) ?? String(value ?? ""),
   },
   {
     typeName: "die:nm_tds_summary",
     title: "TDS Summary",
     description:
-      "Per-location total-dissolved-solids summary for New Mexico, served from GeoServer (WFS, die:nm_tds_summary).",
+      "Per-location total-dissolved-solids summary for New Mexico.",
     color: "#ea580c",
     mt: "water_quality",
   },
@@ -596,11 +605,11 @@ const WFS_LAYERS: {
     typeName: "die:nm_waterlevel_trends",
     title: "Groundwater Trends",
     description:
-      "Per-location groundwater level trend summary for New Mexico, served from GeoServer (WFS, die:nm_waterlevel_trends).",
+      "Per-location groundwater level trend summary for New Mexico.",
     color: "#6b7280",
     mt: "water_level",
     fields: {
-      include: ["name", "trend_category", "well_depth", "slope_ft_per_year", "span_years", "record_count", "source"],
+      include: ["name", "trend_category", "well_depth", "slope_per_year", "span_years", "record_count", "source"],
     },
     mapProperties: mergeWellDepth,
     legend: [
@@ -630,7 +639,7 @@ const WFS_LAYERS: {
     typeName: "die:nm_major_chemistry",
     title: "Major Chemistry",
     description:
-      "Major ion chemistry for New Mexico groundwater, served from GeoServer (WFS, die:nm_major_chemistry).",
+      "Major ion chemistry for New Mexico groundwater.",
     color: "#7c3aed",
     mt: "water_quality",
   },
@@ -638,7 +647,7 @@ const WFS_LAYERS: {
     typeName: "die:nm_monitoring_recency",
     title: "Monitoring Recency",
     description:
-      "Per-location monitoring recency for New Mexico — days since the last observation and active/stale status, served from GeoServer (WFS, die:nm_monitoring_recency).",
+      "Per-location monitoring recency for New Mexico — days since the last observation and active/stale status.",
     color: "#0891b2",
     mt: "wells",
     fields: {
@@ -686,7 +695,7 @@ const WFS_LAYERS: {
     typeName: "die:nm_waterlevel_change",
     title: "Water Level Change",
     description:
-      "Per-location water-level change over a multi-year window for New Mexico — rising/declining direction and net change in feet, served from GeoServer (WFS, die:nm_waterlevel_change).",
+      "Per-location water-level change over a multi-year window for New Mexico — rising/declining direction and net change in feet.",
     color: "#1d4ed8",
     mt: "water_level",
     fields: {
@@ -737,7 +746,7 @@ const WFS_LAYERS: {
     typeName: "die:nm_mcl_exceedance",
     title: "MCL Exceedances",
     description:
-      "Per-location drinking-water MCL exceedances for New Mexico — which analytes exceed primary/secondary limits, served from GeoServer (WFS, die:nm_mcl_exceedance).",
+      "Per-location drinking-water MCL exceedances for New Mexico — which analytes exceed primary/secondary limits.",
     color: "#b91c1c",
     mt: "water_quality",
     // "id" stays in properties (map selection/highlight reads it) but isn't
@@ -776,7 +785,7 @@ const WFS_LAYERS: {
     typeName: "die:nm_water_type",
     title: "Water Type",
     description:
-      "Per-location hydrochemical water type (Piper classification) for New Mexico — dominant cation/anion facies, served from GeoServer (WFS, die:nm_water_type).",
+      "Per-location hydrochemical water type (Piper classification) for New Mexico — dominant cation/anion facies.",
     color: "#7c3aed",
     mt: "water_quality",
     fields: {
@@ -841,6 +850,7 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
   ...(w.facet && { facet: w.facet }),
   ...(w.legend && { legend: w.legend }),
   ...(w.mapProperties && { mapProperties: w.mapProperties }),
+  ...(w.formatValue && { formatValue: w.formatValue }),
 }))
 
 export const LAYER_CATALOG: LayerConfig[] = [
@@ -907,7 +917,7 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
   NWIS:
     "U.S. Geological Survey sites and observations for New Mexico, from the Water Data for the Nation service — groundwater wells plus continuous, daily, field, and channel measurements.",
   "Integrated data products":
-    "Per-location summary layers for New Mexico served from GeoServer — arsenic, water levels, and total dissolved solids.",
+    "Per-location summary products built from many sources — arsenic, water levels, TDS, chemistry, trends, and drinking-water exceedances.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {
