@@ -33,3 +33,26 @@ export function selectFields(keys: string[], fields?: FieldDisplay): string[] {
   }
   return out
 }
+
+/** Format a finite number to exactly 2 decimal places (e.g. `2` → `"2.00"`);
+ *  undefined for non-numeric/non-finite values so callers can fall through
+ *  to their normal formatting. */
+export function fixed2(value: unknown): string | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(2) : undefined
+}
+
+// Field-name fragments that unambiguously identify a water-level, trend, or
+// elevation reading — these always render to exactly 2 decimal places, never
+// raw source precision. Layers whose numeric fields are named generically
+// (e.g. GeoServer's shared min/max/mean/latest_value summary schema, reused
+// by TDS/arsenic/chemistry too) can't be matched by name alone; those set
+// their own `formatValue` instead (see wfs-nm-waterlevels-summary in
+// catalog/layers.ts).
+const ROUNDED_FIELD_RE = /depth_to_water|depth_wat|water_level|elevation|slope_per_year|change_ft|dtw/i
+
+/** `fixed2`, gated to fields whose name marks them as a water-level, trend,
+ *  or elevation reading. Undefined when the field doesn't match, so callers
+ *  fall through to their normal formatting. */
+export function roundedFieldValue(key: string, value: unknown): string | undefined {
+  return ROUNDED_FIELD_RE.test(key) ? fixed2(value) : undefined
+}

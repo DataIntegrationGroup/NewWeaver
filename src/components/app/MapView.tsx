@@ -27,7 +27,7 @@ import {
 
 import type { LayerConfig } from "@/catalog/layers"
 import type { FeatureFilters } from "@/lib/filterFeatures"
-import { selectFields, type FieldDisplay } from "@/lib/fields"
+import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import {
   staLayerKey,
   featuresLayerKey,
@@ -36,7 +36,13 @@ import {
 } from "@/hooks/useLayerData"
 
 /** Plain string cast used when a layer declares no value formatter. */
-const defaultFormat = (_key: string, value: unknown) => String(value ?? "")
+const defaultFormat = (key: string, value: unknown) => roundedFieldValue(key, value) ?? String(value ?? "")
+
+// Hover popups vanish the moment the pointer leaves the feature, so any rows
+// past what fits on first render are permanently unreachable — there's no
+// way to scroll to them without the mouse crossing empty canvas first, which
+// clears the hover. Cap the list instead of relying on scroll.
+const MAX_POPUP_FIELDS = 8
 
 /**
  * Resolve a MapLibre `circle-color` paint value to the actual hex for one
@@ -274,8 +280,20 @@ export function MapView({
       setHoverInfo((prev) => (prev ? null : prev))
       return
     }
-    const properties = (hit.properties ?? {}) as Record<string, unknown>
+    const hitProperties = (hit.properties ?? {}) as Record<string, unknown>
     const layer = layers.find((l) => renderLayerId(l) === hit.layer?.id)
+    // MapLibre's rendered-feature properties come from its internal GeoJSON
+    // tiling, which silently drops any property whose value is null — a
+    // feature with several null fields would show fewer rows in the popup
+    // than the same feature's table row/inspect panel. Prefer the untiled
+    // properties from the layer's own cached FeatureCollection when available.
+    const featureId = String(hitProperties.id ?? hit.id ?? "")
+    const cached = layer
+      ? queryClient
+          .getQueryData<FeatureCollection>(layerCacheKey(layer))
+          ?.features.find((f) => String(f.id ?? f.properties?.id) === featureId)
+      : undefined
+    const properties = (cached?.properties ?? hitProperties) as Record<string, unknown>
     const override = layer ? colorById?.[layer.id] : undefined
     const color =
       override ?? resolveCircleColor(layer?.style.paint?.["circle-color"], properties)
@@ -472,11 +490,16 @@ export function MapView({
             closeOnClick={false}
             maxWidth="440px"
           >
-            {/* No fixed anchor: MapLibre flips the popup to whichever side keeps
-                it on-screen. A tall field list scrolls within a capped height. */}
+            {/* No fixed anchor: MapLibre flips the popup to whichever side
+                keeps it on-screen. Hover popups vanish the instant the
+                pointer leaves the feature, so scrolling to see more rows
+                isn't reachable — the mouse crosses empty canvas (clearing
+                the hover) before it ever gets to a scrollbar. Cap the field
+                list to what fits and say plainly that there's more, instead
+                of a scrollable area nobody can actually scroll. */}
             <div
               data-testid="feature-popup"
-              className="max-h-[min(60vh,20rem)] overflow-y-auto px-3 py-2.5 text-foreground"
+              className="max-w-full overflow-x-hidden px-3 py-2.5 text-foreground"
             >
               {(hoverInfo.title || hoverInfo.name) && (
                 <div className="mb-2 border-b border-border pb-2">
@@ -503,23 +526,39 @@ export function MapView({
                   )}
                 </div>
               )}
-              <dl className="grid grid-cols-[max-content_1fr] text-xs [&>*:nth-last-child(-n+2)]:border-b-0">
-                {selectFields(Object.keys(hoverInfo.properties), hoverInfo.fields)
+              {(() => {
+                const keys = selectFields(Object.keys(hoverInfo.properties), hoverInfo.fields)
                   .filter((k) => k !== "name")
                   .filter((k) => !(hoverInfo.subtitle && k === "trend_category"))
-                  .map((k) => (
-                    <Fragment key={k}>
-                      <dt className="whitespace-nowrap border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
-                        {k}
-                      </dt>
-                      <dd className="break-words border-b border-border/40 py-1 align-top tabular-nums">
-                        <FieldValue
-                          value={(hoverInfo.format ?? defaultFormat)(k, hoverInfo.properties[k])}
-                        />
-                      </dd>
-                    </Fragment>
-                  ))}
-              </dl>
+                const shown = keys.slice(0, MAX_POPUP_FIELDS)
+                const hidden = keys.length - shown.length
+                return (
+                  <>
+                    <dl className="grid grid-cols-[minmax(0,40%)_minmax(0,1fr)] text-xs [&>*:nth-last-child(-n+2)]:border-b-0">
+                      {shown.map((k) => (
+                        <Fragment key={k}>
+                          <dt className="min-w-0 break-words border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
+                            {k}
+                          </dt>
+                          <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top tabular-nums">
+                            <FieldValue
+                              value={(hoverInfo.format ?? defaultFormat)(k, hoverInfo.properties[k])}
+                            />
+                          </dd>
+                        </Fragment>
+                      ))}
+                    </dl>
+                    {hidden > 0 && (
+                      <p
+                        data-testid="feature-popup-more"
+                        className="pt-1.5 text-[11px] italic text-muted-foreground"
+                      >
+                        +{hidden} more — click the point for full details
+                      </p>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </Popup>
         )}

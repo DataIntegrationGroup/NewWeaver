@@ -43,8 +43,12 @@ export function DatastreamChart({ datastream, staBaseUrl }: DatastreamChartProps
   const latest = values.length ? values[values.length - 1] : NaN
   const min = values.length ? Math.min(...values) : NaN
   const max = values.length ? Math.max(...values) : NaN
+  // Always exactly 2 decimals (e.g. "2.00", not "2" or "2.1846") — water-level
+  // readings never report more precision than that.
   const fmtNum = (n: number) =>
-    Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"
+    Number.isFinite(n)
+      ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : "—"
   const fmtDate = (iso: unknown) =>
     new Date(String(iso)).toLocaleDateString(undefined, {
       year: "numeric",

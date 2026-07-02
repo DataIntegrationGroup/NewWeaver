@@ -214,19 +214,6 @@
     border-right-color: var(--popover) !important;
 }
 
-/* Slim, unobtrusive scrollbar for the popup's field list. */
-[data-testid="feature-popup"] {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-}
-[data-testid="feature-popup"]::-webkit-scrollbar {
-    width: 6px;
-}
-[data-testid="feature-popup"]::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 3px;
-}
-
 /* Continuous "marquee" scroll for the home-page data-source carousel. The track
    holds two copies of the list; translating it -50% loops seamlessly. */
 @keyframes marquee {

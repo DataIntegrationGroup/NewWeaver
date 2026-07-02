@@ -5,6 +5,7 @@
  * original Weaver OSE filter. Formatting happens at display time only — the raw
  * codes stay in the data so the OSE filter keeps matching on them.
  */
+import { roundedFieldValue } from "@/lib/fields"
 
 /** Water-right status (`status`). */
 export const OSE_STATUS_LABELS: Record<string, string> = {
@@ -126,6 +127,8 @@ function codeLabel(value: unknown, labels: Record<string, string>): string {
  * layer's `formatValue`.
  */
 export function formatOseValue(key: string, value: unknown): string {
+  const rounded = roundedFieldValue(key, value)
+  if (rounded !== undefined) return rounded
   const labels = OSE_CODE_FIELDS[key]
   return labels ? codeLabel(value, labels) : String(value ?? "")
 }

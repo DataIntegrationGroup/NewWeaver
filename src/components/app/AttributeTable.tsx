@@ -22,7 +22,7 @@ import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer, Attri
 import { useFeaturesLayer, useStaLayer, useArcGisLayer, useWfsLayer } from "@/hooks/useLayerData"
 import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from "@/lib/filterFeatures"
 import { pointInAnyShape } from "@/lib/geo"
-import { selectFields, type FieldDisplay } from "@/lib/fields"
+import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FieldValue } from "./FieldValue"
 import {
@@ -84,7 +84,7 @@ function TableView({
   fc,
   fields,
   facet,
-  format = (_k, v) => String(v ?? ""),
+  format = (k, v) => roundedFieldValue(k, v) ?? String(v ?? ""),
   loading,
   filters,
   shapes,
@@ -206,7 +206,13 @@ function TableView({
         className="flex-1 overflow-auto"
         onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       >
-        <Table>
+        {/* The shared Table wraps itself in an overflow-x-auto div; nested
+            inside our own scrollRef (which owns the real, height-bounded
+            scrollbars for this virtualized view), that inner wrapper would
+            grow to the full unclipped table height and strand its horizontal
+            scrollbar far below the visible viewport. Hand scrolling
+            entirely to scrollRef instead. */}
+        <Table containerClassName="overflow-visible">
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id} className="border-0 hover:bg-transparent">
