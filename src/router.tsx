@@ -9,6 +9,7 @@ import { Home } from "@/components/site/Home"
 import { About } from "@/components/site/About"
 import { Help } from "@/components/site/Help"
 import { DataCatalog } from "@/components/site/DataCatalog"
+import { RegionalPlanning } from "@/components/site/RegionalPlanning"
 import { validateSearch } from "@/lib/urlState"
 
 /**
@@ -75,12 +76,20 @@ const catalogRoute = createRoute({
   validateSearch: validateCatalogSearch,
 })
 
+/** Regional water planning decision-support dashboard. */
+const planningRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/planning",
+  component: RegionalPlanning,
+})
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   mapRoute,
   aboutRoute,
   helpRoute,
   catalogRoute,
+  planningRoute,
 ])
 
 export const router = createRouter({ routeTree })
