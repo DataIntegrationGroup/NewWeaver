@@ -29,6 +29,13 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { REGION_CATALOG, REGION_KINDS, type RegionKind } from "@/catalog/regions"
 import { useRegionOptions, useRegionFeatures } from "@/hooks/useRegions"
@@ -36,14 +43,17 @@ import { regionPolygons } from "@/lib/regions"
 import { useTheme } from "@/components/theme-provider"
 import type { RegionRef } from "@/lib/urlState"
 import { PlanningMap, type PlanningRegion } from "@/components/app/PlanningMap"
-import { usePlanningWaterData } from "@/hooks/usePlanning"
+import { usePlanningWaterData, useWellSeries } from "@/hooks/usePlanning"
 import {
   wellPoints,
   filterWells,
+  wellsWithSeries,
   type Distribution,
   type PlanningSummary,
   type WellCategory,
+  type WellSeriesRow,
 } from "@/lib/planning"
+import { LineChart } from "lucide-react"
 
 const regionKey = (kind: RegionKind, id: string) => `${kind}:${id}`
 
@@ -315,16 +325,248 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
   )
 }
 
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+
+/** Hydrograph for one well: depth-to-water over time, fetched live on demand.
+ *  Depth increases downward, so the y-axis is inverted (0 at the top). */
+function WellHydrograph({ well, dark }: { well: WellSeriesRow; dark: boolean }) {
+  const { data, isLoading, isError } = useWellSeries(well.id)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2" data-testid="hydrograph-loading">
+        <Skeleton className="h-4 w-1/3" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
+  if (isError || !data || data.points.length === 0) {
+    return (
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        No water-level readings available for this well.
+      </p>
+    )
+  }
+
+  const { points, units } = data
+  const values = points.map((p) => p.v)
+  const latest = values[values.length - 1]
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const axis = dark ? "#9ca3af" : "#6b7280"
+  const line = dark ? "#38bdf8" : "#0369a1"
+
+  const option = {
+    animation: false,
+    grid: { left: 64, right: 16, top: 16, bottom: 56 },
+    xAxis: { type: "time", axisLabel: { color: axis } },
+    yAxis: {
+      type: "value",
+      name: `Depth to water (${units})`,
+      nameLocation: "middle",
+      nameGap: 46,
+      inverse: true,
+      scale: true,
+      axisLabel: { color: axis },
+      nameTextStyle: { color: axis },
+    },
+    tooltip: {
+      trigger: "axis",
+      formatter: (ps: { value: [string, number] }[]) => {
+        const p = ps[0]
+        return p ? `${fmtDate(p.value[0])}<br/><strong>${p.value[1].toFixed(2)} ${units}</strong>` : ""
+      },
+    },
+    dataZoom: [{ type: "inside" }, { type: "slider", height: 20, bottom: 8 }],
+    series: [
+      {
+        type: "line",
+        showSymbol: false,
+        smooth: false,
+        lineStyle: { width: 1.25, color: line },
+        itemStyle: { color: line },
+        data: points.map((p) => [p.t, p.v]),
+        name: well.name,
+      },
+    ],
+  }
+
+  const fmtNum = (n: number) => n.toFixed(2)
+
+  return (
+    <div data-testid="hydrograph">
+      <dl className="mb-2 grid grid-cols-4 gap-2 rounded-md border bg-muted/30 p-2 text-center">
+        {[
+          { k: "Latest", v: `${fmtNum(latest)} ${units}` },
+          { k: "Shallowest", v: fmtNum(min) },
+          { k: "Deepest", v: fmtNum(max) },
+          { k: "Readings", v: values.length.toLocaleString() },
+        ].map((s) => (
+          <div key={s.k}>
+            <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {s.k}
+            </dt>
+            <dd className="text-sm font-semibold tabular-nums">{s.v}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mb-1 text-[11px] text-muted-foreground">
+        Period of record: {fmtDate(points[0].t)} – {fmtDate(points[points.length - 1].t)}
+      </p>
+      <ReactECharts option={option} style={{ height: 300 }} notMerge />
+    </div>
+  )
+}
+
+/** Hydrograph modal for a selected well; shared by the records list and the
+ *  map (a click on a well point opens the same dialog). */
+function HydrographDialog({
+  well,
+  dark,
+  onClose,
+}: {
+  well: WellSeriesRow | null
+  dark: boolean
+  onClose: () => void
+}) {
+  return (
+    <Dialog open={!!well} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{well?.name || well?.id}</DialogTitle>
+          <DialogDescription>
+            {well?.source ? `${well.source} · ` : ""}
+            Water-level hydrograph (depth to water below ground surface).
+          </DialogDescription>
+        </DialogHeader>
+        {well && <WellHydrograph well={well} dark={dark} />}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Card listing every well in the region with more than one water-level
+ *  reading; picking one opens its hydrograph via `onSelect`. */
+function WaterLevelRecords({
+  rows,
+  mapActive,
+  onToggleMap,
+  onSelect,
+}: {
+  rows: WellSeriesRow[]
+  mapActive: boolean
+  onToggleMap: () => void
+  onSelect: (well: WellSeriesRow) => void
+}) {
+  const [query, setQuery] = useState("")
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return q ? rows.filter((r) => r.name.toLowerCase().includes(q)) : rows
+  }, [rows, query])
+  const shown = filtered.slice(0, 250)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <LineChart className="size-4 text-muted-foreground" />
+          Water-level records
+          <div className="ml-auto flex items-center gap-2">
+            {rows.length > 0 && (
+              <button
+                type="button"
+                aria-pressed={mapActive}
+                onClick={onToggleMap}
+                data-testid="planning-map-toggle"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                  mapActive
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                {mapActive ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                {mapActive ? "Showing on map" : "Show on map"}
+              </button>
+            )}
+            <InfoPopover title="Water-level records">
+              <p>
+                Wells in the selected regions with more than one water-level reading — the wells
+                that have a hydrograph. Click a well to plot its depth-to-water over time, or “Show
+                on map” to highlight just these wells.
+              </p>
+              <p>
+                The list comes from the summary products’ per-well reading counts (more than one
+                reading). Each hydrograph is fetched live from the water-level time-series API for
+                that well.
+              </p>
+            </InfoPopover>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="mb-2 text-xs text-muted-foreground">
+          {rows.length.toLocaleString()} wells with repeat readings.
+        </p>
+        <Input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search wells…"
+          aria-label="Search wells with records"
+          className="mb-2"
+        />
+        {rows.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No wells with repeat readings in the selected regions.
+          </p>
+        ) : (
+          <ul
+            className="max-h-72 space-y-0.5 overflow-y-auto pr-1"
+            data-testid="well-records-list"
+          >
+            {shown.map((r) => (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(r)}
+                  data-testid="well-record-row"
+                  className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                >
+                  <span className="min-w-0 truncate">{r.name || r.id}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {r.count.toLocaleString()} readings
+                  </span>
+                </button>
+              </li>
+            ))}
+            {filtered.length > shown.length && (
+              <li className="px-2 py-1.5 text-xs text-muted-foreground">
+                +{(filtered.length - shown.length).toLocaleString()} more — refine your search.
+              </li>
+            )}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function Dashboard({
   summary,
   dark,
   activeCategories,
   onToggleCategory,
+  seriesWells,
+  onSelectWell,
 }: {
   summary: PlanningSummary
   dark: boolean
   activeCategories: Set<WellCategory>
   onToggleCategory: (cat: WellCategory) => void
+  seriesWells: WellSeriesRow[]
+  onSelectWell: (well: WellSeriesRow) => void
 }) {
   const belowPct =
     summary.statusScored > 0
@@ -595,6 +837,13 @@ function Dashboard({
           </CardContent>
         </Card>
       </div>
+
+      <WaterLevelRecords
+        rows={seriesWells}
+        mapActive={activeCategories.has("series")}
+        onToggleMap={() => onToggleCategory("series")}
+        onSelect={onSelectWell}
+      />
     </div>
   )
 }
@@ -688,6 +937,25 @@ export function RegionalPlanning() {
     [wells, activeCategories]
   )
 
+  // Wells with a hydrograph, plus a fast id → row lookup for map clicks.
+  const seriesWells = useMemo(
+    () => (result ? wellsWithSeries(result.data) : []),
+    [result]
+  )
+  const seriesById = useMemo(
+    () => new Map(seriesWells.map((r) => [r.id, r])),
+    [seriesWells]
+  )
+
+  // The well whose hydrograph is open (from the list, or a map click).
+  const [selectedWell, setSelectedWell] = useState<WellSeriesRow | null>(null)
+
+  // Map clicks open a hydrograph only while the records layer is the one shown.
+  const wellClickHandler = activeCategories.has("series")
+    ? (id: string, name: string) =>
+        setSelectedWell(seriesById.get(id) ?? { id, name, count: 0 })
+    : undefined
+
   return (
     <PageShell>
       <SiteHeader />
@@ -700,7 +968,11 @@ export function RegionalPlanning() {
         {/* Main */}
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <div className="relative h-[42%] min-h-[280px] shrink-0 border-b">
-            <PlanningMap regions={planningRegions} wells={shownWells} />
+            <PlanningMap
+              regions={planningRegions}
+              wells={shownWells}
+              onWellClick={wellClickHandler}
+            />
             {selectedList.length > 0 && (
               <div className="pointer-events-none absolute left-3 top-3 z-10 flex max-w-[70%] flex-wrap gap-1.5">
                 {selectedList.map((r) => (
@@ -755,11 +1027,19 @@ export function RegionalPlanning() {
                 dark={dark}
                 activeCategories={activeCategories}
                 onToggleCategory={toggleCategory}
+                seriesWells={seriesWells}
+                onSelectWell={setSelectedWell}
               />
             ) : null}
           </div>
         </main>
       </div>
+
+      <HydrographDialog
+        well={selectedWell}
+        dark={dark}
+        onClose={() => setSelectedWell(null)}
+      />
     </PageShell>
   )
 }

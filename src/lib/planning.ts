@@ -27,6 +27,9 @@ export const PLANNING_TYPENAMES = {
   mcl: "die:nm_mcl_exceedance",
 } as const
 
+/** Per-observation water-level series (one row per reading), keyed by well id. */
+export const TIMESERIES_TYPENAME = "die:nm_waterlevels_timeseries"
+
 export type PlanningDataset = keyof typeof PLANNING_TYPENAMES
 
 export interface RegionWaterData {
@@ -140,7 +143,7 @@ export const WELL_UNKNOWN_COLOR = "#64748b"
 
 /** Concern categories a well can belong to — the map-toggle buttons on the
  *  matching KPI cards filter the well points to these memberships. */
-export type WellCategory = "below" | "deplete" | "mcl"
+export type WellCategory = "below" | "deplete" | "mcl" | "series"
 
 function idsWhere(features: Feature[], pred: (p: Record<string, unknown>) => boolean): Set<string> {
   const out = new Set<string>()
@@ -174,6 +177,8 @@ export function wellPoints(data: RegionWaterData): FeatureCollection {
   )
   const depleteIds = idsWhere(data.depletion, (p) => p.status === "projected")
   const mclIds = idsWhere(data.mcl, (p) => p.any_exceedance === true)
+  // Wells with a hydrograph (more than one reading) — see wellsWithSeries.
+  const seriesIds = new Set(wellsWithSeries(data).map((r) => r.id))
 
   const seen = new Set<string>()
   const features: Feature[] = []
@@ -195,6 +200,7 @@ export function wellPoints(data: RegionWaterData): FeatureCollection {
           below: belowIds.has(id),
           deplete: depleteIds.has(id),
           mcl: mclIds.has(id),
+          series: seriesIds.has(id),
         },
       })
     }
@@ -216,6 +222,89 @@ export function filterWells(
       return [...active].some((cat) => p[cat] === true)
     }),
   }
+}
+
+// ---------------------------------------------------------------------------
+// Water-level records / hydrographs
+// ---------------------------------------------------------------------------
+
+export interface WellSeriesRow {
+  id: string
+  name: string
+  /** Number of water-level readings on record. */
+  count: number
+  source?: string
+  latestDtw?: number
+}
+
+/**
+ * Wells in the region with more than one water-level reading — the candidates
+ * for a hydrograph. Built from the summary products (which already carry a
+ * reading count per well), deduped by id and sorted by record count desc.
+ */
+export function wellsWithSeries(data: RegionWaterData): WellSeriesRow[] {
+  const rows = new Map<string, WellSeriesRow>()
+  // Status carries record_count + latest_dtw; recency/trends backfill wells the
+  // status product doesn't cover. Keep the largest count seen for each well.
+  for (const set of [data.status, data.recency, data.trends]) {
+    for (const f of set) {
+      const p = (f.properties ?? {}) as Record<string, unknown>
+      const id = String(p.id ?? f.id ?? "")
+      if (!id) continue
+      // observation_count is the raw reading count (closest to the hydrograph's
+      // length); record_count is a coarser fallback.
+      const count = num(p.observation_count) ?? num(p.record_count) ?? 0
+      if (count <= 1) continue
+      const existing = rows.get(id)
+      if (existing && existing.count >= count) continue
+      rows.set(id, {
+        id,
+        name: String(p.name ?? existing?.name ?? ""),
+        count,
+        source: (p.source as string) ?? existing?.source,
+        latestDtw: num(p.latest_dtw) ?? existing?.latestDtw,
+      })
+    }
+  }
+  return [...rows.values()].sort((a, b) => b.count - a.count)
+}
+
+export interface SeriesPoint {
+  /** ISO datetime of the reading. */
+  t: string
+  /** Depth to water below ground surface (ft). */
+  v: number
+}
+
+export interface WellSeries {
+  points: SeriesPoint[]
+  units: string
+}
+
+/**
+ * Fetch one well's full water-level time series from the WFS timeseries layer,
+ * filtered by well id and ordered oldest→newest. Live from the API.
+ */
+export async function fetchWellSeries(id: string): Promise<WellSeries> {
+  const client = wfsClient(GEOSERVER_WFS_BASE_URL)
+  const escaped = id.replace(/'/g, "''")
+  const fc = await client.getAllFeatures(
+    TIMESERIES_TYPENAME,
+    { cqlFilter: `id='${escaped}'` },
+    5000,
+    40
+  )
+  let units = "ft"
+  const points: SeriesPoint[] = []
+  for (const f of fc.features) {
+    const p = (f.properties ?? {}) as Record<string, unknown>
+    const t = String(p.datetime ?? "")
+    const v = num(p.parameter_value)
+    if (p.parameter_units) units = String(p.parameter_units)
+    if (t && v !== undefined) points.push({ t, v })
+  }
+  points.sort((a, b) => a.t.localeCompare(b.t))
+  return { points, units }
 }
 
 /** MapLibre `circle-color` match expression coloring a well by its status. */

@@ -1,8 +1,16 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { FeatureCollection, Polygon } from "geojson"
-import { Map, Source, Layer, type MapRef } from "@/components/ui/map"
+import {
+  Map,
+  Source,
+  Layer,
+  type MapRef,
+  type MapLayerMouseEvent,
+} from "@/components/ui/map"
 import { polygonsBbox } from "@/lib/regions"
 import { STATUS_CLASSES, WELL_UNKNOWN_COLOR, wellColorExpression } from "@/lib/planning"
+
+const WELLS_LAYER_ID = "planning-wells-circle"
 
 export interface PlanningRegion {
   key: string
@@ -14,6 +22,9 @@ interface PlanningMapProps {
   regions: PlanningRegion[]
   /** Monitored wells inside the regions, colored by water-level status. */
   wells?: FeatureCollection | null
+  /** When set, well points are clickable and this fires with the clicked
+   *  well's id + name (used to open its hydrograph). */
+  onWellClick?: (id: string, name: string) => void
 }
 
 /** GeoJSON of all visible region polygons, tagged with the region name. */
@@ -35,8 +46,18 @@ function toFeatureCollection(regions: PlanningRegion[]): FeatureCollection {
  * frames the map to the combined extent whenever the set of visible regions
  * changes. Purpose-built for the planning page (no catalog layers, no clicks).
  */
-export function PlanningMap({ regions, wells }: PlanningMapProps) {
+export function PlanningMap({ regions, wells, onWellClick }: PlanningMapProps) {
   const mapRef = useRef<MapRef | null>(null)
+  const [hoverWell, setHoverWell] = useState(false)
+
+  const clickable = !!onWellClick && !!wells && wells.features.length > 0
+
+  const handleClick = (e: MapLayerMouseEvent) => {
+    if (!onWellClick) return
+    const hit = e.features?.[0]
+    const p = hit?.properties
+    if (p?.id != null) onWellClick(String(p.id), String(p.name ?? ""))
+  }
 
   // The identity of the visible set: refit only when regions are added/removed.
   const key = regions.map((r) => r.key).sort().join("|")
@@ -62,17 +83,28 @@ export function PlanningMap({ regions, wells }: PlanningMapProps) {
 
   return (
     <div className="h-full w-full" data-testid="planning-map">
-      <Map ref={mapRef} onLoad={() => {
-        // Frame the initial selection once the canvas is ready.
-        const map = mapRef.current
-        const bbox = polygonsBbox(regions.flatMap((r) => r.polygons))
-        if (map && bbox) {
-          map.fitBounds(
-            [[bbox[0], bbox[1]], [bbox[2], bbox[3]]],
-            { padding: 56, maxZoom: 11, duration: 0 }
-          )
+      <Map
+        ref={mapRef}
+        interactiveLayerIds={clickable ? [WELLS_LAYER_ID] : undefined}
+        cursor={clickable && hoverWell ? "pointer" : undefined}
+        onClick={clickable ? handleClick : undefined}
+        onMouseMove={
+          clickable
+            ? (e: MapLayerMouseEvent) => setHoverWell((e.features?.length ?? 0) > 0)
+            : undefined
         }
-      }}>
+        onLoad={() => {
+          // Frame the initial selection once the canvas is ready.
+          const map = mapRef.current
+          const bbox = polygonsBbox(regions.flatMap((r) => r.polygons))
+          if (map && bbox) {
+            map.fitBounds(
+              [[bbox[0], bbox[1]], [bbox[2], bbox[3]]],
+              { padding: 56, maxZoom: 11, duration: 0 }
+            )
+          }
+        }}
+      >
         {regions.length > 0 && (
           <Source id="planning-regions" type="geojson" data={data}>
             <Layer
