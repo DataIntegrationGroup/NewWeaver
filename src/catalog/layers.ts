@@ -11,7 +11,7 @@ import type { ItemsQuery } from "@/clients/ogcFeatures"
 import type { StaQuery } from "@/clients/sensorThings"
 import type { ArcGisQuery } from "@/clients/arcGisRest"
 import type { WfsQuery } from "@/clients/wfsClient"
-import { fixed2, type FieldDisplay } from "@/lib/fields"
+import { fixed2, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { formatOseValue } from "@/lib/oseCodes"
 import {
   GEOSERVER_WFS_BASE_URL,
@@ -828,6 +828,188 @@ const WFS_LAYERS: {
           "Mg",    "#16a34a",
           "Na+K",  "#ea580c",
           "mixed", "#7c3aed",
+          /* default */ "#9ca3af",
+        ],
+      },
+    },
+  },
+  {
+    typeName: "die:nm_seasonal_amplitude",
+    title: "Seasonal Amplitude",
+    description:
+      "Per-location seasonal water-level amplitude for New Mexico — average and peak within-year fluctuation.",
+    color: "#0d9488",
+    mt: "water_level",
+    fields: {
+      include: [
+        "name",
+        "source",
+        "status",
+        "mean_amplitude_ft",
+        "max_amplitude_ft",
+        "max_amplitude_year",
+        "min_amplitude_ft",
+        "n_years_used",
+        "n_years_with_data",
+        "record_count",
+        "well_depth",
+      ],
+    },
+    mapProperties: mergeWellDepth,
+    formatValue: (key, value) =>
+      (["mean_amplitude_ft", "max_amplitude_ft", "min_amplitude_ft"].includes(key)
+        ? fixed2(value)
+        : undefined) ?? String(value ?? ""),
+    facet: {
+      field: "status",
+      label: "Status",
+      options: [
+        { value: "ok", label: "OK" },
+        { value: "insufficient", label: "Insufficient data" },
+      ],
+    },
+    legend: [
+      { label: "OK", color: "#0d9488" },
+      { label: "Insufficient data", color: "#9ca3af" },
+    ],
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "ok", "#0d9488",
+          /* default */ "#9ca3af",
+        ],
+      },
+    },
+  },
+  {
+    typeName: "die:nm_waterlevel_status",
+    title: "Water Level Status",
+    description:
+      "Per-location current water-level status for New Mexico — percentile rank relative to the period of record.",
+    color: "#ca8a04",
+    mt: "water_level",
+    fields: {
+      include: [
+        "name",
+        "source",
+        "status",
+        "latest_dtw",
+        "latest_dtw_date",
+        "dtw_percentile",
+        "median_dtw",
+        "min_dtw",
+        "max_dtw",
+        "span_years",
+        "record_count",
+        "well_depth",
+      ],
+    },
+    mapProperties: mergeWellDepth,
+    facet: {
+      field: "status",
+      label: "Status",
+      options: [
+        { value: "much below normal", label: "Much below normal" },
+        { value: "below normal", label: "Below normal" },
+        { value: "normal", label: "Normal" },
+        { value: "above normal", label: "Above normal" },
+        { value: "much above normal", label: "Much above normal" },
+        { value: "insufficient", label: "Insufficient data" },
+      ],
+    },
+    legend: [
+      { label: "Much below normal", color: "#b91c1c" },
+      { label: "Below normal", color: "#f97316" },
+      { label: "Normal", color: "#16a34a" },
+      { label: "Above normal", color: "#38bdf8" },
+      { label: "Much above normal", color: "#1e40af" },
+      { label: "Insufficient data", color: "#9ca3af" },
+    ],
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "much below normal", "#b91c1c",
+          "below normal",      "#f97316",
+          "normal",            "#16a34a",
+          "above normal",      "#38bdf8",
+          "much above normal", "#1e40af",
+          /* default */ "#9ca3af",
+        ],
+      },
+    },
+  },
+  {
+    typeName: "die:nm_depletion_projection",
+    title: "Depletion Projection",
+    description:
+      "Per-location groundwater depletion projection for New Mexico — years until water level reaches well depth, based on the current trend.",
+    color: "#c026d3",
+    mt: "water_level",
+    fields: {
+      include: [
+        "name",
+        "source",
+        "status",
+        "trend_category",
+        "slope_ft_per_year",
+        "latest_dtw",
+        "latest_dtw_date",
+        "remaining_ft",
+        "years_to_depletion",
+        "projected_depletion_year",
+        "span_years",
+        "record_count",
+        "well_depth",
+      ],
+    },
+    mapProperties: mergeWellDepth,
+    formatValue: (key, value) =>
+      (["slope_ft_per_year", "remaining_ft", "years_to_depletion"].includes(key)
+        ? fixed2(value)
+        : undefined) ?? roundedFieldValue(key, value) ?? String(value ?? ""),
+    facet: {
+      field: "status",
+      label: "Status",
+      options: [
+        { value: "projected", label: "Projected" },
+        { value: "dtw exceeds well depth", label: "Exceeds well depth" },
+        { value: "not declining", label: "Not declining" },
+        { value: "not enough data", label: "Not enough data" },
+        { value: "no well depth", label: "No well depth" },
+      ],
+    },
+    legend: [
+      { label: "Projected", color: "#dc2626" },
+      { label: "Exceeds well depth", color: "#7c2d12" },
+      { label: "Not declining", color: "#16a34a" },
+      { label: "Not enough data", color: "#9ca3af" },
+      { label: "No well depth", color: "#d1d5db" },
+    ],
+    style: {
+      type: "circle",
+      paint: {
+        "circle-radius": 3.75,
+        "circle-stroke-width": 1,
+        "circle-stroke-color": SCATTER_STROKE,
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "projected",              "#dc2626",
+          "dtw exceeds well depth", "#7c2d12",
+          "not declining",          "#16a34a",
+          "no well depth",          "#d1d5db",
           /* default */ "#9ca3af",
         ],
       },
