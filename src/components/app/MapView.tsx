@@ -534,10 +534,10 @@ export function MapView({
                 const hidden = keys.length - shown.length
                 return (
                   <>
-                    <dl className="grid grid-cols-[minmax(0,40%)_minmax(0,1fr)] text-xs [&>*:nth-last-child(-n+2)]:border-b-0">
+                    <dl className="grid grid-cols-[max-content_minmax(0,1fr)] text-xs [&>*:nth-last-child(-n+2)]:border-b-0">
                       {shown.map((k) => (
                         <Fragment key={k}>
-                          <dt className="min-w-0 break-words border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
+                          <dt className="whitespace-nowrap border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
                             {k}
                           </dt>
                           <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top tabular-nums">
