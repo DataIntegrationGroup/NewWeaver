@@ -49,8 +49,11 @@ import {
   wellPoints,
   filterWells,
   wellsWithSeries,
+  mergeRegionWaterData,
+  summarizeWaterData,
   type Distribution,
   type PlanningSummary,
+  type RegionWaterData,
   type WellCategory,
   type WellSeriesRow,
 } from "@/lib/planning"
@@ -932,21 +935,34 @@ export function RegionalPlanning() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedList, readySignature])
 
-  const allPolygons = useMemo(
-    () => planningRegions.flatMap((r) => r.polygons),
-    [planningRegions]
-  )
-  const regionKeys = planningRegions.map((r) => r.key)
-
   const geometryLoading = refs.length > 0 && planningRegions.length < refs.length
   const {
-    data: result,
+    results: regionResults,
     isLoading: dataLoading,
     isError,
     progress,
-  } = usePlanningWaterData(regionKeys, allPolygons)
+  } = usePlanningWaterData(planningRegions)
 
   const loading = geometryLoading || dataLoading
+
+  // Merge the per-region datasets once each region's data lands. The useQueries
+  // array's identity churns every render, so key the merge on which regions have
+  // data (not the array itself) to avoid recombining on every render.
+  const dataSignature = planningRegions
+    .map((r, i) => (regionResults[i]?.data ? r.key : `-${r.key}`))
+    .join("|")
+  const mergedData = useMemo(() => {
+    const parts = regionResults
+      .map((q) => q.data)
+      .filter((d): d is RegionWaterData => !!d)
+    return parts.length ? mergeRegionWaterData(parts) : null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataSignature])
+
+  const summary = useMemo(
+    () => (mergedData ? summarizeWaterData(mergedData) : null),
+    [mergedData]
+  )
 
   // Which concern categories are toggled to filter the map's well points.
   const [activeCategories, setActiveCategories] = useState<Set<WellCategory>>(new Set())
@@ -959,8 +975,8 @@ export function RegionalPlanning() {
     })
 
   const wells = useMemo(
-    () => (result ? wellPoints(result.data) : null),
-    [result]
+    () => (mergedData ? wellPoints(mergedData) : null),
+    [mergedData]
   )
   // Union of the active categories' wells; all wells when none are toggled.
   const shownWells = useMemo(
@@ -970,8 +986,8 @@ export function RegionalPlanning() {
 
   // Wells with a hydrograph, plus a fast id → row lookup for map clicks.
   const seriesWells = useMemo(
-    () => (result ? wellsWithSeries(result.data) : []),
-    [result]
+    () => (mergedData ? wellsWithSeries(mergedData) : []),
+    [mergedData]
   )
   const seriesById = useMemo(
     () => new Map(seriesWells.map((r) => [r.id, r])),
@@ -1052,9 +1068,9 @@ export function RegionalPlanning() {
               <p className="pt-10 text-center text-sm text-destructive">
                 Could not load water data for the selected regions. Try again.
               </p>
-            ) : result ? (
+            ) : summary ? (
               <Dashboard
-                summary={result.summary}
+                summary={summary}
                 dark={dark}
                 activeCategories={activeCategories}
                 onToggleCategory={toggleCategory}

@@ -88,6 +88,41 @@ export async function fetchRegionWaterData(
   return { status, trends, depletion, recency, amplitude, mcl }
 }
 
+/** Dataset keys in a RegionWaterData, for iterating merges/summaries. */
+const DATASET_KEYS = Object.keys(EMPTY) as (keyof RegionWaterData)[]
+
+/**
+ * Merge per-region water data into one dataset, deduping features by well id
+ * within each product (a well on a shared boundary can appear in two regions).
+ * Fetching + point-in-polygon happens per region and is cached, so toggling one
+ * region only fetches that region; this merge recombines cached parts cheaply.
+ */
+export function mergeRegionWaterData(parts: RegionWaterData[]): RegionWaterData {
+  if (parts.length === 1) return parts[0]
+  const out: RegionWaterData = {
+    status: [],
+    trends: [],
+    depletion: [],
+    recency: [],
+    amplitude: [],
+    mcl: [],
+  }
+  for (const key of DATASET_KEYS) {
+    const seen = new Set<string>()
+    for (const part of parts) {
+      for (const f of part[key]) {
+        const id = String(f.properties?.id ?? f.id ?? "")
+        if (id) {
+          if (seen.has(id)) continue
+          seen.add(id)
+        }
+        out[key].push(f)
+      }
+    }
+  }
+  return out
+}
+
 // ---------------------------------------------------------------------------
 // Aggregation
 // ---------------------------------------------------------------------------
