@@ -96,7 +96,14 @@ function AttributeFilterInput({
   const [text, setText] = React.useState(value)
   const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
+  // Resync the local (debounced) text when the committed value changes
+  // externally — e.g. a reset or share-link navigation.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   React.useEffect(() => setText(value), [value])
+
+  // Clear any pending debounce on unmount (e.g. the settings popover closing)
+  // so it can't fire onChange after teardown.
+  React.useEffect(() => () => clearTimeout(timer.current), [])
 
   const onType = (v: string) => {
     setText(v)

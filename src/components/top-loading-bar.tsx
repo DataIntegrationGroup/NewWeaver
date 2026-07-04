@@ -21,6 +21,9 @@ export function TopLoadingBar({ active, lingerMs = 400 }: TopLoadingBarProps) {
 
   useEffect(() => {
     if (active) {
+      // Intentional sync: show immediately while work is in flight. The
+      // trailing hide is deferred to the timeout below.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(true)
       return
     }

@@ -26,7 +26,11 @@ export function FilterControls({ bbox, q, onBboxChange, onQueryChange }: FilterC
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Keep in sync when the query changes externally (URL navigation, share link).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setText(q), [q])
+
+  // Clear any pending debounce on unmount so it can't fire after teardown.
+  useEffect(() => () => clearTimeout(timer.current), [])
 
   const onType = (v: string) => {
     setText(v)

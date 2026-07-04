@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useState } from "react"
 import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -52,15 +52,36 @@ export function OnboardingTour({
   storageKey,
   eyebrow = "Getting started",
 }: OnboardingTourProps) {
-  const [open, setOpen] = useState(() => !localStorage.getItem(storageKey))
+  const [open, setOpen] = useState(() => {
+    try {
+      return !localStorage.getItem(storageKey)
+    } catch {
+      // localStorage can throw in private/sandboxed contexts — show the tour.
+      return true
+    }
+  })
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
+
+  const dismiss = useCallback(() => {
+    try {
+      localStorage.setItem(storageKey, "1")
+    } catch {
+      // Ignore storage failures — the tour just won't be remembered.
+    }
+    setOpen(false)
+  }, [storageKey])
+
+  // Clamp against a steps array that may have shrunk while the tour is open,
+  // so indexing never runs off the end.
+  const idx = Math.min(step, steps.length - 1)
 
   // Re-measure the current target whenever the step changes or the window
   // resizes — layouts are often responsive and panels resizable.
   useLayoutEffect(() => {
     if (!open) return
-    const update = () => setRect(measure(steps[step].target))
+    const target = steps[idx]?.target
+    const update = () => setRect(target ? measure(target) : null)
     update()
     window.addEventListener("resize", update)
     window.addEventListener("scroll", update, true)
@@ -68,7 +89,7 @@ export function OnboardingTour({
       window.removeEventListener("resize", update)
       window.removeEventListener("scroll", update, true)
     }
-  }, [open, step, steps])
+  }, [open, idx, steps])
 
   // Arrow keys advance / go back; Esc dismisses.
   useEffect(() => {
@@ -80,16 +101,11 @@ export function OnboardingTour({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, steps])
+  }, [open, steps, dismiss])
 
   if (!open || steps.length === 0) return null
-  const dismiss = () => {
-    localStorage.setItem(storageKey, "1")
-    setOpen(false)
-  }
-  const last = step === steps.length - 1
-  const s = steps[step]
+  const last = idx === steps.length - 1
+  const s = steps[idx]
 
   // Position the card relative to the measured target. Fall back to a
   // bottom-right corner card if the target can't be found.
@@ -168,7 +184,7 @@ export function OnboardingTour({
           <X className="size-4" />
         </button>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {eyebrow} · {step + 1}/{steps.length}
+          {eyebrow} · {idx + 1}/{steps.length}
         </p>
         <h3 className="mt-1 !text-base font-semibold text-foreground">
           {s.title}
@@ -184,13 +200,13 @@ export function OnboardingTour({
                 onClick={() => setStep(i)}
                 className={cn(
                   "size-1.5 rounded-full transition-colors",
-                  i === step ? "bg-primary" : "bg-border hover:bg-muted-foreground"
+                  i === idx ? "bg-primary" : "bg-border hover:bg-muted-foreground"
                 )}
               />
             ))}
           </div>
           <div className="flex gap-2">
-            {step > 0 && (
+            {idx > 0 && (
               <Button variant="ghost" size="sm" onClick={() => setStep((s) => s - 1)}>
                 Back
               </Button>
