@@ -1028,6 +1028,7 @@ const WFS_LAYERS: {
     // Only pull sites with sufficient data — GeoServer flags rows lacking
     // enough cation/anion coverage as balance_class 'insufficient'.
     cqlFilter: "balance_class <> 'insufficient'",
+    mapProperties: mergeWellDepth,
   },
   {
     typeName: "die:nm_sar",
@@ -1039,6 +1040,7 @@ const WFS_LAYERS: {
     // Only pull sites with sufficient data — rows lacking sodium/calcium/
     // magnesium to compute SAR are flagged sar_class 'insufficient'.
     cqlFilter: "sar_class <> 'insufficient'",
+    mapProperties: mergeWellDepth,
   },
   {
     typeName: "die:nm_wqi",
@@ -1047,6 +1049,7 @@ const WFS_LAYERS: {
       "Per-location water quality index (WQI) for New Mexico — a composite summary of groundwater quality.",
     color: "#9333ea",
     mt: "water_quality",
+    mapProperties: mergeWellDepth,
   },
 ]
 
@@ -1082,7 +1085,7 @@ export const LAYER_CATALOG: LayerConfig[] = [
  * renamed fields, etc.) so the IndexedDB cache busts instead of replaying a
  * stale shape. Used as the persist `buster` in main.tsx.
  */
-export const CATALOG_VERSION = "2"
+export const CATALOG_VERSION = "3"
 
 /**
  * WFS typeNames whose fetched FeatureCollections are persisted to IndexedDB —
