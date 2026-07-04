@@ -120,16 +120,18 @@ function RegionPicker({
         aria-label={`Search ${entry.label}`}
       />
 
-      {selected.size > 0 && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {selected.size} selected
-          </span>
-          <Button variant="ghost" size="sm" onClick={onClear} data-testid="planning-clear">
-            Clear all
-          </Button>
-        </div>
-      )}
+      <div className="flex h-8 items-center justify-between">
+        {selected.size > 0 && (
+          <>
+            <span className="text-xs text-muted-foreground">
+              {selected.size} selected
+            </span>
+            <Button variant="ghost" size="sm" onClick={onClear} data-testid="planning-clear">
+              Clear all
+            </Button>
+          </>
+        )}
+      </div>
 
       <ul
         className="min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1"
