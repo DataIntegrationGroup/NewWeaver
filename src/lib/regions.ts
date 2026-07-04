@@ -21,6 +21,18 @@ export interface RegionOption {
   name: string
 }
 
+/** Corrections for region names the upstream ArcGIS services publish mangled.
+ *  OSE's Counties layer serves "Do0a Ana" — the ñ dropped to a "0" at the
+ *  source. Fix on read so every display point (suggestions, chips) is right. */
+const REGION_NAME_FIXES: Record<string, string> = {
+  "Do0a Ana": "Doña Ana",
+}
+
+/** Restore a mangled region name from the upstream service, else pass through. */
+export function cleanRegionName(name: string): string {
+  return REGION_NAME_FIXES[name] ?? name
+}
+
 /** Every named region of a kind (id + name only — no geometry). */
 export async function fetchRegionOptions(kind: RegionKind): Promise<RegionOption[]> {
   const entry = REGION_CATALOG[kind]
@@ -31,7 +43,7 @@ export async function fetchRegionOptions(kind: RegionKind): Promise<RegionOption
   const options = fc.features
     .map((f) => ({
       id: String(f.properties?.[entry.idField] ?? f.id ?? ""),
-      name: String(f.properties?.[entry.nameField] ?? "").trim(),
+      name: cleanRegionName(String(f.properties?.[entry.nameField] ?? "").trim()),
     }))
     .filter((o) => o.id && o.name)
   options.sort((a, b) => a.name.localeCompare(b.name))

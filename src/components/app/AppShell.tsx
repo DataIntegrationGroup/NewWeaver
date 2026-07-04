@@ -33,7 +33,7 @@ import type { RegionChip } from "./RegionSelector"
 import type { GeocodeResult } from "@/lib/geocode"
 import { REGION_CATALOG, type RegionKind } from "@/catalog/regions"
 import { useRegionFeatures } from "@/hooks/useRegions"
-import { regionPolygons, polygonsBbox, regionCoverage } from "@/lib/regions"
+import { regionPolygons, polygonsBbox, regionCoverage, cleanRegionName } from "@/lib/regions"
 import { MapView } from "./MapView"
 import { InspectPanel } from "./InspectPanel"
 import { AttributeTable } from "./AttributeTable"
@@ -155,7 +155,12 @@ export function AppShell() {
     return {
       kind: r.kind,
       id: r.id,
-      name: q.data?.properties?.[REGION_CATALOG[r.kind].nameField] as string | undefined,
+      name: (() => {
+        const raw = q.data?.properties?.[REGION_CATALOG[r.kind].nameField] as
+          | string
+          | undefined
+        return raw != null ? cleanRegionName(raw) : undefined
+      })(),
       loading: q.isLoading,
     }
   })

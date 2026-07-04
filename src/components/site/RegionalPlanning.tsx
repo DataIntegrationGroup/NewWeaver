@@ -9,6 +9,7 @@ import {
   Info,
   MapPin,
   TrendingDown,
+  TrendingUp,
   TriangleAlert,
   Waves,
   X,
@@ -572,6 +573,10 @@ function Dashboard({
     summary.statusScored > 0
       ? Math.round((summary.belowNormal / summary.statusScored) * 100)
       : undefined
+  const abovePct =
+    summary.statusScored > 0
+      ? Math.round((summary.aboveNormal / summary.statusScored) * 100)
+      : undefined
   const slope = summary.medianSlope
   const slopeLabel =
     slope === undefined
@@ -581,7 +586,7 @@ function Dashboard({
   return (
     <div className="space-y-5" data-testid="planning-dashboard">
       {/* Headline KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           icon={MapPin}
           label="Monitoring points"
@@ -623,6 +628,30 @@ function Dashboard({
                 well’s period-of-record percentiles. This counts the “below normal” and “much
                 below normal” classes. The percentage is out of wells with enough record to be
                 scored (excludes “insufficient data”).
+              </p>
+            </>
+          }
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="Above-normal levels"
+          value={fmt(summary.aboveNormal)}
+          sub={abovePct !== undefined ? `${abovePct}% of scored wells` : undefined}
+          mapToggle={{
+            active: activeCategories.has("above"),
+            onToggle: () => onToggleCategory("above"),
+          }}
+          info={
+            <>
+              <p>
+                Wells whose most recent water level sits above or much above their own historical
+                range — a recovery / wet-conditions signal.
+              </p>
+              <p>
+                From the Water Level Status product: the latest reading is ranked against each
+                well’s period-of-record percentiles. This counts the “above normal” and “much above
+                normal” classes. The percentage is out of wells with enough record to be scored
+                (excludes “insufficient data”).
               </p>
             </>
           }

@@ -143,7 +143,7 @@ export const WELL_UNKNOWN_COLOR = "#64748b"
 
 /** Concern categories a well can belong to — the map-toggle buttons on the
  *  matching KPI cards filter the well points to these memberships. */
-export type WellCategory = "below" | "deplete" | "mcl" | "series"
+export type WellCategory = "below" | "above" | "deplete" | "mcl" | "series"
 
 function idsWhere(features: Feature[], pred: (p: Record<string, unknown>) => boolean): Set<string> {
   const out = new Set<string>()
@@ -175,6 +175,10 @@ export function wellPoints(data: RegionWaterData): FeatureCollection {
     data.status,
     (p) => p.status === "below normal" || p.status === "much below normal"
   )
+  const aboveIds = idsWhere(
+    data.status,
+    (p) => p.status === "above normal" || p.status === "much above normal"
+  )
   const depleteIds = idsWhere(data.depletion, (p) => p.status === "projected")
   const mclIds = idsWhere(data.mcl, (p) => p.any_exceedance === true)
   // Wells with a hydrograph (more than one reading) — see wellsWithSeries.
@@ -198,6 +202,7 @@ export function wellPoints(data: RegionWaterData): FeatureCollection {
           name: f.properties?.name ?? "",
           status: statusById.get(id) ?? "unknown",
           below: belowIds.has(id),
+          above: aboveIds.has(id),
           deplete: depleteIds.has(id),
           mcl: mclIds.has(id),
           series: seriesIds.has(id),
@@ -323,6 +328,7 @@ export interface PlanningSummary {
   statusDist: Distribution[]
   statusScored: number
   belowNormal: number
+  aboveNormal: number
 
   /** Groundwater level trend direction. */
   trendDist: Distribution[]
@@ -372,6 +378,8 @@ export function summarizeWaterData(data: RegionWaterData): PlanningSummary {
   ).length
   const belowNormal =
     (statusTally.get("much below normal") ?? 0) + (statusTally.get("below normal") ?? 0)
+  const aboveNormal =
+    (statusTally.get("much above normal") ?? 0) + (statusTally.get("above normal") ?? 0)
 
   // Trend distribution + median slope (ft/yr) among wells with a real trend.
   const trendTally = tally(data.trends, "trend_category")
@@ -423,6 +431,7 @@ export function summarizeWaterData(data: RegionWaterData): PlanningSummary {
     statusDist,
     statusScored,
     belowNormal,
+    aboveNormal,
     trendDist,
     trendScored,
     medianSlope,
