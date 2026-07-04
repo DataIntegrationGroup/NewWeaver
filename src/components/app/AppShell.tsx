@@ -38,12 +38,35 @@ import { MapView } from "./MapView"
 import { InspectPanel } from "./InspectPanel"
 import { AttributeTable } from "./AttributeTable"
 import { ExportDialog } from "./ExportDialog"
-import { OnboardingTour } from "./OnboardingTour"
+import { OnboardingTour, type TourStep } from "@/components/onboarding-tour"
 
 const SIDEBAR_WIDTH_KEY = "weaver-sidebar-width"
 const SIDEBAR_MIN = 240
 const SIDEBAR_MAX = 520
 const SIDEBAR_DEFAULT = 288
+
+// Getting-started tour content — points at this app's real UI. The tour
+// component itself is generic (design-system); the steps live here.
+const TOUR_STEPS: TourStep[] = [
+  {
+    title: "Browse the layers",
+    body: "Toggle data layers on and off in the sidebar — monitoring networks, OSE GIS, and USGS NWIS. Use the search box to find one fast.",
+    target: "#layer-sidebar",
+    place: "right",
+  },
+  {
+    title: "Inspect a point",
+    body: "Click any point on the map to open its details — attributes, and for monitoring sites, a time-series chart of its observations.",
+    target: "#main-content",
+    place: "bottom",
+  },
+  {
+    title: "Share your view",
+    body: "The page URL captures your exact map — visible layers, extent, and selection. Hit Share to copy a link to it.",
+    target: "[data-testid='share-view']",
+    place: "bottom",
+  },
+]
 
 /**
  * AppShell — header + filters + layer sidebar + map + inspect panel + table.
@@ -616,7 +639,7 @@ export function AppShell() {
         shapes={shapes}
       />
 
-      <OnboardingTour />
+      <OnboardingTour steps={TOUR_STEPS} storageKey="weaver-tour-seen" />
     </PageShell>
   )
 }

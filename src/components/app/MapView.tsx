@@ -98,7 +98,7 @@ import {
   isClustered,
 } from "./MapLayers"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FieldValue } from "./FieldValue"
+import { FieldValue } from "@/components/ui/field-value"
 import { ActiveLayerChips } from "./ActiveLayerChips"
 import { MapLegend } from "./MapLegend"
 

@@ -1,5 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import { useIsFetching } from "@tanstack/react-query"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { RouterProvider } from "@tanstack/react-router"
 import posthog from "posthog-js"
@@ -11,11 +12,16 @@ import { ThemeProvider } from "./components/theme-provider"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { Toaster } from "./components/ui/sonner"
-import { TopLoadingBar } from "./components/app/TopLoadingBar"
+import { TopLoadingBar } from "./components/top-loading-bar"
 import { queryClient } from "./lib/queryClient"
 import { layerPersister } from "./lib/persister"
 import { CATALOG_VERSION, PERSISTED_WFS_TYPENAMES } from "./catalog/layers"
 import { router } from "./router"
+
+// Wire the generic (design-system) loading bar to this app's query activity.
+function GlobalLoadingBar() {
+  return <TopLoadingBar active={useIsFetching() > 0} />
+}
 
 // Init only when a key is configured, so dev builds and CI emit nothing by
 // default. capture_pageview "history_change" fires $pageview on TanStack
@@ -54,7 +60,7 @@ const app = (
           }}
         >
           <TooltipProvider>
-            <TopLoadingBar />
+            <GlobalLoadingBar />
             <RouterProvider router={router} />
             <Toaster richColors closeButton />
           </TooltipProvider>

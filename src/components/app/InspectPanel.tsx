@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/tooltip"
 import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { DatastreamChart } from "./DatastreamChart"
-import { FieldValue } from "./FieldValue"
+import { FieldValue } from "@/components/ui/field-value"
 
 interface InspectPanelProps {
   layer: LayerConfig

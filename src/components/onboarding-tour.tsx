@@ -4,9 +4,7 @@ import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-const SEEN_KEY = "weaver-tour-seen"
-
-type Step = {
+export type TourStep = {
   title: string
   body: string
   /** CSS selector for the UI element this step points at. */
@@ -15,26 +13,14 @@ type Step = {
   place: "right" | "bottom" | "left"
 }
 
-const STEPS: Step[] = [
-  {
-    title: "Browse the layers",
-    body: "Toggle data layers on and off in the sidebar — monitoring networks, OSE GIS, and USGS NWIS. Use the search box to find one fast.",
-    target: "#layer-sidebar",
-    place: "right",
-  },
-  {
-    title: "Inspect a point",
-    body: "Click any point on the map to open its details — attributes, and for monitoring sites, a time-series chart of its observations.",
-    target: "#main-content",
-    place: "bottom",
-  },
-  {
-    title: "Share your view",
-    body: "The page URL captures your exact map — visible layers, extent, and selection. Hit Share to copy a link to it.",
-    target: "[data-testid='share-view']",
-    place: "bottom",
-  },
-]
+interface OnboardingTourProps {
+  /** The ordered steps to walk through. */
+  steps: TourStep[]
+  /** localStorage key used to remember the tour was seen (once per browser). */
+  storageKey: string
+  /** Label above the step title. Defaults to "Getting started". */
+  eyebrow?: string
+}
 
 const CARD_W = 320
 const GAP = 14 // space between target and card
@@ -59,17 +45,22 @@ function clamp(v: number, size: number, max: number) {
  * A dismissible getting-started tour shown once per browser (localStorage).
  * Each step spotlights its target element (dim backdrop with a cut-out) and
  * anchors an explanatory card beside it, so the copy points at the real UI.
+ * Fully presentational — the consumer owns the step content and storage key.
  */
-export function OnboardingTour() {
-  const [open, setOpen] = useState(() => !localStorage.getItem(SEEN_KEY))
+export function OnboardingTour({
+  steps,
+  storageKey,
+  eyebrow = "Getting started",
+}: OnboardingTourProps) {
+  const [open, setOpen] = useState(() => !localStorage.getItem(storageKey))
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
 
   // Re-measure the current target whenever the step changes or the window
-  // resizes — the sidebar is resizable and the layout is responsive.
+  // resizes — layouts are often responsive and panels resizable.
   useLayoutEffect(() => {
     if (!open) return
-    const update = () => setRect(measure(STEPS[step].target))
+    const update = () => setRect(measure(steps[step].target))
     update()
     window.addEventListener("resize", update)
     window.addEventListener("scroll", update, true)
@@ -77,28 +68,28 @@ export function OnboardingTour() {
       window.removeEventListener("resize", update)
       window.removeEventListener("scroll", update, true)
     }
-  }, [open, step])
+  }, [open, step, steps])
 
   // Arrow keys advance / go back; Esc dismisses.
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") dismiss()
-      else if (e.key === "ArrowRight") setStep((s) => Math.min(STEPS.length - 1, s + 1))
+      else if (e.key === "ArrowRight") setStep((s) => Math.min(steps.length - 1, s + 1))
       else if (e.key === "ArrowLeft") setStep((s) => Math.max(0, s - 1))
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, steps])
 
-  if (!open) return null
+  if (!open || steps.length === 0) return null
   const dismiss = () => {
-    localStorage.setItem(SEEN_KEY, "1")
+    localStorage.setItem(storageKey, "1")
     setOpen(false)
   }
-  const last = step === STEPS.length - 1
-  const s = STEPS[step]
+  const last = step === steps.length - 1
+  const s = steps[step]
 
   // Position the card relative to the measured target. Fall back to a
   // bottom-right corner card if the target can't be found.
@@ -177,7 +168,7 @@ export function OnboardingTour() {
           <X className="size-4" />
         </button>
         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Getting started · {step + 1}/{STEPS.length}
+          {eyebrow} · {step + 1}/{steps.length}
         </p>
         <h3 className="mt-1 !text-base font-semibold text-foreground">
           {s.title}
@@ -185,7 +176,7 @@ export function OnboardingTour() {
         <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>
         <div className="mt-3 flex items-center justify-between">
           <div className="flex gap-1.5">
-            {STEPS.map((_, i) => (
+            {steps.map((_, i) => (
               <button
                 key={i}
                 type="button"

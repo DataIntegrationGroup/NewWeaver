@@ -20,7 +20,7 @@ import type { RegionCoverage } from "@/lib/regions"
 import { LocationSearch } from "./LocationSearch"
 import { RegionSelector, type RegionChip } from "./RegionSelector"
 import { MeasurementFacet } from "./MeasurementFacet"
-import { FilterControls } from "./FilterControls"
+import { FilterControls } from "@/components/ui/filter-controls"
 
 interface SearchWidgetsProps {
   layers: LayerConfig[]

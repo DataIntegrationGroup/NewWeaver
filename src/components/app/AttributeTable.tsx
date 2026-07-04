@@ -24,7 +24,7 @@ import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from 
 import { pointInAnyShape } from "@/lib/geo"
 import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FieldValue } from "./FieldValue"
+import { FieldValue } from "@/components/ui/field-value"
 import {
   Table,
   TableBody,
