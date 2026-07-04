@@ -562,6 +562,9 @@ const WFS_LAYERS: {
   description: string
   color: string
   mt: MeasurementType
+  /** Server-side CQL filter applied at fetch — e.g. to pull only sites with
+   *  sufficient data. Becomes the layer's WFS `cql_filter`. */
+  cqlFilter?: string
   style?: LayerStyle
   fields?: FieldDisplay
   facet?: AttributeFacet
@@ -1015,6 +1018,36 @@ const WFS_LAYERS: {
       },
     },
   },
+  {
+    typeName: "die:nm_ion_balance",
+    title: "Ion Balance",
+    description:
+      "Per-location major-ion charge balance for New Mexico groundwater. Shows only sites with enough cation and anion coverage to compute a balance.",
+    color: "#0d9488",
+    mt: "water_quality",
+    // Only pull sites with sufficient data — GeoServer flags rows lacking
+    // enough cation/anion coverage as balance_class 'insufficient'.
+    cqlFilter: "balance_class <> 'insufficient'",
+  },
+  {
+    typeName: "die:nm_sar",
+    title: "Sodium Adsorption Ratio",
+    description:
+      "Per-location sodium adsorption ratio (SAR) for New Mexico — an indicator of irrigation-water suitability. Shows only sites with enough data to compute SAR.",
+    color: "#ca8a04",
+    mt: "water_quality",
+    // Only pull sites with sufficient data — rows lacking sodium/calcium/
+    // magnesium to compute SAR are flagged sar_class 'insufficient'.
+    cqlFilter: "sar_class <> 'insufficient'",
+  },
+  {
+    typeName: "die:nm_wqi",
+    title: "Water Quality Index",
+    description:
+      "Per-location water quality index (WQI) for New Mexico — a composite summary of groundwater quality.",
+    color: "#9333ea",
+    mt: "water_quality",
+  },
 ]
 
 const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
@@ -1028,6 +1061,7 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
   section: WFS_SECTION,
   cluster: true,
   style: w.style ?? staPoint(w.color),
+  ...(w.cqlFilter && { query: { cqlFilter: w.cqlFilter } }),
   ...(w.fields && { fields: w.fields }),
   ...(w.facet && { facet: w.facet }),
   ...(w.legend && { legend: w.legend }),
