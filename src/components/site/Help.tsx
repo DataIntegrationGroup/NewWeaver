@@ -125,10 +125,68 @@ function ConnectCard({
 
 const SECTIONS = [
   { id: "using", label: "Using the map" },
+  { id: "planning", label: "Regional planning" },
+  { id: "exporting", label: "Exporting data" },
   { id: "sources", label: "Data sources" },
   { id: "gis", label: "Desktop GIS" },
+  { id: "glossary", label: "Glossary" },
+  { id: "faq", label: "FAQ" },
   { id: "disclaimer", label: "Disclaimer" },
 ] as const
+
+/** Glossary entries — plain-language definitions of terms used across Weaver. */
+const GLOSSARY: { term: string; def: React.ReactNode }[] = [
+  {
+    term: "Depth to water (DTW / BGS)",
+    def: "How far below the ground surface the water table sits, in feet. Larger numbers mean a deeper water level. “BGS” = below ground surface.",
+  },
+  {
+    term: "Hydrograph",
+    def: "A plot of one well’s depth-to-water over time. Because depth increases downward, the y-axis is inverted — a line trending up on the page means the water level is rising.",
+  },
+  {
+    term: "Water-level status",
+    def: "Where a well’s most recent reading falls against its own history, ranked into percentile classes from “much below normal” to “much above normal.” Wells without enough record are “insufficient data.”",
+  },
+  {
+    term: "Groundwater trend",
+    def: "The long-term direction of a well’s depth-to-water from a linear fit over its record. Because the measure is depth, “deepening” means the level is falling and “rising” means it is recovering.",
+  },
+  {
+    term: "Depletion projection",
+    def: "An estimate of when a well would decline to its reported well depth if the current trend continues. “Projected” wells are those on track to run dry.",
+  },
+  {
+    term: "Seasonal amplitude",
+    def: "How much a well’s water level swings within a typical year — the within-year high-to-low range.",
+  },
+  {
+    term: "Monitoring recency",
+    def: "Whether a well has a recent reading. “Active” wells have current data; “stale” wells have not reported lately.",
+  },
+  {
+    term: "MCL exceedance",
+    def: "A sample where an analyte is above its drinking-water Maximum Contaminant Level — a regulatory quality threshold.",
+  },
+  {
+    term: "Points of Diversion (POD)",
+    def: "Locations, published by the Office of the State Engineer, where water is legally authorized to be diverted or pumped.",
+  },
+  {
+    term: "Region of interest",
+    def: "A county, public water system, or hydrologic basin you pick to restrict the data to that area — an alternative to drawing a shape by hand.",
+  },
+]
+
+/** A question / answer pair in the FAQ. */
+function Faq({ q, children }: { q: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <h3 className="!text-base font-semibold text-foreground">{q}</h3>
+      <div className="text-sm text-muted-foreground">{children}</div>
+    </div>
+  )
+}
 
 /** Sticky outline of the page's sections, with the in-view section highlighted. */
 function DocsSidebar({ active }: { active: string }) {
@@ -228,18 +286,38 @@ export function Help() {
           <div className="min-w-0 flex-1 space-y-12">
             <section id="using" className="scroll-mt-6 space-y-4">
               <h2 className="!text-2xl text-primary">Using the map</h2>
+              <p className="text-muted-foreground">
+                Weaver is a map-first way to explore New Mexico water data. Turn
+                on the layers you care about, click a site to read its details,
+                narrow to an area, and download what you find.
+              </p>
               <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
                 <li>
                   <strong>Layers.</strong> Use the sidebar to toggle data layers
                   on and off. Each layer is a monitoring network or an integrated
-                  dataset.
+                  dataset, grouped by source. Dense point layers cluster when
+                  zoomed out and separate as you zoom in.
                 </li>
-                {/* Click-a-point / click-a-feature mechanics bullets removed —
-                    the panel and table communicate themselves by affordance now
-                    (SPEC §T.T10 / §V.V7). */}
                 <li>
-                  <strong>Find a place.</strong> Search an address to see what’s
-                  monitored nearby, with the coverage — and gaps — for that location.
+                  <strong>Inspect a site.</strong> Click any point to open its
+                  details panel — identifiers, attributes, and, where a site has a
+                  record, its water-level or water-quality time series.
+                </li>
+                <li>
+                  <strong>Attribute table.</strong> Open the table to see every
+                  visible feature as sortable rows. It stays in sync with the map,
+                  the current filters, and any area you’ve selected.
+                </li>
+                <li>
+                  <strong>Find a place.</strong> Search an address to recenter the
+                  map and see what’s monitored nearby, with the coverage — and
+                  gaps — for that location.
+                </li>
+                <li>
+                  <strong>Select an area.</strong> Draw a rectangle or polygon, or
+                  pick a region of interest (a county, public water system, or
+                  hydrologic basin) to restrict the data to that area for viewing
+                  and export.
                 </li>
                 <li>
                   <strong>Filter.</strong> Restrict data to the current map extent
@@ -247,11 +325,96 @@ export function Help() {
                   match attributes.
                 </li>
                 <li>
+                  <strong>Basemap &amp; theme.</strong> Switch the basemap (Light,
+                  Dark, Satellite, and more) to suit the task, and toggle light or
+                  dark mode from the header.
+                </li>
+                <li>
                   <strong>Share.</strong> The visible layers, map extent, and
                   selection are encoded in the page URL — copy it to share the
                   exact view.
                 </li>
               </ul>
+            </section>
+
+            <section id="planning" className="scroll-mt-6 space-y-4">
+              <h2 className="!text-2xl text-primary">Regional planning</h2>
+              <p className="text-muted-foreground">
+                The <strong>Regional Planning</strong> page rolls the per-well
+                integrated data products up into decision-support summaries for an
+                area. Toggle one or more regions — counties, public water systems,
+                or hydrologic basins — in the sidebar; the map frames them and the
+                dashboard pulls the water data live and summarizes it. Turn on
+                several regions to compare them side by side.
+              </p>
+              <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+                <li>
+                  <strong>Monitoring points.</strong> How many wells fall inside
+                  the selected regions, and how many are actively reporting vs
+                  stale.
+                </li>
+                <li>
+                  <strong>Water-level status.</strong> How current levels compare
+                  to each well’s own history, as a distribution from much-below to
+                  much-above normal, with headline counts of below- and
+                  above-normal wells.
+                </li>
+                <li>
+                  <strong>Groundwater trend.</strong> The long-term direction of
+                  levels across the region, plus the median rate of change.
+                </li>
+                <li>
+                  <strong>Depletion outlook.</strong> Wells projected to decline to
+                  their well depth if current trends hold, with soonest and median
+                  timing.
+                </li>
+                <li>
+                  <strong>Seasonal swing &amp; quality.</strong> Typical
+                  within-year amplitude and any drinking-water limit exceedances.
+                </li>
+                <li>
+                  <strong>Hydrographs.</strong> Every well with repeat readings is
+                  listed; click one — or a well point on the map — to plot its
+                  depth-to-water over time. Each KPI card can also highlight just
+                  its wells on the map.
+                </li>
+              </ul>
+            </section>
+
+            <section id="exporting" className="scroll-mt-6 space-y-4">
+              <h2 className="!text-2xl text-primary">Exporting data</h2>
+              <p className="text-muted-foreground">
+                Everything you see is downloadable. Make a selection — draw a
+                shape, pick a region, or filter the map — then open{" "}
+                <strong>Download data</strong> and choose a format:
+              </p>
+              <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+                <li>
+                  <strong>Time series (CSV).</strong> Every observation for the
+                  selected monitoring locations, one row per reading — the format
+                  for trend analysis and charting.
+                </li>
+                <li>
+                  <strong>Latest observation (CSV).</strong> The most recent
+                  reading per location — a compact snapshot of current conditions.
+                </li>
+                <li>
+                  <strong>Features (GeoJSON).</strong> A geospatial inventory of
+                  the selection for use in a GIS or mapping tool.
+                </li>
+              </ul>
+              <p className="text-sm text-muted-foreground">
+                Time-series and latest exports need monitoring locations that carry
+                a record; the Features export also works for vector-only layers.
+                For a live connection instead of a one-time file, connect a{" "}
+                <a
+                  href="#gis"
+                  className="text-primary underline underline-offset-2"
+                >
+                  desktop GIS
+                </a>{" "}
+                to the OGC API.
+              </p>
             </section>
 
             <section id="sources" className="scroll-mt-6 space-y-4">
@@ -418,6 +581,96 @@ export function Help() {
                   </a>{" "}
                   and use the names published there.
                 </p>
+              </div>
+            </section>
+
+            <section id="glossary" className="scroll-mt-6 space-y-4">
+              <h2 className="!text-2xl text-primary">Glossary</h2>
+              <p className="text-muted-foreground">
+                Plain-language definitions of terms used across the map and the
+                planning dashboard.
+              </p>
+              <dl className="space-y-3">
+                {GLOSSARY.map((g) => (
+                  <div key={g.term} className="rounded-lg border bg-card p-4">
+                    <dt className="font-semibold text-foreground">{g.term}</dt>
+                    <dd className="mt-1 text-sm text-muted-foreground">{g.def}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
+            <section id="faq" className="scroll-mt-6 space-y-4">
+              <h2 className="!text-2xl text-primary">
+                Frequently asked questions
+              </h2>
+              <div className="space-y-5">
+                <Faq q="Why don’t I see any data?">
+                  Make sure at least one layer is turned on in the sidebar. Some
+                  layers only reveal individual points as you zoom in, and any
+                  active filter (map view, feature filter, or a selected area) can
+                  hide features outside it — clear filters to see everything again.
+                </Faq>
+                <Faq q="A site has no time series — why?">
+                  Not every feature carries a record. Water-level and
+                  water-quality series come from monitoring locations that report
+                  to the SensorThings networks; vector-only layers (for example
+                  Points of Diversion) are locations without an attached series.
+                </Faq>
+                <Faq q="What does “depth to water” mean, and why is the chart upside down?">
+                  Depth to water is measured downward from the ground surface, so a
+                  bigger number is a deeper water level. Hydrographs invert the
+                  y-axis so a rising water level reads as an upward line. See the{" "}
+                  <a
+                    href="#glossary"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    glossary
+                  </a>
+                  .
+                </Faq>
+                <Faq q="How current is the data?">
+                  Weaver reads the source APIs live, so you see what each service
+                  currently publishes. Update frequency varies by network and
+                  site — the planning page’s “active vs stale” counts reflect which
+                  wells have recent readings.
+                </Faq>
+                <Faq q="Can I use this data in my own tools?">
+                  Yes. Export CSV or GeoJSON from{" "}
+                  <a
+                    href="#exporting"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    Download data
+                  </a>
+                  , connect a{" "}
+                  <a
+                    href="#gis"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    desktop GIS
+                  </a>{" "}
+                  to the OGC API, or call the{" "}
+                  <a
+                    href="#api"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    public API endpoints
+                  </a>{" "}
+                  directly. Please read the{" "}
+                  <a
+                    href="#disclaimer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    disclaimer
+                  </a>{" "}
+                  first.
+                </Faq>
+                <Faq q="Is a shared link private?">
+                  No. The URL encodes only the view — layers, extent, and
+                  selection — and points at the same public data everyone sees. It
+                  contains no personal information.
+                </Faq>
               </div>
             </section>
 
