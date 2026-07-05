@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import type { FeatureCollection, Polygon } from "geojson"
 import {
   Map,
   Source,
   Layer,
+  Popup,
   type MapRef,
   type MapLayerMouseEvent,
 } from "@/components/ui/map"
@@ -11,6 +12,20 @@ import { polygonsBbox } from "@/lib/regions"
 import { STATUS_CLASSES, WELL_UNKNOWN_COLOR, wellColorExpression } from "@/lib/planning"
 
 const WELLS_LAYER_ID = "planning-wells-circle"
+
+// Water-level status → swatch color, mirroring the map's circle paint.
+const STATUS_COLOR: Record<string, string> = Object.fromEntries(
+  STATUS_CLASSES.map((c) => [c.key, c.color])
+)
+
+// Boolean concern flags carried on each well point, shown as popup rows when set.
+const CONCERN_LABELS: { key: string; label: string }[] = [
+  { key: "below", label: "Below normal" },
+  { key: "above", label: "Above normal" },
+  { key: "deplete", label: "Projected depletion" },
+  { key: "mcl", label: "MCL exceedance" },
+  { key: "series", label: "Has time series" },
+]
 
 export interface PlanningRegion {
   key: string
@@ -44,19 +59,50 @@ function toFeatureCollection(regions: PlanningRegion[]): FeatureCollection {
 /**
  * PlanningMap — draws every selected region as a filled, outlined boundary and
  * frames the map to the combined extent whenever the set of visible regions
- * changes. Purpose-built for the planning page (no catalog layers, no clicks).
+ * changes. Monitored wells hover to a detail popup and click to open their
+ * hydrograph, matching the main map. Purpose-built for the planning page.
  */
 export function PlanningMap({ regions, wells, onWellClick }: PlanningMapProps) {
   const mapRef = useRef<MapRef | null>(null)
-  const [hoverWell, setHoverWell] = useState(false)
+  const [hoverInfo, setHoverInfo] = useState<{
+    longitude: number
+    latitude: number
+    name: string
+    status: string
+    color: string
+    concerns: string[]
+  } | null>(null)
 
-  const clickable = !!onWellClick && !!wells && wells.features.length > 0
+  const hasWells = !!wells && wells.features.length > 0
+  const clickable = !!onWellClick && hasWells
 
   const handleClick = (e: MapLayerMouseEvent) => {
     if (!onWellClick) return
     const hit = e.features?.[0]
     const p = hit?.properties
     if (p?.id != null) onWellClick(String(p.id), String(p.name ?? ""))
+  }
+
+  // Hit-test on move: a well under the pointer drives the hover popup; empty
+  // space clears it. Mirrors the main map's hover behavior.
+  const handleMouseMove = (e: MapLayerMouseEvent) => {
+    const p = e.features?.[0]?.properties
+    if (!p) {
+      setHoverInfo((prev) => (prev ? null : prev))
+      return
+    }
+    const status = String(p.status ?? "unknown")
+    setHoverInfo({
+      longitude: e.lngLat.lng,
+      latitude: e.lngLat.lat,
+      name: String(p.name ?? ""),
+      status,
+      color: STATUS_COLOR[status] ?? WELL_UNKNOWN_COLOR,
+      // Tiled properties may carry booleans as real booleans or strings.
+      concerns: CONCERN_LABELS.filter(
+        (c) => p[c.key] === true || p[c.key] === "true"
+      ).map((c) => c.label),
+    })
   }
 
   // The identity of the visible set: refit only when regions are added/removed.
@@ -85,14 +131,10 @@ export function PlanningMap({ regions, wells, onWellClick }: PlanningMapProps) {
     <div className="h-full w-full" data-testid="planning-map">
       <Map
         ref={mapRef}
-        interactiveLayerIds={clickable ? [WELLS_LAYER_ID] : undefined}
-        cursor={clickable && hoverWell ? "pointer" : undefined}
+        interactiveLayerIds={hasWells ? [WELLS_LAYER_ID] : undefined}
+        cursor={clickable && hoverInfo ? "pointer" : undefined}
         onClick={clickable ? handleClick : undefined}
-        onMouseMove={
-          clickable
-            ? (e: MapLayerMouseEvent) => setHoverWell((e.features?.length ?? 0) > 0)
-            : undefined
-        }
+        onMouseMove={hasWells ? handleMouseMove : undefined}
         onLoad={() => {
           // Frame the initial selection once the canvas is ready.
           const map = mapRef.current
@@ -133,6 +175,64 @@ export function PlanningMap({ regions, wells, onWellClick }: PlanningMapProps) {
               }}
             />
           </Source>
+        )}
+
+        {hoverInfo && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            offset={12}
+            closeButton={false}
+            closeOnClick={false}
+            maxWidth="320px"
+          >
+            <div
+              data-testid="planning-well-popup"
+              className="max-w-full overflow-x-hidden px-3 py-2.5 text-foreground"
+            >
+              <div className="mb-2 border-b border-border pb-2">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                    style={{ background: hoverInfo.color }}
+                  />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Monitored well
+                  </span>
+                </div>
+                {hoverInfo.name && (
+                  <p className="mt-0.5 text-sm font-semibold leading-tight">
+                    {hoverInfo.name}
+                  </p>
+                )}
+              </div>
+              <dl className="grid grid-cols-[max-content_minmax(0,1fr)] text-xs [&>*:nth-last-child(-n+2)]:border-b-0">
+                <Fragment>
+                  <dt className="whitespace-nowrap border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
+                    Level status
+                  </dt>
+                  <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top">
+                    {hoverInfo.status}
+                  </dd>
+                </Fragment>
+                {hoverInfo.concerns.map((label) => (
+                  <Fragment key={label}>
+                    <dt className="whitespace-nowrap border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
+                      {label}
+                    </dt>
+                    <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top">
+                      Yes
+                    </dd>
+                  </Fragment>
+                ))}
+              </dl>
+              {onWellClick && (
+                <p className="pt-1.5 text-[11px] italic text-muted-foreground">
+                  Click the point for its hydrograph
+                </p>
+              )}
+            </div>
+          </Popup>
         )}
       </Map>
 
