@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react"
+import type { FeatureCollection } from "geojson"
 import ReactECharts from "echarts-for-react"
 import {
   Activity,
+  Download,
   Droplets,
   Eye,
   EyeOff,
   Gauge,
   Info,
   MapPin,
+  Table2,
   TrendingDown,
   TrendingUp,
   TriangleAlert,
@@ -37,6 +40,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { toCsv, downloadFile, exportFilename, type CsvValue } from "@/lib/export/csv"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { REGION_CATALOG, REGION_KINDS, type RegionKind } from "@/catalog/regions"
 import { useRegionOptions, useRegionFeatures } from "@/hooks/useRegions"
@@ -206,6 +218,113 @@ function InfoPopover({ title, children }: { title: string; children: React.React
   )
 }
 
+/** A column in a card's data grid: which row key to read and its header. */
+interface GridColumn {
+  key: string
+  label: string
+}
+
+/** Tabular data behind a card, shown in a modal and downloadable as CSV. */
+interface GridData {
+  title: string
+  /** Stable stem for the downloaded filename (weaver-{stem}-{stamp}.csv). */
+  filename: string
+  columns: GridColumn[]
+  rows: Record<string, CsvValue>[]
+}
+
+const GRID_ROW_CAP = 1000
+
+/** Modal showing a card's rows as a data grid, with a CSV download. */
+function DataGridDialog({
+  open,
+  onOpenChange,
+  data,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  data: GridData
+}) {
+  const { title, filename, columns, rows } = data
+  const downloadCsv = () => {
+    const csv = toCsv(
+      columns.map((c) => c.label),
+      rows.map((r) => columns.map((c) => r[c.key]))
+    )
+    downloadFile(`${exportFilename(filename)}.csv`, csv, "text/csv")
+  }
+  const shown = rows.slice(0, GRID_ROW_CAP)
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            {rows.length.toLocaleString()} {rows.length === 1 ? "row" : "rows"}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={downloadCsv}
+            disabled={rows.length === 0}
+            data-testid="card-download-csv"
+          >
+            <Download className="size-3.5" />
+            Download CSV
+          </Button>
+        </div>
+        <div className="max-h-[60vh] overflow-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((c) => (
+                  <TableHead key={c.key}>{c.label}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {shown.map((r, i) => (
+                <TableRow key={i}>
+                  {columns.map((c) => (
+                    <TableCell key={c.key}>{r[c.key] == null ? "" : String(r[c.key])}</TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        {rows.length > GRID_ROW_CAP && (
+          <p className="text-xs text-muted-foreground">
+            Showing the first {GRID_ROW_CAP.toLocaleString()} of{" "}
+            {rows.length.toLocaleString()} rows — download the CSV for all.
+          </p>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** "View data" button that toggles a DataGridDialog for a card's rows. */
+function ViewDataButton({ data }: { data: GridData }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        data-testid="card-view-data"
+        className="inline-flex items-center justify-center gap-1.5 rounded-md border border-input px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      >
+        <Table2 className="size-3.5" />
+        View data
+      </button>
+      <DataGridDialog open={open} onOpenChange={setOpen} data={data} />
+    </>
+  )
+}
+
 function KpiCard({
   icon: Icon,
   label,
@@ -214,6 +333,7 @@ function KpiCard({
   tone = "default",
   info,
   mapToggle,
+  grid,
 }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
@@ -223,6 +343,8 @@ function KpiCard({
   info?: React.ReactNode
   /** When set, renders a "show on map" toggle that filters the well points. */
   mapToggle?: { active: boolean; onToggle: () => void }
+  /** When set, renders a "View data" button opening a data-grid modal. */
+  grid?: GridData
 }) {
   const toneClass =
     tone === "danger"
@@ -248,21 +370,26 @@ function KpiCard({
             {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
           </div>
         </div>
-        {mapToggle && (
-          <button
-            type="button"
-            aria-pressed={mapToggle.active}
-            onClick={mapToggle.onToggle}
-            data-testid="planning-map-toggle"
-            className={`mt-3 inline-flex items-center justify-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-              mapToggle.active
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-input text-muted-foreground hover:bg-accent hover:text-foreground"
-            }`}
-          >
-            {mapToggle.active ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-            {mapToggle.active ? "Showing on map" : "Show on map"}
-          </button>
+        {(mapToggle || grid) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {mapToggle && (
+              <button
+                type="button"
+                aria-pressed={mapToggle.active}
+                onClick={mapToggle.onToggle}
+                data-testid="planning-map-toggle"
+                className={`inline-flex items-center justify-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                  mapToggle.active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-input text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                {mapToggle.active ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
+                {mapToggle.active ? "Showing on map" : "Show on map"}
+              </button>
+            )}
+            {grid && <ViewDataButton data={grid} />}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -473,6 +600,23 @@ function WaterLevelRecords({
   }, [rows, query])
   const shown = filtered.slice(0, 250)
 
+  const grid: GridData = {
+    title: "Water-level records",
+    filename: "water-level-records",
+    columns: [
+      { key: "name", label: "Well" },
+      { key: "count", label: "Readings" },
+      { key: "source", label: "Source" },
+      { key: "latestDtw", label: "Latest DTW (ft)" },
+    ],
+    rows: rows.map((r) => ({
+      name: r.name,
+      count: r.count,
+      source: r.source ?? "",
+      latestDtw: r.latestDtw ?? "",
+    })),
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -496,6 +640,7 @@ function WaterLevelRecords({
                 {mapActive ? "Showing on map" : "Show on map"}
               </button>
             )}
+            {rows.length > 0 && <ViewDataButton data={grid} />}
             <InfoPopover title="Water-level records">
               <p>
                 Wells in the selected regions with more than one water-level reading — the wells
@@ -562,6 +707,7 @@ function WaterLevelRecords({
 function Dashboard({
   summary,
   dark,
+  wells,
   activeCategories,
   onToggleCategory,
   seriesWells,
@@ -569,11 +715,34 @@ function Dashboard({
 }: {
   summary: PlanningSummary
   dark: boolean
+  wells: FeatureCollection | null
   activeCategories: Set<WellCategory>
   onToggleCategory: (cat: WellCategory) => void
   seriesWells: WellSeriesRow[]
   onSelectWell: (well: WellSeriesRow) => void
 }) {
+  // The wells shown on the map for a concern category, as data-grid rows —
+  // mirrors exactly what "Show on map" highlights for that card.
+  const categoryGrid = (cat: WellCategory, title: string): GridData => ({
+    title,
+    filename: `planning-${cat}-wells`,
+    columns: [
+      { key: "name", label: "Well" },
+      { key: "id", label: "ID" },
+      { key: "status", label: "Level status" },
+    ],
+    rows: wells
+      ? filterWells(wells, new Set([cat])).features.map((f) => {
+          const p = (f.properties ?? {}) as Record<string, unknown>
+          return {
+            name: String(p.name ?? ""),
+            id: String(p.id ?? ""),
+            status: String(p.status ?? ""),
+          }
+        })
+      : [],
+  })
+
   const belowPct =
     summary.statusScored > 0
       ? Math.round((summary.belowNormal / summary.statusScored) * 100)
@@ -622,6 +791,7 @@ function Dashboard({
             active: activeCategories.has("below"),
             onToggle: () => onToggleCategory("below"),
           }}
+          grid={categoryGrid("below", "Below-normal wells")}
           info={
             <>
               <p>
@@ -646,6 +816,7 @@ function Dashboard({
             active: activeCategories.has("above"),
             onToggle: () => onToggleCategory("above"),
           }}
+          grid={categoryGrid("above", "Above-normal wells")}
           info={
             <>
               <p>
@@ -675,6 +846,7 @@ function Dashboard({
             active: activeCategories.has("deplete"),
             onToggle: () => onToggleCategory("deplete"),
           }}
+          grid={categoryGrid("deplete", "Wells projected to deplete")}
           info={
             <>
               <p>
@@ -699,6 +871,7 @@ function Dashboard({
             active: activeCategories.has("mcl"),
             onToggle: () => onToggleCategory("mcl"),
           }}
+          grid={categoryGrid("mcl", "Wells with MCL exceedances")}
           info={
             <>
               <p>
@@ -1072,6 +1245,7 @@ export function RegionalPlanning() {
               <Dashboard
                 summary={summary}
                 dark={dark}
+                wells={wells}
                 activeCategories={activeCategories}
                 onToggleCategory={toggleCategory}
                 seriesWells={seriesWells}
