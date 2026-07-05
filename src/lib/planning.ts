@@ -248,6 +248,31 @@ export function wellPoints(data: RegionWaterData): FeatureCollection {
   return { type: "FeatureCollection", features }
 }
 
+/**
+ * Merge every product's per-well properties into one record per well id, so a
+ * well's full metadata (record counts, dates, depth, trend, status, MCL, …) is
+ * available in one place — e.g. for a downloadable data grid. Fields present in
+ * an earlier product win; later products only fill gaps (null/empty).
+ */
+export function mergeWellProperties(
+  data: RegionWaterData
+): Map<string, Record<string, unknown>> {
+  const byId = new Map<string, Record<string, unknown>>()
+  for (const set of [data.status, data.recency, data.trends, data.depletion, data.amplitude, data.mcl]) {
+    for (const f of set) {
+      const p = (f.properties ?? {}) as Record<string, unknown>
+      const id = String(p.id ?? f.id ?? "")
+      if (!id) continue
+      const cur = byId.get(id) ?? {}
+      for (const [k, v] of Object.entries(p)) {
+        if (cur[k] == null || cur[k] === "") cur[k] = v
+      }
+      byId.set(id, cur)
+    }
+  }
+  return byId
+}
+
 /** Filter well points to those in any of the active concern categories. An
  *  empty set means "no filter" — return every well. */
 export function filterWells(

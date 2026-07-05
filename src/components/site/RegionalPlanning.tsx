@@ -61,6 +61,7 @@ import {
   wellPoints,
   filterWells,
   wellsWithSeries,
+  mergeWellProperties,
   mergeRegionWaterData,
   summarizeWaterData,
   type Distribution,
@@ -229,13 +230,14 @@ interface GridData {
   title: string
   /** Stable stem for the downloaded filename (weaver-{stem}-{stamp}.csv). */
   filename: string
-  columns: GridColumn[]
+  /** Explicit column order/labels; when omitted, derived from the row keys. */
+  columns?: GridColumn[]
   rows: Record<string, CsvValue>[]
 }
 
 const GRID_ROW_CAP = 1000
 
-/** Modal showing a card's rows as a data grid, with a CSV download. */
+/** Modal showing a card's rows as a data grid — filterable, with a CSV export. */
 function DataGridDialog({
   open,
   onOpenChange,
@@ -245,42 +247,84 @@ function DataGridDialog({
   onOpenChange: (open: boolean) => void
   data: GridData
 }) {
-  const { title, filename, columns, rows } = data
+  const { title, filename, rows } = data
+  const [query, setQuery] = useState("")
+
+  // Columns: explicit when given, otherwise the union of keys across all rows
+  // (first-seen order) so every field a row carries gets a column.
+  const columns = useMemo<GridColumn[]>(() => {
+    if (data.columns) return data.columns
+    const keys: string[] = []
+    const seen = new Set<string>()
+    for (const r of rows) {
+      for (const k of Object.keys(r)) {
+        if (!seen.has(k)) {
+          seen.add(k)
+          keys.push(k)
+        }
+      }
+    }
+    return keys.map((k) => ({ key: k, label: k }))
+  }, [data.columns, rows])
+
+  // Global filter: match the query against any cell (case-insensitive).
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((r) =>
+      columns.some((c) => String(r[c.key] ?? "").toLowerCase().includes(q))
+    )
+  }, [rows, columns, query])
+  const shown = filtered.slice(0, GRID_ROW_CAP)
+
   const downloadCsv = () => {
+    // Export the current (filtered) rows with every column.
     const csv = toCsv(
       columns.map((c) => c.label),
-      rows.map((r) => columns.map((c) => r[c.key]))
+      filtered.map((r) => columns.map((c) => r[c.key]))
     )
     downloadFile(`${exportFilename(filename)}.csv`, csv, "text/csv")
   }
-  const shown = rows.slice(0, GRID_ROW_CAP)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-[95vw]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            {rows.length.toLocaleString()} {rows.length === 1 ? "row" : "rows"}
+            {filtered.length.toLocaleString()} of {rows.length.toLocaleString()}{" "}
+            {rows.length === 1 ? "row" : "rows"}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex justify-end">
+        <div className="flex items-center gap-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter rows…"
+            className="h-8 max-w-xs"
+            data-testid="card-grid-filter"
+            aria-label="Filter rows"
+          />
           <Button
             size="sm"
             variant="outline"
             onClick={downloadCsv}
-            disabled={rows.length === 0}
+            disabled={filtered.length === 0}
             data-testid="card-download-csv"
+            className="ml-auto"
           >
             <Download className="size-3.5" />
             Download CSV
           </Button>
         </div>
-        <div className="max-h-[60vh] overflow-auto rounded-md border">
+        <div className="max-h-[70vh] overflow-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 {columns.map((c) => (
-                  <TableHead key={c.key}>{c.label}</TableHead>
+                  <TableHead key={c.key} className="whitespace-nowrap">
+                    {c.label}
+                  </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -288,17 +332,19 @@ function DataGridDialog({
               {shown.map((r, i) => (
                 <TableRow key={i}>
                   {columns.map((c) => (
-                    <TableCell key={c.key}>{r[c.key] == null ? "" : String(r[c.key])}</TableCell>
+                    <TableCell key={c.key} className="whitespace-nowrap">
+                      {r[c.key] == null ? "" : String(r[c.key])}
+                    </TableCell>
                   ))}
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
-        {rows.length > GRID_ROW_CAP && (
+        {filtered.length > GRID_ROW_CAP && (
           <p className="text-xs text-muted-foreground">
             Showing the first {GRID_ROW_CAP.toLocaleString()} of{" "}
-            {rows.length.toLocaleString()} rows — download the CSV for all.
+            {filtered.length.toLocaleString()} matching rows — download the CSV for all.
           </p>
         )}
       </DialogContent>
@@ -583,11 +629,13 @@ function HydrographDialog({
  *  reading; picking one opens its hydrograph via `onSelect`. */
 function WaterLevelRecords({
   rows,
+  wellPropsById,
   mapActive,
   onToggleMap,
   onSelect,
 }: {
   rows: WellSeriesRow[]
+  wellPropsById: Map<string, Record<string, unknown>>
   mapActive: boolean
   onToggleMap: () => void
   onSelect: (well: WellSeriesRow) => void
@@ -600,21 +648,21 @@ function WaterLevelRecords({
   }, [rows, query])
   const shown = filtered.slice(0, 250)
 
+  // Each row carries the well's full merged metadata plus its reading count;
+  // columns are derived from whatever fields exist.
   const grid: GridData = {
     title: "Water-level records",
     filename: "water-level-records",
-    columns: [
-      { key: "name", label: "Well" },
-      { key: "count", label: "Readings" },
-      { key: "source", label: "Source" },
-      { key: "latestDtw", label: "Latest DTW (ft)" },
-    ],
-    rows: rows.map((r) => ({
-      name: r.name,
-      count: r.count,
-      source: r.source ?? "",
-      latestDtw: r.latestDtw ?? "",
-    })),
+    rows: rows.map((r) => {
+      const full = wellPropsById.get(r.id) ?? {}
+      return {
+        ...full,
+        name: r.name,
+        readings: r.count,
+        source: r.source ?? (full.source as CsvValue) ?? "",
+        latest_dtw: r.latestDtw ?? (full.latest_dtw as CsvValue) ?? "",
+      } as Record<string, CsvValue>
+    }),
   }
 
   return (
@@ -708,6 +756,7 @@ function Dashboard({
   summary,
   dark,
   wells,
+  wellPropsById,
   activeCategories,
   onToggleCategory,
   seriesWells,
@@ -716,29 +765,25 @@ function Dashboard({
   summary: PlanningSummary
   dark: boolean
   wells: FeatureCollection | null
+  /** Well id → merged metadata across every product (for the data grid). */
+  wellPropsById: Map<string, Record<string, unknown>>
   activeCategories: Set<WellCategory>
   onToggleCategory: (cat: WellCategory) => void
   seriesWells: WellSeriesRow[]
   onSelectWell: (well: WellSeriesRow) => void
 }) {
   // The wells shown on the map for a concern category, as data-grid rows —
-  // mirrors exactly what "Show on map" highlights for that card.
+  // mirrors exactly what "Show on map" highlights. Each row carries the well's
+  // full merged metadata (columns are derived from whatever fields exist).
   const categoryGrid = (cat: WellCategory, title: string): GridData => ({
     title,
     filename: `planning-${cat}-wells`,
-    columns: [
-      { key: "name", label: "Well" },
-      { key: "id", label: "ID" },
-      { key: "status", label: "Level status" },
-    ],
     rows: wells
       ? filterWells(wells, new Set([cat])).features.map((f) => {
           const p = (f.properties ?? {}) as Record<string, unknown>
-          return {
-            name: String(p.name ?? ""),
-            id: String(p.id ?? ""),
-            status: String(p.status ?? ""),
-          }
+          const id = String(p.id ?? f.id ?? "")
+          const full = wellPropsById.get(id)
+          return (full ?? { id, name: p.name, status: p.status }) as Record<string, CsvValue>
         })
       : [],
   })
@@ -1047,6 +1092,7 @@ function Dashboard({
 
       <WaterLevelRecords
         rows={seriesWells}
+        wellPropsById={wellPropsById}
         mapActive={activeCategories.has("series")}
         onToggleMap={() => onToggleCategory("series")}
         onSelect={onSelectWell}
@@ -1151,6 +1197,11 @@ export function RegionalPlanning() {
     () => (mergedData ? wellPoints(mergedData) : null),
     [mergedData]
   )
+  // Full merged metadata per well id — feeds the data-grid modals.
+  const wellPropsById = useMemo(
+    () => (mergedData ? mergeWellProperties(mergedData) : new Map<string, Record<string, unknown>>()),
+    [mergedData]
+  )
   // Union of the active categories' wells; all wells when none are toggled.
   const shownWells = useMemo(
     () => (wells ? filterWells(wells, activeCategories) : null),
@@ -1246,6 +1297,7 @@ export function RegionalPlanning() {
                 summary={summary}
                 dark={dark}
                 wells={wells}
+                wellPropsById={wellPropsById}
                 activeCategories={activeCategories}
                 onToggleCategory={toggleCategory}
                 seriesWells={seriesWells}
