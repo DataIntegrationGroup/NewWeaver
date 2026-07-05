@@ -193,6 +193,8 @@ export interface LayerOption {
   facet?: LayerFacet
   /** Shows a "cluster points" toggle in the settings popover. */
   supportsClusterToggle?: boolean
+  /** Shows a "bubble map" (size points by value) toggle in the settings popover. */
+  supportsBubbleToggle?: boolean
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -219,6 +221,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → whether clustering is on (settings popover). */
   clusterById?: Record<string, boolean>
   onClusterChange?: (id: string, cluster: boolean) => void
+  /** Layer id → whether the bubble map (size-by-value) is on (settings popover). */
+  bubbleById?: Record<string, boolean>
+  onBubbleChange?: (id: string, bubble: boolean) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -245,6 +250,8 @@ function LayerSelector({
   onFacetChange,
   clusterById,
   onClusterChange,
+  bubbleById,
+  onBubbleChange,
   colorById,
   onColorChange,
   onToggle,
@@ -399,6 +406,16 @@ function LayerSelector({
                               checked={clusterById?.[option.id] ?? false}
                               onCheckedChange={(v) => onClusterChange(option.id, v)}
                               aria-label="Cluster points"
+                            />
+                          </div>
+                        )}
+                        {option.supportsBubbleToggle && onBubbleChange && (
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                            <span className="text-xs text-muted-foreground">Bubble map (size by value)</span>
+                            <Switch
+                              checked={bubbleById?.[option.id] ?? false}
+                              onCheckedChange={(v) => onBubbleChange(option.id, v)}
+                              aria-label="Bubble map"
                             />
                           </div>
                         )}

@@ -123,6 +123,8 @@ export function AppShell() {
   const [clusterById, setClusterById] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(LAYER_CATALOG.filter((l) => l.legend).map((l) => [l.id, false]))
   )
+  // Per-layer bubble-map (proportional-symbol) toggle; off by default.
+  const [bubbleById, setBubbleById] = useState<Record<string, boolean>>({})
   const [colorById, setColorById] = useState<Record<string, string>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
@@ -525,6 +527,10 @@ export function AppShell() {
             onClusterChange={(id, cluster) =>
               setClusterById((m) => ({ ...m, [id]: cluster }))
             }
+            bubbleById={bubbleById}
+            onBubbleChange={(id, bubble) =>
+              setBubbleById((m) => ({ ...m, [id]: bubble }))
+            }
             colorById={colorById}
             onColorChange={(id, color) =>
               setColorById((m) => ({ ...m, [id]: color }))
@@ -557,6 +563,7 @@ export function AppShell() {
               attributeQueryById={attributeQueryById}
               facetValuesById={facetValuesById}
               clusterById={clusterById}
+              bubbleById={bubbleById}
               colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}

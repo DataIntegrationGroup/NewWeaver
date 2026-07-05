@@ -117,6 +117,8 @@ interface MapViewProps {
   facetValuesById?: Record<string, string[]>
   /** Layer id → clustering override (settings popover). */
   clusterById?: Record<string, boolean>
+  /** Layer id → bubble-map (size-by-value) toggle (settings popover). */
+  bubbleById?: Record<string, boolean>
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   /** Ids of enabled layers hidden from the map via their chip (still listed). */
@@ -161,6 +163,7 @@ export function MapView({
   attributeQueryById,
   facetValuesById,
   clusterById,
+  bubbleById,
   colorById,
   hiddenLayerIds,
   onLayerCount,
@@ -472,6 +475,7 @@ export function MapView({
             attributeQuery={attributeQueryById?.[layer.id]}
             facetValues={facetValuesById?.[layer.id]}
             clusterOverride={clusterById?.[layer.id]}
+            bubble={bubbleById?.[layer.id]}
             colorOverride={colorById?.[layer.id]}
             visible={!hiddenLayerIds?.includes(layer.id)}
             onCount={handleLayerCount}

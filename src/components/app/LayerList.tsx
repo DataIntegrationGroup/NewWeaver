@@ -45,6 +45,9 @@ interface LayerListProps {
   /** Layer id → whether clustering is on (settings popover). */
   clusterById?: Record<string, boolean>
   onClusterChange?: (id: string, cluster: boolean) => void
+  /** Layer id → whether the bubble map (size-by-value) is on (settings popover). */
+  bubbleById?: Record<string, boolean>
+  onBubbleChange?: (id: string, bubble: boolean) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -82,6 +85,8 @@ function toOption(layer: LayerConfig): LayerOption {
     // Cluster toggle is for color-mapped ("legend") layers, where clustering
     // hides the per-point category color behind a flat bubble.
     supportsClusterToggle: !!layer.legend,
+    // Bubble map is offered for layers that declare a numeric field to size by.
+    supportsBubbleToggle: !!layer.bubbleField,
   }
 }
 
@@ -108,7 +113,7 @@ const DEFAULT_OPEN = ["Integrated data products"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, colorById, onColorChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -209,6 +214,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
                 onFacetChange={onFacetChange}
                 clusterById={clusterById}
                 onClusterChange={onClusterChange}
+                bubbleById={bubbleById}
+                onBubbleChange={onBubbleChange}
                 colorById={colorById}
                 onColorChange={onColorChange}
                 onToggle={onToggle}

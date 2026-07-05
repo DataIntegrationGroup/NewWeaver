@@ -88,6 +88,10 @@ interface BaseLayer {
   clusterRadius?: number
   /** Stop clustering above this zoom (default 18, matching Weaver). */
   clusterMaxZoom?: number
+  /** Numeric property to size points by when the "bubble map" toggle is on
+   *  (proportional-symbol map). Presence enables the toggle in the settings
+   *  popover; turning it on sizes each point's radius by this field's value. */
+  bubbleField?: string
   /** Multi-select attribute filter shown in the layer's settings popover. */
   facet?: AttributeFacet
   /** Swatch/label pairs for the map legend, when points are categorically
@@ -565,6 +569,8 @@ const WFS_LAYERS: {
   /** Server-side CQL filter applied at fetch — e.g. to pull only sites with
    *  sufficient data. Becomes the layer's WFS `cql_filter`. */
   cqlFilter?: string
+  /** Numeric field to size points by under the bubble-map toggle. */
+  bubbleField?: string
   style?: LayerStyle
   fields?: FieldDisplay
   facet?: AttributeFacet
@@ -600,9 +606,11 @@ const WFS_LAYERS: {
     typeName: "die:nm_tds_summary",
     title: "TDS Summary",
     description:
-      "Per-location total-dissolved-solids summary for New Mexico.",
+      "Per-location total-dissolved-solids summary for New Mexico. Turn on the bubble map to size each point by its mean TDS.",
     color: "#ea580c",
     mt: "water_quality",
+    // Proportional-symbol option: size points by mean TDS (mg/L).
+    bubbleField: "mean",
   },
   {
     typeName: "die:nm_waterlevel_trends",
@@ -1065,6 +1073,7 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
   cluster: true,
   style: w.style ?? staPoint(w.color),
   ...(w.cqlFilter && { query: { cqlFilter: w.cqlFilter } }),
+  ...(w.bubbleField && { bubbleField: w.bubbleField }),
   ...(w.fields && { fields: w.fields }),
   ...(w.facet && { facet: w.facet }),
   ...(w.legend && { legend: w.legend }),

@@ -69,11 +69,31 @@ interface LayerProps2 {
   clusterOverride?: boolean
   /** Override the layer's point color. */
   colorOverride?: string
+  /** Size points by the layer's `bubbleField` (proportional-symbol map). */
+  bubble?: boolean
   /** Reports the filtered feature count after rendering. */
   onCount?: (id: string, count: number) => void
 }
 
 type Paint = Record<string, unknown>
+
+/**
+ * Proportional-symbol radius: size a point by a numeric field's value. Linear
+ * interpolation over breakpoints tuned for TDS (mg/L); reasonable for any
+ * positive magnitude. Non-numeric/null values coalesce to the smallest dot.
+ */
+function bubbleRadius(field: string): unknown {
+  return [
+    "interpolate",
+    ["linear"],
+    ["coalesce", ["to-number", ["get", field]], 0],
+    0, 3,
+    500, 6,
+    2000, 10,
+    5000, 16,
+    15000, 26,
+  ]
+}
 
 /** Scale a paint's opacity channels by `opacity` (no-op at 1). */
 function withOpacity(paint: Paint, type: string, opacity: number): Paint {
@@ -151,6 +171,7 @@ function GeoSource({
   facetValues,
   clusterOverride,
   colorOverride,
+  bubble,
   onCount,
 }: {
   layer: LayerConfig
@@ -162,6 +183,7 @@ function GeoSource({
   facetValues?: string[]
   clusterOverride?: boolean
   colorOverride?: string
+  bubble?: boolean
   onCount?: (id: string, count: number) => void
 }) {
   const facetField = layer.facet?.field
@@ -182,15 +204,21 @@ function GeoSource({
     onCount?.(layer.id, count)
   }, [onCount, layer.id, count])
 
-  const basePaint = colorOverride
-    ? { ...(layer.style.paint ?? {}), "circle-color": colorOverride }
-    : (layer.style.paint ?? {})
+  // Bubble map sizes points by a numeric field; it takes over circle-radius.
+  const bubbleOn = !!bubble && !!layer.bubbleField
+  const basePaint: Paint = {
+    ...(layer.style.paint ?? {}),
+    ...(colorOverride ? { "circle-color": colorOverride } : {}),
+    ...(bubbleOn ? { "circle-radius": bubbleRadius(layer.bubbleField!) } : {}),
+  }
   const paint = withOpacity(basePaint, layer.style.type, opacity)
   // MapLibre layout visibility: hides the layer (no draw, no clicks) while
   // keeping the source loaded, so its chip and count survive a hide toggle.
   const vis = visible === false ? "none" : "visible"
 
-  const clustered = isClustered(layer, clusterOverride)
+  // Clustering aggregates points, which hides per-point magnitude — so a
+  // bubble map is drawn unclustered even if clustering is otherwise on.
+  const clustered = isClustered(layer, clusterOverride) && !bubbleOn
   // react-map-gl's <Source> only calls setData() when props change on an
   // existing geojson source — `cluster`/`clusterRadius` are frozen at first
   // creation and silently ignored after that. Keying on `clustered` forces a
