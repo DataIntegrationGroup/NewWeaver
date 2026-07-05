@@ -3,6 +3,7 @@ import { Loader2, Settings } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
 import { Input } from "@/components/ui/input"
 import {
   Tooltip,
@@ -195,6 +196,9 @@ export interface LayerOption {
   supportsClusterToggle?: boolean
   /** Shows a "bubble map" (size points by value) toggle in the settings popover. */
   supportsBubbleToggle?: boolean
+  /** Shows a min/max value range slider in the settings popover, filtering by
+   *  `field` over the full [min, max] domain. */
+  range?: { field: string; min: number; max: number; unit?: string }
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -224,6 +228,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → whether the bubble map (size-by-value) is on (settings popover). */
   bubbleById?: Record<string, boolean>
   onBubbleChange?: (id: string, bubble: boolean) => void
+  /** Layer id → current [min, max] value range (settings popover slider). */
+  rangeById?: Record<string, [number, number]>
+  onRangeChange?: (id: string, range: [number, number]) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -252,6 +259,8 @@ function LayerSelector({
   onClusterChange,
   bubbleById,
   onBubbleChange,
+  rangeById,
+  onRangeChange,
   colorById,
   onColorChange,
   onToggle,
@@ -419,6 +428,33 @@ function LayerSelector({
                             />
                           </div>
                         )}
+                        {option.range && onRangeChange && (() => {
+                          const { min, max, unit } = option.range!
+                          const [lo, hi] = rangeById?.[option.id] ?? [min, max]
+                          const step = Math.max(1, Math.round((max - min) / 200))
+                          return (
+                            <div className="mt-2 pt-2 border-t space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Value range</span>
+                                <span className="text-xs tabular-nums">
+                                  {lo.toLocaleString()}–{hi.toLocaleString()}
+                                  {unit ? ` ${unit}` : ""}
+                                </span>
+                              </div>
+                              <Slider
+                                min={min}
+                                max={max}
+                                step={step}
+                                value={[lo, hi]}
+                                data-testid={`layer-range-${option.id}`}
+                                aria-label={`${option.title} value range`}
+                                onValueChange={(v) =>
+                                  onRangeChange(option.id, [v[0], v[1]] as [number, number])
+                                }
+                              />
+                            </div>
+                          )
+                        })()}
                       </PopoverContent>
                     </Popover>
                   )}

@@ -16,7 +16,7 @@ import {
   useArcGisLayer,
   useWfsLayer,
 } from "@/hooks/useLayerData"
-import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from "@/lib/filterFeatures"
+import { filterFeatures, matchesText, matchesValues, matchesRange, type FeatureFilters } from "@/lib/filterFeatures"
 
 /** Render-layer id (the MapLibre layer that receives feature clicks) for a layer. */
 export function renderLayerId(layer: LayerConfig): string {
@@ -71,6 +71,8 @@ interface LayerProps2 {
   colorOverride?: string
   /** Size points by the layer's `bubbleField` (proportional-symbol map). */
   bubble?: boolean
+  /** Min/max bounds filtering features by the layer's `rangeField` value. */
+  range?: [number, number]
   /** Reports the filtered feature count after rendering. */
   onCount?: (id: string, count: number) => void
 }
@@ -172,6 +174,7 @@ function GeoSource({
   clusterOverride,
   colorOverride,
   bubble,
+  range,
   onCount,
 }: {
   layer: LayerConfig
@@ -184,10 +187,13 @@ function GeoSource({
   clusterOverride?: boolean
   colorOverride?: string
   bubble?: boolean
+  range?: [number, number]
   onCount?: (id: string, count: number) => void
 }) {
   const facetField = layer.facet?.field
   const facetKey = facetValues?.join(",")
+  const rangeField = layer.rangeField
+  const rangeKey = range?.join(",")
   const filteredFc = useMemo(() => {
     let out = fc
     if (attributeQuery) {
@@ -196,9 +202,12 @@ function GeoSource({
     if (facetField && facetValues && facetValues.length > 0) {
       out = { ...out, features: out.features.filter((f) => matchesValues(f, facetField, facetValues)) }
     }
+    if (rangeField && range) {
+      out = { ...out, features: out.features.filter((f) => matchesRange(f, rangeField, range[0], range[1])) }
+    }
     return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues compared via facetKey, not identity
-  }, [fc, attributeQuery, facetField, facetKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues/range compared via facetKey/rangeKey, not identity
+  }, [fc, attributeQuery, facetField, facetKey, rangeField, rangeKey])
   const count = filteredFc.features.length
   useEffect(() => {
     onCount?.(layer.id, count)

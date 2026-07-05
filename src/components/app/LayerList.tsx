@@ -48,6 +48,9 @@ interface LayerListProps {
   /** Layer id → whether the bubble map (size-by-value) is on (settings popover). */
   bubbleById?: Record<string, boolean>
   onBubbleChange?: (id: string, bubble: boolean) => void
+  /** Layer id → [min, max] value range filter (settings popover). */
+  rangeById?: Record<string, [number, number]>
+  onRangeChange?: (id: string, range: [number, number]) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -87,6 +90,16 @@ function toOption(layer: LayerConfig): LayerOption {
     supportsClusterToggle: !!layer.legend,
     // Bubble map is offered for layers that declare a numeric field to size by.
     supportsBubbleToggle: !!layer.bubbleField,
+    // Value range slider for layers that declare a numeric field + domain.
+    range:
+      layer.rangeField && layer.rangeDomain
+        ? {
+            field: layer.rangeField,
+            min: layer.rangeDomain[0],
+            max: layer.rangeDomain[1],
+            unit: layer.rangeUnit,
+          }
+        : undefined,
   }
 }
 
@@ -113,7 +126,7 @@ const DEFAULT_OPEN = ["Integrated data products"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, colorById, onColorChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, rangeById, onRangeChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -216,6 +229,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
                 onClusterChange={onClusterChange}
                 bubbleById={bubbleById}
                 onBubbleChange={onBubbleChange}
+                rangeById={rangeById}
+                onRangeChange={onRangeChange}
                 colorById={colorById}
                 onColorChange={onColorChange}
                 onToggle={onToggle}

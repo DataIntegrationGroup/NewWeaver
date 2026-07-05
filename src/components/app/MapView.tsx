@@ -119,6 +119,8 @@ interface MapViewProps {
   clusterById?: Record<string, boolean>
   /** Layer id → bubble-map (size-by-value) toggle (settings popover). */
   bubbleById?: Record<string, boolean>
+  /** Layer id → [min, max] value range filter over the layer's rangeField. */
+  rangeById?: Record<string, [number, number]>
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   /** Ids of enabled layers hidden from the map via their chip (still listed). */
@@ -164,6 +166,7 @@ export function MapView({
   facetValuesById,
   clusterById,
   bubbleById,
+  rangeById,
   colorById,
   hiddenLayerIds,
   onLayerCount,
@@ -476,6 +479,7 @@ export function MapView({
             facetValues={facetValuesById?.[layer.id]}
             clusterOverride={clusterById?.[layer.id]}
             bubble={bubbleById?.[layer.id]}
+            range={rangeById?.[layer.id]}
             colorOverride={colorById?.[layer.id]}
             visible={!hiddenLayerIds?.includes(layer.id)}
             onCount={handleLayerCount}

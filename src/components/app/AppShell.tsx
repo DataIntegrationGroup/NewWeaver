@@ -125,6 +125,8 @@ export function AppShell() {
   )
   // Per-layer bubble-map (proportional-symbol) toggle; off by default.
   const [bubbleById, setBubbleById] = useState<Record<string, boolean>>({})
+  // Per-layer [min, max] value range filter over the layer's rangeField.
+  const [rangeById, setRangeById] = useState<Record<string, [number, number]>>({})
   const [colorById, setColorById] = useState<Record<string, string>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
@@ -531,6 +533,10 @@ export function AppShell() {
             onBubbleChange={(id, bubble) =>
               setBubbleById((m) => ({ ...m, [id]: bubble }))
             }
+            rangeById={rangeById}
+            onRangeChange={(id, range) =>
+              setRangeById((m) => ({ ...m, [id]: range }))
+            }
             colorById={colorById}
             onColorChange={(id, color) =>
               setColorById((m) => ({ ...m, [id]: color }))
@@ -564,6 +570,7 @@ export function AppShell() {
               facetValuesById={facetValuesById}
               clusterById={clusterById}
               bubbleById={bubbleById}
+              rangeById={rangeById}
               colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}

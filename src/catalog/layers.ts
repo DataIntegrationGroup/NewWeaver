@@ -92,6 +92,14 @@ interface BaseLayer {
    *  (proportional-symbol map). Presence enables the toggle in the settings
    *  popover; turning it on sizes each point's radius by this field's value. */
   bubbleField?: string
+  /** Numeric property offered as a min/max value range slider in the settings
+   *  popover. Presence enables the slider; dragging it filters features whose
+   *  value falls within the chosen bounds. */
+  rangeField?: string
+  /** Full domain [min, max] of `rangeField` for the slider bounds. */
+  rangeDomain?: [number, number]
+  /** Unit label shown beside the range slider (e.g. "mg/L"). */
+  rangeUnit?: string
   /** Multi-select attribute filter shown in the layer's settings popover. */
   facet?: AttributeFacet
   /** Swatch/label pairs for the map legend, when points are categorically
@@ -571,6 +579,12 @@ const WFS_LAYERS: {
   cqlFilter?: string
   /** Numeric field to size points by under the bubble-map toggle. */
   bubbleField?: string
+  /** Numeric field to expose as a min/max value range filter. */
+  rangeField?: string
+  /** Slider domain [min, max] for `rangeField`. */
+  rangeDomain?: [number, number]
+  /** Unit label shown beside the range slider. */
+  rangeUnit?: string
   style?: LayerStyle
   fields?: FieldDisplay
   facet?: AttributeFacet
@@ -611,6 +625,10 @@ const WFS_LAYERS: {
     mt: "water_quality",
     // Proportional-symbol option: size points by mean TDS (mg/L).
     bubbleField: "mean",
+    // Value range slider: filter to sites whose mean TDS is within bounds.
+    rangeField: "mean",
+    rangeDomain: [0, 35000],
+    rangeUnit: "mg/L",
   },
   {
     typeName: "die:nm_waterlevel_trends",
@@ -1074,6 +1092,9 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
   style: w.style ?? staPoint(w.color),
   ...(w.cqlFilter && { query: { cqlFilter: w.cqlFilter } }),
   ...(w.bubbleField && { bubbleField: w.bubbleField }),
+  ...(w.rangeField && { rangeField: w.rangeField }),
+  ...(w.rangeDomain && { rangeDomain: w.rangeDomain }),
+  ...(w.rangeUnit && { rangeUnit: w.rangeUnit }),
   ...(w.fields && { fields: w.fields }),
   ...(w.facet && { facet: w.facet }),
   ...(w.legend && { legend: w.legend }),

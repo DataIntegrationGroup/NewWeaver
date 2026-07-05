@@ -44,6 +44,19 @@ export function matchesValues(f: Feature, field: string, values: string[]): bool
   return values.includes(String(f.properties?.[field]))
 }
 
+/** True if `field`'s numeric value falls within [min, max]. Features whose
+ *  value is missing or non-numeric are excluded — a value filter keeps only
+ *  points with a value in range. */
+export function matchesRange(
+  f: Feature,
+  field: string,
+  min: number,
+  max: number
+): boolean {
+  const n = Number(f.properties?.[field])
+  return Number.isFinite(n) && n >= min && n <= max
+}
+
 function inBounds(
   f: Feature,
   [w, s, e, n]: [number, number, number, number]
