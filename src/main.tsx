@@ -15,7 +15,7 @@ import { Toaster } from "./components/ui/sonner"
 import { TopLoadingBar } from "./components/top-loading-bar"
 import { queryClient } from "./lib/queryClient"
 import { layerPersister } from "./lib/persister"
-import { CATALOG_VERSION, PERSISTED_WFS_TYPENAMES } from "./catalog/layers"
+import { CATALOG_VERSION, PERSISTED_INTEGRATED_COLLECTIONS } from "./catalog/layers"
 import { router } from "./router"
 
 // Wire the generic (design-system) loading bar to this app's query activity.
@@ -47,13 +47,15 @@ const app = (
             maxAge: 24 * 60 * 60 * 1000,
             buster: CATALOG_VERSION,
             dehydrateOptions: {
-              // Persist only the Integrated data products (WFS) layer queries.
+              // Persist only the Integrated data products layer queries (now
+              // OGC API Features). The features query key is
+              // ["features", baseUrl, collectionId, …].
               shouldDehydrateQuery: (q) => {
                 const key = q.queryKey
                 return (
-                  key[0] === "wfs" &&
+                  key[0] === "features" &&
                   typeof key[2] === "string" &&
-                  PERSISTED_WFS_TYPENAMES.has(key[2])
+                  PERSISTED_INTEGRATED_COLLECTIONS.has(key[2])
                 )
               },
             },

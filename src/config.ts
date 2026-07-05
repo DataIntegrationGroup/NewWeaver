@@ -54,6 +54,14 @@ export const OSE_ARCGIS_BASE_URL =
 export const GEOSERVER_WFS_BASE_URL =
   env.VITE_GEOSERVER_WFS_BASE_URL ?? "/geoserver"
 
+// GeoServer OGC API Features — the modern replacement for the WFS endpoint on
+// the same GeoServer, serving the integrated `die` products as OGC API
+// Features (same GeoJSON the DIE/Ocotillo pygeoapi returns). Routed through the
+// same same-origin `/geoserver` proxy as WFS. The OgcFeaturesClient appends
+// `/collections/{id}/items`, so this is the `.../ogc/features/v1` root.
+export const GEOSERVER_OGC_FEATURES_BASE_URL =
+  env.VITE_GEOSERVER_OGC_FEATURES_BASE_URL ?? "/geoserver/ogc/features/v1"
+
 // USGS Water Data for the Nation — the modern NWIS replacement, served as an
 // OGC API Features endpoint (same protocol as the DIE/Ocotillo pygeoapi). The
 // `monitoring-locations` collection carries NWIS sites; we read it through the

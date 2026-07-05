@@ -100,14 +100,15 @@ export class OgcFeaturesClient {
   }
 
   /**
-   * Fetch every item in a collection, following offset paging until the server
-   * has nothing left. OGC API Features caps a page (pygeoapi defaults to 10,
-   * hard-caps at 10000), so a single getItems only ever returns a slice — this
-   * loops to assemble the full FeatureCollection the map/table expect.
+   * Fetch every item in a collection by following the OGC `rel="next"` link
+   * chain until the server stops emitting one. This is the portable paging
+   * mechanism: pygeoapi (offset-based) and GeoServer (startIndex-based) both
+   * advertise the next page as a link, so we don't have to know which query
+   * param a server honors — GeoServer, notably, ignores `offset`.
    *
-   * `pageSize` is the per-request limit; `maxPages` bounds the loop so a
-   * mis-set offset can't spin forever. Any caller-supplied limit/offset in
-   * `query` is overridden by the pager.
+   * `pageSize` is the initial `limit`; the server echoes it into the next
+   * link. `maxPages` bounds the loop so a self-referential link can't spin
+   * forever. Any caller-supplied limit/offset in `query` is overridden.
    */
   async getAllItems(
     collectionId: string,
@@ -117,27 +118,36 @@ export class OgcFeaturesClient {
     onProgress?: (loaded: number) => void
   ): Promise<FeatureCollection> {
     const all: Feature[] = []
-    let offset = 0
     let numberMatched: number | undefined
     let last: FeatureCollection | undefined
+    // First page respects the caller's query (bbox, filter, …) + our base URL;
+    // the pager owns limit/offset.
+    const rest: ItemsQuery = { ...query }
+    delete rest.limit
+    delete rest.offset
+    let url: string | null = `/collections/${collectionId}/items${buildQuery({
+      ...rest,
+      limit: pageSize,
+    })}`
 
-    for (let page = 0; page < maxPages; page++) {
-      const fc = await this.getItems(collectionId, {
-        ...query,
-        limit: pageSize,
-        offset,
-      })
+    for (let page = 0; page < maxPages && url; page++) {
+      const fc: FeatureCollection = await this.get<FeatureCollection>(url)
       last = fc
       numberMatched = fc.numberMatched ?? numberMatched
       const batch = fc.features ?? []
       all.push(...batch)
       onProgress?.(all.length)
 
-      const done =
-        batch.length < pageSize ||
+      // Stop when we've matched everything the server reported, or there's no
+      // next page. Empty batch also ends the loop (defensive).
+      if (
+        batch.length === 0 ||
         (numberMatched !== undefined && all.length >= numberMatched)
-      if (done) break
-      offset += pageSize
+      ) {
+        break
+      }
+      const next = fc.links?.find((l: Link) => l.rel === "next")?.href
+      url = next ? this.followPath(next) : null
     }
 
     return {
@@ -146,6 +156,27 @@ export class OgcFeaturesClient {
       numberMatched,
       numberReturned: all.length,
       links: last?.links,
+    }
+  }
+
+  /**
+   * Convert a `rel="next"` href into a URL `get()` can fetch: strip our base's
+   * path prefix so the result is base-relative (get() re-prepends the base).
+   * This keeps proxied servers same-origin — GeoServer's next link is an
+   * absolute upstream URL that would otherwise bypass the CORS proxy.
+   */
+  private followPath(href: string): string | null {
+    try {
+      const next = new URL(href)
+      const basePath = this.baseUrl.startsWith("http")
+        ? new URL(this.baseUrl).pathname
+        : this.baseUrl
+      const path = next.pathname.startsWith(basePath)
+        ? next.pathname.slice(basePath.length)
+        : next.pathname
+      return path + next.search
+    } catch {
+      return null
     }
   }
 

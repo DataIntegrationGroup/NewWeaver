@@ -14,7 +14,7 @@ import type { WfsQuery } from "@/clients/wfsClient"
 import { fixed2, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { formatOseValue } from "@/lib/oseCodes"
 import {
-  GEOSERVER_WFS_BASE_URL,
+  GEOSERVER_OGC_FEATURES_BASE_URL,
   OCOTILLO_FEATURES_BASE_URL,
   OSE_ARCGIS_BASE_URL,
   STA_ST2_BASE_URL,
@@ -1079,18 +1079,26 @@ const WFS_LAYERS: {
   },
 ]
 
-const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
+// The integrated `die` products are served by GeoServer's OGC API Features
+// endpoint (the modern replacement for its WFS). Each maps 1:1 to an OGC
+// collection whose id is the workspace-qualified `die:` layer name. The `wfs-`
+// id stem is kept so bookmarked URLs and layer references stay valid. A
+// server-side CQL filter (e.g. "only sufficient data") rides as an OGC
+// `filter` + `filter-lang=cql2-text`.
+const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
   id: `wfs-${w.typeName.split(":").pop()!.replace(/_/g, "-")}`,
   title: w.title,
   description: w.description,
-  source: "wfs",
-  wfsBaseUrl: GEOSERVER_WFS_BASE_URL,
-  typeName: w.typeName,
+  source: "features",
+  featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+  collectionId: w.typeName,
   measurementType: w.mt,
   section: WFS_SECTION,
   cluster: true,
   style: w.style ?? staPoint(w.color),
-  ...(w.cqlFilter && { query: { cqlFilter: w.cqlFilter } }),
+  ...(w.cqlFilter && {
+    query: { filter: w.cqlFilter, "filter-lang": "cql2-text" },
+  }),
   ...(w.bubbleField && { bubbleField: w.bubbleField }),
   ...(w.rangeField && { rangeField: w.rangeField }),
   ...(w.rangeDomain && { rangeDomain: w.rangeDomain }),
@@ -1103,7 +1111,7 @@ const wfsLayers: WfsLayer[] = WFS_LAYERS.map((w) => ({
 }))
 
 export const LAYER_CATALOG: LayerConfig[] = [
-  ...wfsLayers,
+  ...integratedLayers,
   ...st2AgencyLayers,
   ...ocotilloLayers,
   ...oseGisLayers,
@@ -1113,19 +1121,20 @@ export const LAYER_CATALOG: LayerConfig[] = [
 /**
  * Bump when a persisted layer's feature shape changes (new `mapProperties`,
  * renamed fields, etc.) so the IndexedDB cache busts instead of replaying a
- * stale shape. Used as the persist `buster` in main.tsx.
+ * stale shape. Used as the persist `buster` in main.tsx. Bumped to 4 when the
+ * integrated products moved from WFS to OGC API Features (new query keys).
  */
-export const CATALOG_VERSION = "3"
+export const CATALOG_VERSION = "4"
 
 /**
- * WFS typeNames whose fetched FeatureCollections are persisted to IndexedDB —
- * only the "Integrated data products" section. The WFS query key carries the
- * typeName, so the persist predicate matches on these.
+ * OGC collection ids whose fetched FeatureCollections are persisted to
+ * IndexedDB — only the "Integrated data products" section. The features query
+ * key carries the collection id, so the persist predicate matches on these.
  */
-export const PERSISTED_WFS_TYPENAMES = new Set(
-  LAYER_CATALOG.filter((l) => l.source === "wfs" && l.section === WFS_SECTION).map(
-    (l) => (l as WfsLayer).typeName
-  )
+export const PERSISTED_INTEGRATED_COLLECTIONS = new Set(
+  LAYER_CATALOG.filter(
+    (l) => l.source === "features" && l.section === WFS_SECTION
+  ).map((l) => (l as FeaturesLayer).collectionId)
 )
 
 /**

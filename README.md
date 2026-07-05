@@ -3,11 +3,15 @@
 A modern, public, read-only web app that displays New Mexico water data through
 standards-based service layers — no source-specific code.
 
-- **OGC API Features** (pygeoapi; also USGS Water Data for the Nation) —
-  vector / integrated collections
+- **OGC API Features** (pygeoapi; USGS Water Data for the Nation; and GeoServer,
+  which serves the per-location integrated summary products) — vector /
+  integrated collections
 - **OGC SensorThings API** (FROST) — monitoring locations + time series,
   spanning a primary server and the `st2` agency-networks server
-- **OGC WFS** (GeoServer) — per-location integrated summary products
+- **OGC WFS** (GeoServer) — still supported. The integrated summary products
+  now load through GeoServer's OGC API Features endpoint by default, but the WFS
+  client (`src/clients/wfsClient.ts`) remains available and a layer can target
+  it via `source: "wfs"`.
 - **ArcGIS REST** (Esri Feature Services) — OSE Points of Diversion and
   Aquifer Test Wells
 
@@ -33,9 +37,11 @@ data, no editing/ingest. See `weaver-replacement-plan` for full scope.
 
 Four data adapters, one map, a config-driven layer catalog, detail/inspect views.
 
-- `src/clients/ogcFeatures.ts` — `OgcFeaturesClient` (pygeoapi, USGS OGC API)
+- `src/clients/ogcFeatures.ts` — `OgcFeaturesClient` (pygeoapi, USGS OGC API,
+  and GeoServer OGC API Features — the integrated summary products)
 - `src/clients/sensorThings.ts` — `SensorThingsClient` (FROST STA)
-- `src/clients/wfsClient.ts` — `WfsClient` (GeoServer WFS summary products)
+- `src/clients/wfsClient.ts` — `WfsClient` (GeoServer WFS — still supported;
+  no longer the default transport for the integrated products)
 - `src/clients/arcGisRest.ts` — ArcGIS REST client (OSE Feature Services)
 - `src/catalog/layers.ts` — the layer registry; adding a dataset = a new entry
 - `src/components/app/` — app shell, map view, layer list, panels
@@ -44,8 +50,9 @@ Four data adapters, one map, a config-driven layer catalog, detail/inspect views
   `st2` server hosting CABQ); a catalog layer targets one via `staBaseUrl`.
 
 No backend of its own: static hosting + the upstream APIs (all must have CORS
-enabled for the public origin; the GeoServer WFS is proxied same-origin because
-it sends no CORS headers — see `vite.config.ts` / nginx).
+enabled for the public origin; GeoServer — both its OGC API Features and WFS
+endpoints, under the same `/geoserver` path — is proxied same-origin because it
+sends no CORS headers — see `vite.config.ts` / nginx).
 
 ### Design system
 

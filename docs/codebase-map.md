@@ -31,6 +31,8 @@ Weaver API. Endpoints in `src/config.ts` (all `VITE_*` overridable):
 | `OCOTILLO_FEATURES_BASE_URL` | Ocotillo pygeoapi (NM water collections) | OGC API Features |
 | `OSE_ARCGIS_BASE_URL` | OSE GIS Esri FeatureServer (PODs, aquifer tests) | ArcGIS REST |
 | `USGS_OGC_BASE_URL` | USGS Water Data (NWIS replacement) | OGC API Features |
+| `GEOSERVER_OGC_FEATURES_BASE_URL` | GeoServer (integrated `die:` summary products) | OGC API Features |
+| `GEOSERVER_WFS_BASE_URL` | GeoServer WFS — **still supported**, no longer the default for the integrated products | OGC WFS |
 
 About + Help copy both state "display surface only / no Weaver-only backend"
 (`About.tsx`, `Help.tsx`). → discovery (geocode/search) MUST be client-side.
@@ -38,7 +40,11 @@ About + Help copy both state "display surface only / no Weaver-only backend"
 ## Clients (`src/clients/`)
 
 - `ogcFeatures.ts` — `OgcFeaturesClient`. `/collections/{id}/items`, **bbox** +
-  limit/offset paging. Used by DIE, Ocotillo, USGS NWIS.
+  `rel="next"` link-following paging (portable across pygeoapi's `offset` and
+  GeoServer's `startIndex`; GeoServer ignores `offset`). Used by DIE, Ocotillo,
+  USGS NWIS, and GeoServer's integrated `die:` products.
+- `wfsClient.ts` — `WfsClient` (GeoServer WFS). **Still supported** but no longer
+  the default transport for the integrated products (now OGC API Features).
 - `sensorThings.ts` — STA. `/Locations`, `/Datastreams`; `$filter`/`$expand`/
   `$select`, `@iot.nextLink` paging. `Datastream.observationType` +
   `unitOfMeasurement` discovered at click-time. **No bbox.**
