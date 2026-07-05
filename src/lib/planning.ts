@@ -267,6 +267,12 @@ export function mergeWellProperties(
       for (const [k, v] of Object.entries(p)) {
         if (cur[k] == null || cur[k] === "") cur[k] = v
       }
+      // Carry the point's coordinates so lat/lon land in the data grid + CSV.
+      if (cur.lat == null && f.geometry?.type === "Point") {
+        const [lon, lat] = f.geometry.coordinates
+        cur.lon = Math.round(lon * 1e6) / 1e6
+        cur.lat = Math.round(lat * 1e6) / 1e6
+      }
       byId.set(id, cur)
     }
   }
