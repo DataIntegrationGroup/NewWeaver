@@ -6,7 +6,8 @@
  * `openRequest` lets a parent force one open (e.g. the #find/#measure
  * doorway deep links in AppShell, which need their target section visible).
  */
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
+import { Gauge, Layers, MapPin, LandPlot, SlidersHorizontal } from "lucide-react"
 import {
   Accordion,
   AccordionContent,
@@ -36,6 +37,10 @@ interface SearchWidgetsProps {
   q: string
   onBboxChange: (v: boolean) => void
   onQueryChange: (v: string) => void
+  /** The layer catalog (LayerList), rendered as the accordion's "Layers"
+   *  section. Passed as a node so AppShell keeps owning the layer state/props
+   *  instead of threading them all through here. */
+  layersSlot?: ReactNode
   /** Force a section open (e.g. a #find/#measure doorway deep link); bump
    *  `nonce` to re-fire on repeated requests for the same section. */
   openRequest?: { section: "location" | "regions" | "measure" | "filter"; nonce: number }
@@ -55,13 +60,14 @@ export function SearchWidgets({
   q,
   onBboxChange,
   onQueryChange,
+  layersSlot,
   openRequest,
 }: SearchWidgetsProps) {
-  // Collapsed by default, except a section restored from a shared URL
-  // (region chips, an active text/extent filter) starts open so it isn't
-  // hidden right after the link loads. Lazy initializer — only checked once.
+  // The layer catalog opens by default (it's the primary control); the
+  // find/narrow tools stay collapsed except a section restored from a shared
+  // URL (region chips, an active text/extent filter). Lazy init — checked once.
   const [open, setOpen] = useState<string[]>(() => {
-    const initial: string[] = []
+    const initial: string[] = layersSlot ? ["layers"] : []
     if (regionChips.length > 0) initial.push("regions")
     if (bbox || q) initial.push("filter")
     return initial
@@ -78,7 +84,10 @@ export function SearchWidgets({
       <Accordion type="multiple" value={open} onValueChange={setOpen}>
         <AccordionItem value="location">
           <AccordionTrigger data-testid="search-widget-location-trigger">
-            Find a location
+            <span className="flex items-center gap-2">
+              <MapPin className="size-4 shrink-0 text-muted-foreground" />
+              Find a location
+            </span>
           </AccordionTrigger>
           <AccordionContent>
             <LocationSearch layers={layers} onLocate={onLocate} onExport={onExport} />
@@ -87,7 +96,10 @@ export function SearchWidgets({
 
         <AccordionItem value="regions">
           <AccordionTrigger data-testid="search-widget-regions-trigger">
-            Regions of interest
+            <span className="flex items-center gap-2">
+              <LandPlot className="size-4 shrink-0 text-muted-foreground" />
+              Regions of interest
+            </span>
           </AccordionTrigger>
           <AccordionContent>
             <RegionSelector
@@ -103,7 +115,10 @@ export function SearchWidgets({
 
         <AccordionItem value="measure">
           <AccordionTrigger data-testid="search-widget-measure-trigger">
-            Browse by what’s measured
+            <span className="flex items-center gap-2">
+              <Gauge className="size-4 shrink-0 text-muted-foreground" />
+              Browse by what’s measured
+            </span>
           </AccordionTrigger>
           <AccordionContent>
             <MeasurementFacet onSelect={onMeasurementSelect} />
@@ -112,7 +127,10 @@ export function SearchWidgets({
 
         <AccordionItem value="filter">
           <AccordionTrigger data-testid="search-widget-filter-trigger">
-            Filter
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="size-4 shrink-0 text-muted-foreground" />
+              Filter
+            </span>
           </AccordionTrigger>
           <AccordionContent>
             <FilterControls
@@ -123,6 +141,18 @@ export function SearchWidgets({
             />
           </AccordionContent>
         </AccordionItem>
+
+        {layersSlot && (
+          <AccordionItem value="layers">
+            <AccordionTrigger data-testid="search-widget-layers-trigger">
+              <span className="flex items-center gap-2">
+                <Layers className="size-4 shrink-0 text-muted-foreground" />
+                Datasets
+              </span>
+            </AccordionTrigger>
+            <AccordionContent>{layersSlot}</AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
     </div>
   )

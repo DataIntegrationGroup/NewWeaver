@@ -163,10 +163,7 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="!text-base !font-semibold uppercase tracking-wide text-muted-foreground">
-          Layers
-        </h2>
+      <div className="flex items-center justify-end gap-2">
         <div className="flex items-center gap-1 text-xs">
           <button
             type="button"
@@ -189,7 +186,7 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
       </div>
       <Input
         type="search"
-        placeholder="Search layers…"
+        placeholder="Search datasets…"
         data-testid="layer-search"
         className="h-8"
         value={search}

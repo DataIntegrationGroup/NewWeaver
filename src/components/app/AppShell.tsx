@@ -500,6 +500,7 @@ export function AppShell() {
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
+          {viewActions}
           <SearchWidgets
             layers={visibleLayers}
             onLocate={handleLocate}
@@ -515,47 +516,48 @@ export function AppShell() {
             onBboxChange={handleBboxChange}
             onQueryChange={setQuery}
             openRequest={openSearchRequest ?? undefined}
-          />
-          {viewActions}
-          <LayerList
-            visible={layerIds}
-            opacityById={opacityById}
-            onOpacityChange={(id, v) =>
-              setOpacityById((m) => ({ ...m, [id]: v }))
+            layersSlot={
+              <LayerList
+                visible={layerIds}
+                opacityById={opacityById}
+                onOpacityChange={(id, v) =>
+                  setOpacityById((m) => ({ ...m, [id]: v }))
+                }
+                hideNoDataById={hideNoDataById}
+                onHideNoDataChange={(id, hide) =>
+                  setHideNoDataById((m) => ({ ...m, [id]: hide }))
+                }
+                attributeQueryById={attributeQueryById}
+                onAttributeQueryChange={(id, q) =>
+                  setAttributeQueryById((m) => ({ ...m, [id]: q }))
+                }
+                facetValuesById={facetValuesById}
+                onFacetChange={(id, values) =>
+                  setFacetValuesById((m) => ({ ...m, [id]: values }))
+                }
+                clusterById={clusterById}
+                onClusterChange={(id, cluster) =>
+                  setClusterById((m) => ({ ...m, [id]: cluster }))
+                }
+                bubbleById={bubbleById}
+                onBubbleChange={(id, bubble) =>
+                  setBubbleById((m) => ({ ...m, [id]: bubble }))
+                }
+                classifyById={classifyById}
+                onClassifyChange={(id, classify) =>
+                  setClassifyById((m) => ({ ...m, [id]: classify }))
+                }
+                rangeById={rangeById}
+                onRangeChange={(id, range) =>
+                  setRangeById((m) => ({ ...m, [id]: range }))
+                }
+                colorById={colorById}
+                onColorChange={(id, color) =>
+                  setColorById((m) => ({ ...m, [id]: color }))
+                }
+                onToggle={handleToggleLayer}
+              />
             }
-            hideNoDataById={hideNoDataById}
-            onHideNoDataChange={(id, hide) =>
-              setHideNoDataById((m) => ({ ...m, [id]: hide }))
-            }
-            attributeQueryById={attributeQueryById}
-            onAttributeQueryChange={(id, q) =>
-              setAttributeQueryById((m) => ({ ...m, [id]: q }))
-            }
-            facetValuesById={facetValuesById}
-            onFacetChange={(id, values) =>
-              setFacetValuesById((m) => ({ ...m, [id]: values }))
-            }
-            clusterById={clusterById}
-            onClusterChange={(id, cluster) =>
-              setClusterById((m) => ({ ...m, [id]: cluster }))
-            }
-            bubbleById={bubbleById}
-            onBubbleChange={(id, bubble) =>
-              setBubbleById((m) => ({ ...m, [id]: bubble }))
-            }
-            classifyById={classifyById}
-            onClassifyChange={(id, classify) =>
-              setClassifyById((m) => ({ ...m, [id]: classify }))
-            }
-            rangeById={rangeById}
-            onRangeChange={(id, range) =>
-              setRangeById((m) => ({ ...m, [id]: range }))
-            }
-            colorById={colorById}
-            onColorChange={(id, color) =>
-              setColorById((m) => ({ ...m, [id]: color }))
-            }
-            onToggle={handleToggleLayer}
           />
           {/* Resize handle on the right edge — desktop only. */}
           <div
