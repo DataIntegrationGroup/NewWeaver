@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tooltip"
 import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { DatastreamChart } from "./DatastreamChart"
+import { Hydrograph } from "./Hydrograph"
 import { FieldValue } from "@/components/ui/field-value"
 
 interface InspectPanelProps {
@@ -316,6 +317,53 @@ function FeatureInspect({ layer, featureId, onClose, onZoomTo }: { layer: Featur
   return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
 }
 
+/** Feature-layer inspector that leads with the well's water-level hydrograph
+ *  (depth to water over time), then its site metadata. Used for layers flagged
+ *  `hydrograph` (e.g. die:nm_waterlevel_status), whose feature `id` keys the
+ *  timeseries fetch. */
+function HydrographInspect({ layer, featureId, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
+  const { data } = useFeaturesLayer(layer)
+  const feature = data?.features.find((f) => String(f.id ?? f.properties?.id) === featureId)
+  const pos = firstPosition(feature)
+  const props = (feature?.properties ?? {}) as Record<string, unknown>
+  const wellId = String(props.id ?? feature?.id ?? "")
+  const name = (props.name as string) ?? `Well ${wellId}`
+
+  return (
+    <PanelShell
+      title={name}
+      onClose={onClose}
+      onZoomTo={pos && onZoomTo ? () => onZoomTo(pos[0], pos[1]) : undefined}
+    >
+      {!feature ? (
+        <p className="text-sm text-muted-foreground">Feature not found.</p>
+      ) : (
+        <div className="space-y-4">
+          <PlainLead layer={layer} />
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Hydrograph
+            </p>
+            {wellId ? (
+              <Hydrograph wellId={wellId} name={name} />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No well id on this feature — cannot load a hydrograph.
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Details
+            </p>
+            <AttributeList properties={props} fields={layer.fields} format={layer.formatValue} />
+          </div>
+        </div>
+      )}
+    </PanelShell>
+  )
+}
+
 /** Attribute list for an OSE GIS feature from ArcGIS REST. */
 function ArcGisInspect({ layer, featureId, onClose, onZoomTo }: { layer: ArcGisLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useArcGisLayer(layer)
@@ -430,6 +478,8 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
 }
 
 export function InspectPanel({ layer, featureId, onClose, onZoomTo }: InspectPanelProps) {
+  if (layer.source === "features" && layer.hydrograph)
+    return <HydrographInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "sta")
     return <StaInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "arcgis")

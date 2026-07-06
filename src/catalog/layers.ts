@@ -17,7 +17,6 @@ import {
   GEOSERVER_OGC_FEATURES_BASE_URL,
   OCOTILLO_FEATURES_BASE_URL,
   OSE_ARCGIS_BASE_URL,
-  STA_BASE_URL,
   STA_ST2_BASE_URL,
   USGS_OGC_BASE_URL,
 } from "@/config"
@@ -113,6 +112,10 @@ interface BaseLayer {
   /** Swatch/label pairs for the map legend, when points are categorically
    *  color-mapped (e.g. trend direction). Omit for a single-color layer. */
   legend?: { label: string; color: string }[]
+  /** When true, the inspector renders this feature's water-level hydrograph
+   *  (depth to water over time, from die:nm_waterlevels_timeseries) above the
+   *  attribute metadata. The feature's `id` keys the timeseries fetch. */
+  hydrograph?: boolean
   style: LayerStyle
 }
 
@@ -229,23 +232,24 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
 }))
 
 /**
- * Hydrograph — groundwater-level monitoring wells on the primary NM Water Data
- * FROST (STA_BASE_URL), the canonical depth-to-water network. Clicking a well
- * opens the inspector, whose DatastreamChart is the hydrograph (depth to water
- * over time). Default-hidden so it doesn't crowd the first paint; bounded by
- * $top so the location pull stays bounded.
+ * Hydrograph — wells with repeat water-level readings, drawn from the integrated
+ * DIE water-level status product (die:nm_waterlevel_status, whose `id` keys the
+ * die:nm_waterlevels_timeseries series). Clicking a well opens the inspector,
+ * which plots its hydrograph (depth to water over time) above the site
+ * metadata. Lives in the "Groundwater levels" section (WFS_SECTION, referenced
+ * here by literal since that const is declared later).
  */
-const hydrographLayer: StaLayer = {
+const hydrographLayer: FeaturesLayer = {
   id: "hydrograph",
   title: "Hydrograph",
   description:
-    "Groundwater-level monitoring wells from New Mexico Water Data — click a well to see its hydrograph (depth to water over time).",
-  source: "sta",
-  staBaseUrl: STA_BASE_URL,
-  defaultVisible: false,
+    "Wells with repeat water-level readings — click a well to see its hydrograph (depth to water over time) and site metadata.",
+  source: "features",
+  featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+  collectionId: "die:nm_waterlevel_status",
   measurementType: "water_level",
-  query: { $top: 2000 },
-  section: "Monitoring networks",
+  section: "Groundwater levels",
+  hydrograph: true,
   style: staPoint("#1e40af"),
 }
 
