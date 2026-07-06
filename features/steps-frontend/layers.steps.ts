@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 
 import { LAYER_CATALOG } from "@/catalog/layers"
 import type { BrowserWorld } from "./support/world"
-import { layerIdByTitle } from "./common.steps"
+import { layerIdByTitle, revealLayerCatalog } from "./common.steps"
 
 type MapSeam = { queryRendered: (layerId: string) => unknown[] }
 
@@ -13,11 +13,13 @@ function renderLayerIdFor(title: string): string {
 }
 
 Then("the user sees a layer for each catalog entry", async function (this: BrowserWorld) {
+  await revealLayerCatalog(this)
   const count = await this.page.locator('[data-testid^="layer-row-"]').count()
   assert.equal(count, LAYER_CATALOG.length)
 })
 
 Then("each layer shows its title and description", async function (this: BrowserWorld) {
+  await revealLayerCatalog(this)
   for (const layer of LAYER_CATALOG) {
     const row = this.page.getByTestId(`layer-row-${layer.id}`)
     assert.ok((await row.textContent())?.includes(layer.title), layer.title)
@@ -25,11 +27,13 @@ Then("each layer shows its title and description", async function (this: Browser
 })
 
 When("the user toggles the {string} layer on", async function (this: BrowserWorld, title: string) {
+  await revealLayerCatalog(this)
   const sw = this.page.getByTestId(`layer-toggle-${layerIdByTitle(title)}`)
   if ((await sw.getAttribute("data-state")) !== "checked") await sw.click()
 })
 
 When("the user toggles the {string} layer off", async function (this: BrowserWorld, title: string) {
+  await revealLayerCatalog(this)
   const sw = this.page.getByTestId(`layer-toggle-${layerIdByTitle(title)}`)
   if ((await sw.getAttribute("data-state")) === "checked") await sw.click()
 })
@@ -54,6 +58,8 @@ Then("the catalog shows a {string} layer group", async function (this: BrowserWo
 })
 
 Then("the {string} layer has an opacity slider", async function (this: BrowserWorld, title: string) {
+  // Opacity lives in the layer's settings popover now — open it before looking.
+  await this.page.getByRole("button", { name: `${title} settings` }).click()
   await this.page.getByTestId(`layer-opacity-${layerIdByTitle(title)}`).waitFor()
 })
 

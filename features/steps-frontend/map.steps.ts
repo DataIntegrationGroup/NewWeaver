@@ -99,12 +99,14 @@ Then("the scale bar updates to a smaller distance", async function (this: Browse
 })
 
 Then("each monitoring point renders as its own marker", async function (this: BrowserWorld) {
-  const props = await this.page.evaluate(() =>
-    (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-      "st2-cabq-points"
-    )
+  // The layer's data loads async after it's toggled on; poll for the real
+  // render rather than sampling once (mirrors "features render on the map").
+  await this.page.waitForFunction(
+    () =>
+      (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
+        "st2-cabq-points"
+      ).length > 0
   )
-  assert.ok(props.length > 0, "expected rendered points")
 })
 
 Then("no cluster counts are shown", async function (this: BrowserWorld) {

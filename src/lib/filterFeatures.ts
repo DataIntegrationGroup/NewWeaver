@@ -44,17 +44,27 @@ export function matchesValues(f: Feature, field: string, values: string[]): bool
   return values.includes(String(f.properties?.[field]))
 }
 
-/** True if `field`'s numeric value falls within [min, max]. Features whose
- *  value is missing or non-numeric are excluded — a value filter keeps only
- *  points with a value in range. */
+/** True if `field`'s numeric value falls within the range. Features whose value
+ *  is missing or non-numeric are excluded — a value filter keeps only points
+ *  with a value in range.
+ *
+ *  Bins are lower-exclusive / upper-inclusive (`min < n <= max`) so a value on a
+ *  shared preset boundary lands in the *lower* (less-saline) bin — matching the
+ *  classification coloring. TDS 1000 is therefore "Fresh", kept by the Fresh
+ *  preset [0, 1000] and rejected by "Slightly brackish" [1000, 3000]. The domain
+ *  floor stays inclusive so the minimum value isn't filtered away. With no
+ *  `domainMin` the range is closed on both ends (back-compat for non-binned
+ *  callers). */
 export function matchesRange(
   f: Feature,
   field: string,
   min: number,
-  max: number
+  max: number,
+  domainMin?: number
 ): boolean {
   const n = Number(f.properties?.[field])
-  return Number.isFinite(n) && n >= min && n <= max
+  if (!Number.isFinite(n) || n > max) return false
+  return domainMin === undefined || min <= domainMin ? n >= min : n > min
 }
 
 function inBounds(

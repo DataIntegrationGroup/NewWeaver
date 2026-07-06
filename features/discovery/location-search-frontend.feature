@@ -7,6 +7,10 @@ Feature: Location search and coverage
 
   Background:
     Given the user has opened the app
+    # Coverage summarises the *visible* layers' cached data (lib/coverage.ts), so
+    # a nearby-data layer must be on for "reports nearby data" to have anything
+    # to find; a far/absent search still falls through to the empty state.
+    And the monitoring-locations layer is visible
 
   Scenario: Searching an address drops a pin and reports nearby data
     When the user searches for the location "100 Yale Blvd, Albuquerque"

@@ -118,13 +118,20 @@ export function classifyPresets(
  * Data-driven `circle-color`: tint each point by which preset bin its numeric
  * `field` value falls in (a `step` over the bin edges). Missing/null values
  * draw grey. Assumes contiguous, ascending bins (as `classifyPresets` returns).
+ *
+ * A value on a shared boundary falls in the *lower* (less-saline) bin — e.g. TDS
+ * 1000 is Fresh, not Slightly brackish — matching matchesRange's upper-inclusive
+ * bins. MapLibre `step` is lower-inclusive at each stop (value >= stop advances),
+ * so each stop is nudged up by a hair to keep an exact-boundary value in the bin
+ * below.
  */
+const CLASSIFY_EPS = 1e-6
 function classifyColor(
   field: string,
   presets: { min: number; color: string }[]
 ): unknown {
   const step: unknown[] = ["step", ["to-number", ["get", field]], presets[0].color]
-  for (let i = 1; i < presets.length; i++) step.push(presets[i].min, presets[i].color)
+  for (let i = 1; i < presets.length; i++) step.push(presets[i].min + CLASSIFY_EPS, presets[i].color)
   return ["case", ["==", ["get", field], null], "#9ca3af", step]
 }
 
@@ -244,7 +251,8 @@ function GeoSource({
       out = { ...out, features: out.features.filter((f) => matchesValues(f, facetField, facetValues)) }
     }
     if (rangeField && range) {
-      out = { ...out, features: out.features.filter((f) => matchesRange(f, rangeField, range[0], range[1])) }
+      const domainMin = layer.rangeDomain?.[0]
+      out = { ...out, features: out.features.filter((f) => matchesRange(f, rangeField, range[0], range[1], domainMin)) }
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues/range compared via facetKey/rangeKey, not identity

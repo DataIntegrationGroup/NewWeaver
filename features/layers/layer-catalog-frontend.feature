@@ -4,7 +4,7 @@ Feature: Layer catalog and toggles
   map. Each entry declares its source (OGC API Features or STA) and style.
   Users turn layers on and off; the list is driven entirely by the catalog, so
   a new dataset appears here without UI changes. Layers are grouped into
-  collapsible sections (Monitoring networks, Integrated data products).
+  collapsible sections (Monitoring networks, NMBGMR GIS).
 
   Background:
     Given the user has opened the app
@@ -16,7 +16,7 @@ Feature: Layer catalog and toggles
 
   Scenario: Layers are grouped into named sections
     Then the catalog shows a "Monitoring networks" layer group
-    And the catalog shows a "Integrated data products" layer group
+    And the catalog shows a "NMBGMR GIS" layer group
 
   # The first paint must show data across New Mexico, not one clustered network
   # (SPEC §V.V5): a statewide integrated product is default-on alongside CABQ.
@@ -66,7 +66,7 @@ Feature: Layer catalog and toggles
     Examples:
       | group                     |
       | Monitoring networks       |
-      | Integrated data products  |
+      | NMBGMR GIS                |
 
   Scenario: Layer groups collapse and expand
     When the user collapses the "Monitoring networks" layer group

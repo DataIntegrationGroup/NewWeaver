@@ -4,6 +4,7 @@ import type { Download } from "playwright"
 
 import type { BrowserWorld } from "./support/world"
 import { selectionCounts } from "./draw.steps"
+import { revealLayerCatalog } from "./common.steps"
 
 type MapSeam = { jumpTo: (lng: number, lat: number, zoom: number) => void }
 type World = BrowserWorld & { download?: Download }
@@ -129,6 +130,7 @@ Then("no time range inputs are shown", async function (this: BrowserWorld) {
 })
 
 Given("no monitoring locations are in the current selection", async function (this: BrowserWorld) {
+  await revealLayerCatalog(this)
   const sw = this.page.getByTestId("layer-toggle-st2-cabq")
   if ((await sw.getAttribute("data-state")) === "checked") await sw.click()
 })
@@ -144,6 +146,7 @@ Then("the modal explains that the selection is empty", async function (this: Bro
 
 Given("the selection contains many continuous datastreams", async function (this: BrowserWorld) {
   // Bernalillo agency returns 30 locations (> the large-export threshold).
+  await revealLayerCatalog(this)
   const sw = this.page.getByTestId("layer-toggle-st2-bernco")
   if ((await sw.getAttribute("data-state")) !== "checked") await sw.click()
 })

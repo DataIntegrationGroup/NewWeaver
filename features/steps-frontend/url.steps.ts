@@ -2,6 +2,7 @@ import { Given, When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
+import { revealLayerCatalog } from "./common.steps"
 
 type MapSeam = {
   jumpTo: (lng: number, lat: number, zoom: number) => void
@@ -45,6 +46,7 @@ When("the user opens that URL", async function (this: BrowserWorld) {
 })
 
 Then("the recorded layers are visible", async function (this: BrowserWorld) {
+  await revealLayerCatalog(this)
   assert.ok(await switchOn(this, "st2-cabq"))
   assert.ok(await switchOn(this, "ocotillo-springs"))
 })
@@ -62,6 +64,7 @@ Then("the recorded feature is selected with its detail shown", async function (t
 })
 
 Given("the user has changed layers and extent", async function (this: BrowserWorld) {
+  await revealLayerCatalog(this)
   await this.page.getByTestId("layer-toggle-ocotillo-latest-tds-wells").click()
   await this.page.waitForFunction(() =>
     /ocotillo-latest-tds-wells/.test(window.location.search)

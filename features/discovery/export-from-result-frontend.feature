@@ -8,6 +8,8 @@ Feature: Download is discoverable from a result
     Given the user has opened the app
 
   Scenario: A location result offers a download path
+    # Coverage (and its download path) needs a nearby-data layer visible.
+    Given the monitoring-locations layer is visible
     When the user searches for the location "100 Yale Blvd, Albuquerque"
     Then the coverage panel offers a download path
     When the user follows the coverage download path
