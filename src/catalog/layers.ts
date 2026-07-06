@@ -532,6 +532,10 @@ const nwisLayers: FeaturesLayer[] = [
  * from the "Integrated data products" section.
  */
 const WFS_SECTION = "Integrated data products"
+// Water-chemistry integrated products get their own collapsible group.
+const CHEM_SECTION = "Water chemistry"
+// The integrated `die:` products span both sections (persisted together).
+const INTEGRATED_SECTIONS = new Set([WFS_SECTION, CHEM_SECTION])
 
 // Summary products carry well depth as separate value + unit columns; merge
 // into one human display field (e.g. "185 ft"). Shared by every WFS product.
@@ -1093,7 +1097,7 @@ const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
   featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
   collectionId: w.typeName,
   measurementType: w.mt,
-  section: WFS_SECTION,
+  section: w.mt === "water_quality" ? CHEM_SECTION : WFS_SECTION,
   cluster: true,
   style: w.style ?? staPoint(w.color),
   ...(w.cqlFilter && {
@@ -1133,7 +1137,7 @@ export const CATALOG_VERSION = "4"
  */
 export const PERSISTED_INTEGRATED_COLLECTIONS = new Set(
   LAYER_CATALOG.filter(
-    (l) => l.source === "features" && l.section === WFS_SECTION
+    (l) => l.source === "features" && !!l.section && INTEGRATED_SECTIONS.has(l.section)
   ).map((l) => (l as FeaturesLayer).collectionId)
 )
 
@@ -1175,7 +1179,9 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
   NWIS:
     "U.S. Geological Survey sites and observations for New Mexico, from the Water Data for the Nation service — groundwater wells plus continuous, daily, field, and channel measurements.",
   "Integrated data products":
-    "Per-location summary products built from many sources — arsenic, water levels, TDS, chemistry, trends, and drinking-water exceedances.",
+    "Per-location summary products built from many sources — water levels, trends, seasonal amplitude, and depletion projections.",
+  "Water chemistry":
+    "Per-location water-chemistry summary products — arsenic, TDS, major-ion chemistry, water type, SAR, water quality index, and drinking-water exceedances.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {

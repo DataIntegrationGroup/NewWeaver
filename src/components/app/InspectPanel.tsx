@@ -226,7 +226,7 @@ function AttributeList({
 function whoMeasures(layer: LayerConfig): string {
   if (layer.source === "sta") return layer.title
   if (layer.source === "arcgis") return "the NM Office of the State Engineer"
-  if (layer.section === "Integrated data products")
+  if (layer.section === "Integrated data products" || layer.section === "Water chemistry")
     return "New Mexico Water Data (integrated products)"
   if (layer.section === "NWIS") return "the U.S. Geological Survey (USGS)"
   return "the NM Bureau of Geology & Mineral Resources"
