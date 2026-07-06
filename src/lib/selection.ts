@@ -1,9 +1,11 @@
 /**
- * Resolve what the user has selected for export. The selection is the union of
- *   - filtered points: features from visible layers passing the active filters
- *   - drawn points: features whose point falls inside any drawn shape
- * (see features/export/design.md). Reads the same cached FeatureCollections the
- * map renders, via the React Query client, so no data is fetched twice.
+ * Resolve what the user has selected for export. Mirrors the attribute table
+ * (src/components/app/AttributeTable.tsx): apply the active filters, then — when
+ * the user has drawn shapes — RESTRICT to points inside those shapes. A drawn
+ * shape narrows the selection to its interior; it does not widen it. With no
+ * shapes the selection is exactly the filtered/visible set (see
+ * features/export/design.md). Reads the same cached FeatureCollections the map
+ * renders, via the React Query client, so no data is fetched twice.
  */
 import type { QueryClient } from "@tanstack/react-query"
 import type { Feature, FeatureCollection, Polygon } from "geojson"
@@ -36,8 +38,6 @@ export interface Selection {
   counts: { filtered: number; drawn: number; total: number }
 }
 
-const featureId = (f: Feature): string => String(f.id ?? f.properties?.id ?? "")
-
 function toSelectedLocation(f: Feature, layer: StaLayer): SelectedLocation {
   const p = firstPosition(f)
   const props = f.properties ?? {}
@@ -54,7 +54,7 @@ function toSelectedLocation(f: Feature, layer: StaLayer): SelectedLocation {
 
 /**
  * Resolve the export selection across the given (visible) layers. Drawn shapes
- * widen the set beyond the filtered points; with no shapes it is exactly the
+ * restrict the filtered set to their interior; with no shapes it is exactly the
  * filtered/visible set.
  */
 export function resolveSelection(
@@ -66,7 +66,7 @@ export function resolveSelection(
   const locations: SelectedLocation[] = []
   const features: SelectedFeature[] = []
   let filteredCount = 0
-  let drawnOnlyCount = 0
+  let drawnCount = 0
 
   for (const layer of layers) {
     const key =
@@ -81,19 +81,16 @@ export function resolveSelection(
     if (!fc) continue
 
     const filtered = filterFeatures(fc, filters).features
-    const filteredIds = new Set(filtered.map(featureId))
 
-    // Drawn points that the filter didn't already include.
-    const drawnExtra = shapes.length
-      ? fc.features.filter(
-          (f) => !filteredIds.has(featureId(f)) && pointInAnyShape(f, shapes)
-        )
-      : []
+    // A drawn shape narrows the selection to its interior (matching the
+    // attribute table). Without a shape, the filtered/visible set stands.
+    const chosen = shapes.length
+      ? filtered.filter((f) => pointInAnyShape(f, shapes))
+      : filtered
 
-    filteredCount += filtered.length
-    drawnOnlyCount += drawnExtra.length
+    if (shapes.length) drawnCount += chosen.length
+    else filteredCount += chosen.length
 
-    const chosen = [...filtered, ...drawnExtra]
     if (layer.source === "sta") {
       for (const f of chosen) locations.push(toSelectedLocation(f, layer))
     } else {
@@ -106,8 +103,8 @@ export function resolveSelection(
     features,
     counts: {
       filtered: filteredCount,
-      drawn: drawnOnlyCount,
-      total: filteredCount + drawnOnlyCount,
+      drawn: drawnCount,
+      total: filteredCount + drawnCount,
     },
   }
 }

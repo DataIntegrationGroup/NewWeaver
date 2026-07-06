@@ -79,6 +79,15 @@ Then("the summary shows the count contributed by the filters", async function (t
   assert.ok((await selectionCounts(this)).filtered >= 1)
 })
 
+Then(
+  "the filters contribute nothing while a shape restricts the selection",
+  async function (this: BrowserWorld) {
+    // A drawn shape restricts (not widens) the selection, so the whole count is
+    // attributed to drawing and the filter bucket is zero (src/lib/selection.ts).
+    assert.equal((await selectionCounts(this)).filtered, 0)
+  }
+)
+
 Then("the selected count includes the drawn points", async function (this: BrowserWorld) {
   assert.ok((await selectionCounts(this)).drawn >= 1)
 })

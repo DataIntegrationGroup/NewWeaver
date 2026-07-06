@@ -16,9 +16,9 @@ Let a user pull the data behind the map out as files, configured through a
    their Locations + Datastreams as properties; OGC features passed through).
    No observations in the GeoJSON.
 
-Plus a **map drawing tool** (rectangle + polygon) to select monitoring points
-spatially, *in addition to* the points already chosen by the visible-layer +
-filter state.
+Plus a **map drawing tool** (rectangle + polygon) to restrict the selection
+spatially — narrowing the visible-layer + filter state down to the points that
+fall inside the drawn shapes.
 
 Everything is client-side: the SPA reads STA / OGC Features and assembles files
 in the browser. No backend, no new service. Consistent with the read-only,
@@ -27,26 +27,28 @@ standards-only architecture.
 ## Selection model — what gets exported
 
 The export operates on a resolved **selection set** of monitoring locations
-(STA) and/or vector features. It is the **union** of two sources:
+(STA) and/or vector features, built in two steps:
 
 - **Filtered points** — features from currently *visible* layers that pass the
   active filters (text `q` + "filter to map view" bbox). This is exactly what
   `filterFeatures` already produces for the map (`src/lib/filterFeatures.ts`).
-- **Drawn points** — features whose point falls inside *any* drawn shape
-  (rectangle or polygon). Drawn shapes ignore the bbox filter — drawing is an
-  explicit "I want these" gesture.
+- **Drawn shapes restrict** — when the user has drawn any shape (rectangle or
+  polygon), the selection is narrowed to the filtered points whose point falls
+  inside *any* drawn shape. A drawn shape only ever shrinks the set; it never
+  adds points the filters excluded. This matches the attribute table
+  (`src/components/app/AttributeTable.tsx`), so the download equals what's on
+  screen.
 
 ```
-selection = filteredPoints ∪ pointsInside(drawnShapes)
+selection = shapes.length
+  ? pointsInside(drawnShapes, filteredPoints)   // restrict
+  : filteredPoints                              // filters only
 ```
 
 If no shapes are drawn, the selection is just the filtered points (today's
-visible set). The modal always shows the resolved count, broken down by source,
-so the user knows what they are about to export. Empty selection disables the
-download.
-
-Per-source counts let the user lean on whichever mechanism they want: pan + the
-map-view filter, or draw explicit regions, or both.
+visible set). The modal always shows the resolved count — labelled "from
+drawing" when a shape is restricting, else "from filters" — so the user knows
+what they are about to export. Empty selection disables the download.
 
 ## Export contents
 

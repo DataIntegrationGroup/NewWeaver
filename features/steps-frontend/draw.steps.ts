@@ -3,10 +3,10 @@ import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
 
-type MapSeam = { jumpTo: (lng: number, lat: number, zoom: number) => void }
-
 // Rectangle/polygon fixtures over the two fixture locations (YALE1 @ -106.62,
-// 35.08 and ALPHA WELL @ -104.52, 33.39).
+// 35.08 and ALPHA WELL @ -104.52, 33.39). A drawn shape RESTRICTS the export
+// selection to the points inside it (matching the attribute table), so each
+// fixture encloses exactly one of the two points.
 const RECT_YALE = {
   type: "Polygon",
   coordinates: [[[-106.72, 35.0], [-106.52, 35.0], [-106.52, 35.18], [-106.72, 35.18], [-106.72, 35.0]]],
@@ -14,19 +14,6 @@ const RECT_YALE = {
 const POLY_ALPHA = {
   type: "Polygon",
   coordinates: [[[-104.62, 33.3], [-104.42, 33.3], [-104.42, 33.48], [-104.62, 33.48], [-104.62, 33.3]]],
-}
-
-async function enableBbox(world: BrowserWorld) {
-  await world.openSearchSection("filter")
-  const sw = world.page.locator('[data-testid="filter-bbox"]:visible')
-  if ((await sw.getAttribute("data-state")) !== "checked") await sw.click()
-}
-
-async function jumpTo(world: BrowserWorld, lng: number, lat: number, zoom: number) {
-  await world.page.evaluate(
-    ([x, y, z]) => (window as unknown as { __weaverMap: MapSeam }).__weaverMap.jumpTo(x, y, z),
-    [lng, lat, zoom]
-  )
 }
 
 /** Open the export modal (if closed) and parse the selection summary counts. */
@@ -50,37 +37,26 @@ When("the user activates the polygon draw tool", async function (this: BrowserWo
 })
 
 // "Drawing" is injected via the test seam (the terra-draw canvas isn't
-// scriptable). A bbox filter panned away from the target makes the drawn point
-// observable as a draw-only contribution in the selection summary.
+// scriptable). Each fixture shape encloses exactly one of the two fixture
+// points, so the restrict semantics are observable in the selection summary.
 When("the user draws a rectangle over a cluster of points", async function (this: BrowserWorld) {
-  await enableBbox(this)
-  await jumpTo(this, -104.52, 33.39, 9) // ALPHA in view, YALE1 out
-  await this.setShapes([RECT_YALE])
+  await this.setShapes([RECT_YALE]) // encloses YALE1 only
 })
 
 When("the user draws a polygon around some points", async function (this: BrowserWorld) {
-  await enableBbox(this)
-  await jumpTo(this, -100, 31, 9) // both fixture points out of view
   await this.setShapes([POLY_ALPHA]) // encloses ALPHA only
 })
 
-When(
-  "the user draws a selection that includes points outside the current extent",
-  async function (this: BrowserWorld) {
-    await jumpTo(this, -106.62, 35.08, 9) // YALE1 in extent
-    await this.setShapes([POLY_ALPHA]) // ALPHA is out of extent, added by drawing
-  }
-)
+Given("the full selection has more than one point", async function (this: BrowserWorld) {
+  // Baseline: with no shape drawn, both fixture points are selected.
+  assert.ok((await selectionCounts(this)).total >= 2)
+})
 
 Given("the user has drawn a selection", async function (this: BrowserWorld) {
-  await enableBbox(this)
-  await jumpTo(this, -104.52, 33.39, 9)
   await this.setShapes([RECT_YALE])
 })
 
 Given("the user has drawn a selection around some points", async function (this: BrowserWorld) {
-  await enableBbox(this)
-  await jumpTo(this, -104.52, 33.39, 9)
   await this.setShapes([RECT_YALE])
 })
 
@@ -102,24 +78,14 @@ Then("only points inside the polygon boundary are selected", async function (thi
 })
 
 Then("points outside the polygon are not selected", async function (this: BrowserWorld) {
-  // ALPHA is enclosed; YALE1 is neither in-extent nor drawn → total is exactly 1.
+  // POLY_ALPHA encloses ALPHA only; YALE1 is outside → total is exactly 1.
   assert.equal((await selectionCounts(this)).total, 1)
 })
-
-Then(
-  "the selection includes both the in-extent points and the drawn points",
-  async function (this: BrowserWorld) {
-    const c = await selectionCounts(this)
-    assert.ok(c.filtered >= 1, "expected in-extent points")
-    assert.ok(c.drawn >= 1, "expected drawn points")
-  }
-)
 
 Then("the drawn points are no longer selected", async function (this: BrowserWorld) {
   assert.equal((await selectionCounts(this)).drawn, 0)
 })
 
 Then("only the filtered points remain selected", async function (this: BrowserWorld) {
-  const c = await selectionCounts(this)
-  assert.equal(c.drawn, 0)
+  assert.equal((await selectionCounts(this)).drawn, 0)
 })

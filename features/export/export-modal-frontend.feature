@@ -27,11 +27,11 @@ Feature: Download modal
     And the user opens the download modal
     Then the selected count matches the locations in the current extent
 
-  Scenario: The selection summary breaks down draw vs filter sources
+  Scenario: A drawn shape attributes the selection to drawing
     Given the user has drawn a selection around some points
     When the user opens the download modal
     Then the summary shows the count contributed by the drawing
-    And the summary shows the count contributed by the filters
+    And the filters contribute nothing while a shape restricts the selection
 
   @smoke
   Scenario: Downloading a time-series CSV

@@ -1,8 +1,9 @@
 @frontend
 Feature: Draw to select points
-  Beyond the map-view filter, the user can draw rectangles or polygons to pick
-  monitoring points explicitly. Drawn selections add to the filtered points and
-  feed straight into the download modal.
+  Beyond the map-view filter, the user can draw rectangles or polygons to
+  restrict the selection spatially: only monitoring points inside the drawn
+  shapes are kept, matching what the attribute table shows. The narrowed
+  selection feeds straight into the download modal.
 
   Background:
     Given the user has opened the app
@@ -21,10 +22,11 @@ Feature: Draw to select points
     Then only points inside the polygon boundary are selected
     And points outside the polygon are not selected
 
-  Scenario: Drawn selection adds to the filtered points
-    Given "filter to map view" is enabled
-    When the user draws a selection that includes points outside the current extent
-    Then the selection includes both the in-extent points and the drawn points
+  Scenario: A drawn shape narrows the selection to its interior
+    Given the full selection has more than one point
+    When the user draws a polygon around some points
+    Then only points inside the polygon boundary are selected
+    And points outside the polygon are not selected
 
   Scenario: Clearing the drawing removes the drawn selection
     Given the user has drawn a selection
