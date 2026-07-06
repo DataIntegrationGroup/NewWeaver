@@ -65,12 +65,11 @@ flowchart LR
     subgraph serve[Serve — open OGC endpoints, Terraform-managed]
         FROST[FROST / SensorThings]
         OCO[Ocotillo — pygeoapi<br/>NM integrated collections]
-        GS[GeoServer / pygeoapi]
+        GS[GeoServer]
     end
     NW[NewWeaver<br/>read-only map + catalog]
 
     AQ -->|SensorThings| FROST
-    DIE -->|Dagster publish| OCO
     DIE -->|Dagster publish + stats| GS
     FROST -->|STA| NW
     OCO -->|OGC API Features| NW
@@ -80,7 +79,7 @@ flowchart LR
 ```
 
 - **Aqueduct** ingests monitoring time-series → publishes to **FROST / SensorThings**.
-- **DIE (Data Integration Engine)** builds the multi-agency integrated products and nightly stats. It's a Python tool (`nmuwd`) whose **Dagster** orchestration runs a `sources → combine → geoserver` asset graph that **publishes each product to GeoServer** (and to Ocotillo/pygeoapi). ([DIE `orchestration/`](https://github.com/DataIntegrationGroup/DataIntegrationEngine) — `definitions.py`, `resources/geoserver.py`)
+- **DIE (Data Integration Engine)** builds the multi-agency integrated products and nightly stats. It's a Python tool (`nmuwd`) whose **Dagster** orchestration runs a `sources → combine → geoserver` asset graph that **publishes each product to GeoServer**. ([DIE `orchestration/`](https://github.com/DataIntegrationGroup/DataIntegrationEngine) — `definitions.py`, `resources/geoserver.py`)
 - **Ocotillo** is the pygeoapi deployment hosting the NM integrated collections.
 - **GeoServer** (the serving layer) is **managed via Terraform**, so the infrastructure NewWeaver reads from is reproducible and version-controlled.
 - **NewWeaver** consumes all of it **live** over open standards — OGC API Features, SensorThings, WFS, ArcGIS REST. ([src/config.ts](../src/config.ts), [docs/codebase-map.md](codebase-map.md#backend--no-weaver-owned-backend-confirmed-cc2--oo4))
@@ -124,7 +123,7 @@ This is the value prop made concrete: because DIE publishes finished integrated 
 |---|---|
 | **Aqueduct** | Ingest pipeline for monitoring time-series → publishes to FROST. |
 | **DIE** | Data Integration Engine — Python tool (`nmuwd`) that builds the multi-agency integrated products and nightly stats. |
-| **Dagster** | The orchestrator running DIE's `sources → combine → geoserver` asset pipeline that publishes products to GeoServer / Ocotillo. |
+| **Dagster** | The orchestrator running DIE's `sources → combine → geoserver` asset pipeline that publishes products to GeoServer. |
 | **Terraform** | Infrastructure-as-code managing the GeoServer serving layer — reproducible, version-controlled infra. |
 | **Ocotillo** | pygeoapi deployment hosting the NM integrated OGC API Features collections. |
 | **DSDS** | DataServicesDesignSystem — the shared shadcn/radix component registry NewWeaver contributes to and consumes from. |
