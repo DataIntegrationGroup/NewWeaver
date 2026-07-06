@@ -17,6 +17,7 @@ import {
   GEOSERVER_OGC_FEATURES_BASE_URL,
   OCOTILLO_FEATURES_BASE_URL,
   OSE_ARCGIS_BASE_URL,
+  STA_BASE_URL,
   STA_ST2_BASE_URL,
   USGS_OGC_BASE_URL,
 } from "@/config"
@@ -226,6 +227,27 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
   section: "Monitoring networks",
   style: staPoint(a.color),
 }))
+
+/**
+ * Hydrograph — groundwater-level monitoring wells on the primary NM Water Data
+ * FROST (STA_BASE_URL), the canonical depth-to-water network. Clicking a well
+ * opens the inspector, whose DatastreamChart is the hydrograph (depth to water
+ * over time). Default-hidden so it doesn't crowd the first paint; bounded by
+ * $top so the location pull stays bounded.
+ */
+const hydrographLayer: StaLayer = {
+  id: "hydrograph",
+  title: "Hydrograph",
+  description:
+    "Groundwater-level monitoring wells from New Mexico Water Data — click a well to see its hydrograph (depth to water over time).",
+  source: "sta",
+  staBaseUrl: STA_BASE_URL,
+  defaultVisible: false,
+  measurementType: "water_level",
+  query: { $top: 2000 },
+  section: "Monitoring networks",
+  style: staPoint("#1e40af"),
+}
 
 /**
  * Ocotillo — New Mexico water-data collections served from a second pygeoapi
@@ -1205,6 +1227,7 @@ const densityLayers: FeaturesLayer[] = [
 
 export const LAYER_CATALOG: LayerConfig[] = [
   ...integratedLayers,
+  hydrographLayer,
   ...st2AgencyLayers,
   ...ocotilloLayers,
   ...oseGisLayers,
