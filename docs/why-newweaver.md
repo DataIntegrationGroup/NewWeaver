@@ -24,6 +24,27 @@ A display surface: four typed data adapters, one MapLibre map, a config-driven l
 
 The upstream data plumbing — how monitoring data lands in FROST, how DIE builds the integrated products — is deliberately **out of scope**. NewWeaver references those systems; it does not reimplement them. ([README.md](../README.md#status))
 
+## What must be kept — the functionality Weaver users rely on
+
+A rewrite is only a win if it **preserves what already works**. The legacy Weaver earns its usage on a few core jobs, and these are non-negotiable requirements for NewWeaver, not nice-to-haves:
+
+- **View a hydrograph of up-to-date data** — pick a monitoring location, see its time-series (water level / depth-to-water / chemistry) plotted from *live* data, not a stale export. This is a primary reason people open Weaver at all.
+- **Download the data behind the hydrograph** — get the underlying observations as a file (CSV) to use in their own analysis.
+- **Share a link to a specific view** — send someone a URL that opens the exact location and its hydrograph, so they see current data without hunting for it.
+- Plus the map itself: browse monitoring networks, inspect a point's attributes, filter/search.
+
+> **Why this section exists:** at a recent hydrology management meeting, **AMP** raised a concrete pain point — *they can't send a user a link to view a hydrograph of up-to-date data*. Viewing hydrographs and downloading their data is a big part of why people use Weaver, so any replacement has to nail it.
+
+**Where NewWeaver stands today** — all three are already implemented and must stay that way:
+
+| User need | NewWeaver status | Backing code |
+|---|---|---|
+| Hydrograph of live data | ✅ Monitoring location → datastreams → ECharts time-series, fetched live from SensorThings | [`DatastreamChart.tsx`](../src/components/app/DatastreamChart.tsx), [`InspectPanel.tsx`](../src/components/app/InspectPanel.tsx) |
+| Download the observations | ✅ Time-series CSV export gathers observations across the selected datastreams | [`src/lib/export/timeSeries.ts`](../src/lib/export/timeSeries.ts) |
+| Shareable link to that view | ✅ Selection (`<layerId>~<featureId>`), visible layers, and extent are URL-encoded → every view is a shareable, Back-navigable link | [`src/lib/urlState.ts`](../src/lib/urlState.ts) |
+
+So AMP's exact ask — a link that opens a specific monitoring point's up-to-date hydrograph, with the data downloadable — is **already achievable** in NewWeaver via URL-encoded selection + the live datastream chart + CSV export. The job now is to keep these paths first-class (and easy to reach — cf. [SPEC §V9](../SPEC.md), export reachable from a narrowed result), verify them against real AMP locations, and make the shareable-hydrograph link obvious in the UI. Treat any regression here as a release blocker.
+
 ## Old Weaver → NewWeaver
 
 The pain points below (left column) are the ones the team hit with the legacy app; the right column is what the new architecture does instead.
