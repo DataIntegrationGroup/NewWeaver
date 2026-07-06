@@ -529,11 +529,11 @@ const nwisLayers: FeaturesLayer[] = [
  * GeoServer WFS — New Mexico Water Data summary layers served from GeoServer
  * (GEOSERVER_WFS_BASE_URL) as a Web Feature Service. Each entry maps 1:1 to a
  * GeoServer typeName in the `die` workspace. Start hidden; users toggle them on
- * from the "Integrated data products" section.
+ * from the "Groundwater levels" and "Groundwater Chemistry" sections.
  */
-const WFS_SECTION = "Integrated data products"
+const WFS_SECTION = "Groundwater levels"
 // Water-chemistry integrated products get their own collapsible group.
-const CHEM_SECTION = "Water chemistry"
+const CHEM_SECTION = "Groundwater Chemistry"
 // The integrated `die:` products span both sections (persisted together).
 const INTEGRATED_SECTIONS = new Set([WFS_SECTION, CHEM_SECTION])
 
@@ -1132,8 +1132,9 @@ export const CATALOG_VERSION = "4"
 
 /**
  * OGC collection ids whose fetched FeatureCollections are persisted to
- * IndexedDB — only the "Integrated data products" section. The features query
- * key carries the collection id, so the persist predicate matches on these.
+ * IndexedDB — only the integrated `die:` products (the "Groundwater levels" and
+ * "Groundwater Chemistry" sections). The features query key carries the
+ * collection id, so the persist predicate matches on these.
  */
 export const PERSISTED_INTEGRATED_COLLECTIONS = new Set(
   LAYER_CATALOG.filter(
@@ -1178,10 +1179,10 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
     "Statewide datasets from the New Mexico Office of the State Engineer — Points of Diversion and Aquifer Test Wells.",
   NWIS:
     "U.S. Geological Survey sites and observations for New Mexico, from the Water Data for the Nation service — groundwater wells plus continuous, daily, field, and channel measurements.",
-  "Integrated data products":
-    "Per-location summary products built from many sources — water levels, trends, seasonal amplitude, and depletion projections.",
-  "Water chemistry":
-    "Per-location water-chemistry summary products — arsenic, TDS, major-ion chemistry, water type, SAR, water quality index, and drinking-water exceedances.",
+  "Groundwater levels":
+    "Per-location groundwater-level summary products — levels, trends, seasonal amplitude, and depletion projections.",
+  "Groundwater Chemistry":
+    "Per-location groundwater-chemistry summary products — arsenic, TDS, major-ion chemistry, water type, SAR, water quality index, and drinking-water exceedances.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {

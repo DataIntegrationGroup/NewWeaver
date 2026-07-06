@@ -1,8 +1,8 @@
 /**
  * Regional water-planning decision support — data access and aggregation.
  *
- * Pulls the "Integrated data products" WFS layers (per-well summaries published
- * from NM Water Data's GeoServer) live for a set of region polygons, then rolls
+ * Pulls the integrated `die:` per-well summary products (published from NM Water
+ * Data's GeoServer via OGC API Features) live for a set of region polygons, then rolls
  * them up into the summary statistics a regional water manager needs: how much
  * is monitored, how water levels sit against their historical range, which way
  * the trend points, depletion risk, seasonal swing, and drinking-water quality.

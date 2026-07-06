@@ -116,8 +116,8 @@ const SECTIONS: { section: string; options: LayerOption[] }[] = (() => {
   return [...groups].map(([section, options]) => ({ section, options }))
 })()
 
-/** Integrated data products + water chemistry expanded; all others collapsed. */
-const DEFAULT_OPEN = ["Integrated data products", "Water chemistry"]
+/** Groundwater levels + chemistry expanded; all others collapsed. */
+const DEFAULT_OPEN = ["Groundwater levels", "Groundwater Chemistry"]
 
 /**
  * LayerList — the catalog of map layers, each with a legend swatch and a
