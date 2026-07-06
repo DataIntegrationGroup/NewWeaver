@@ -88,6 +88,21 @@ The seam is the point: because the contract between components is a **public OGC
 
 > Aqueduct → FROST and DIE → pygeoapi live in other repos and are referenced only. ([README.md](../README.md#status))
 
+## Why hosted DIE beats "everyone runs DIE locally"
+
+DIE started as a command-line tool: `pip install nmuwd`, then `die weave …` writes integrated GeoJSON to a **local output directory** on your machine. ([DIE README](https://github.com/DataIntegrationGroup/DataIntegrationEngine)) That works for a Python-comfortable analyst, but as *the* way to get integrated data it has hard limits. The hosted pipeline — **Dagster runs DIE on a schedule → publishes to GeoServer + GCS → NewWeaver and any GIS client read live** — removes them.
+
+| Everyone runs DIE locally | Hosted: Dagster → GCS/GeoServer → NewWeaver |
+|---|---|
+| **Duplicated compute** — every user re-runs the same multi-agency integration on their own machine | **Computed once, centrally.** Dagster runs the `sources → combine → geoserver` graph on a cron (`0 6 * * *` default); everyone consumes the same output. ([`orchestration/definitions.py`](https://github.com/DataIntegrationGroup/DataIntegrationEngine)) |
+| **No single source of truth** — results differ by who ran it, when, and which `nmuwd` version | **One canonical product set.** Published to GeoServer + versioned dated snapshots in GCS (`gs://…/products/{id}/{date}.geojson` + a `latest`). ([`orchestration/resources/gcs.py`](https://github.com/DataIntegrationGroup/DataIntegrationEngine)) |
+| **Stale the moment it finishes** — a local export is a snapshot; refresh = re-run | **Always fresh** — the nightly job republishes; readers just re-fetch. |
+| **Gatekept** — needs Python, a working env, API keys, and CLI know-how | **Zero setup for the reader.** A web map for non-experts; open OGC endpoints for devs and desktop GIS. No local Python. |
+| **Not shareable / not discoverable** — output is files on one laptop | **A URL.** Every view is a live, shareable link; the same endpoints external tools consume. |
+| **No observability** — a failed local run is your problem to debug | **Monitored pipeline** — per-source and geoserver assets soft-fail as red asset checks in Dagster; reproducible infra via Terraform. ([DIE `orchestration/AGENTS.md`](https://github.com/DataIntegrationGroup/DataIntegrationEngine)) |
+
+The point isn't that the CLI was wrong — it's the right engine. The shift is **who runs it and where the output lives**: from *N users each producing a private, divergent, instantly-stale copy* to *one scheduled run producing a canonical, versioned, live-served product* that NewWeaver is simply a window onto. That inversion is what makes "always fresh, multi-agency, integrated" true for everyone, not just people who can run Python.
+
 ## Core value prop, expanded
 
 - **Always fresh.** No manual exports, no snapshots. DIE publishes; NewWeaver reads live on every page load. Even the home-dashboard counts and activity feed come from a nightly DIE-written stats JSON, read read-only — Weaver computes none of it. ([SPEC.md §V13–V14](../SPEC.md), [src/config.ts `STATS_URL`](../src/config.ts))
