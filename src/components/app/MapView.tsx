@@ -259,6 +259,13 @@ export function MapView({
     () => layers.flatMap((l) => interactiveLayerIdsFor(l, clusterById?.[l.id])),
     [layers, clusterById]
   )
+  // Draw fill (choropleth) layers beneath everything else so polygons don't
+  // cover point layers or steal their clicks. Stable sort preserves order
+  // within each group.
+  const orderedLayers = useMemo(
+    () => [...layers].sort((a, b) => (a.style.type === "fill" ? 0 : 1) - (b.style.type === "fill" ? 0 : 1)),
+    [layers]
+  )
   const clusterLayerIds = new Set(
     layers.filter((l) => isClustered(l, clusterById?.[l.id])).map(clusterLayerId)
   )
@@ -468,7 +475,7 @@ export function MapView({
             />
           </Source>
         )}
-        {layers.map((layer) => (
+        {orderedLayers.map((layer) => (
           <CatalogLayer
             key={layer.id}
             layer={layer}

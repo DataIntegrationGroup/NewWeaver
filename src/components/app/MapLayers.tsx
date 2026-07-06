@@ -97,18 +97,26 @@ function bubbleRadius(field: string): unknown {
   ]
 }
 
-/** Scale a paint's opacity channels by `opacity` (no-op at 1). */
+/** Scale a paint's opacity channels by `opacity` (no-op at 1). Preserves a
+ *  data-driven opacity expression (e.g. the choropleth ramp) by multiplying it
+ *  rather than flattening it to a constant. */
 function withOpacity(paint: Paint, type: string, opacity: number): Paint {
   if (opacity >= 1) return paint
-  const num = (v: unknown) => (typeof v === "number" ? v : 1)
+  // number → v*opacity; expression → ["*", expr, opacity]; missing → opacity.
+  const scale = (v: unknown): unknown =>
+    typeof v === "number"
+      ? v * opacity
+      : Array.isArray(v)
+        ? ["*", v, opacity]
+        : opacity
   const p = { ...paint }
   if (type === "fill") {
-    p["fill-opacity"] = num(paint["fill-opacity"]) * opacity
+    p["fill-opacity"] = scale(paint["fill-opacity"])
   } else if (type === "line") {
-    p["line-opacity"] = num(paint["line-opacity"]) * opacity
+    p["line-opacity"] = scale(paint["line-opacity"])
   } else {
-    p["circle-opacity"] = num(paint["circle-opacity"]) * opacity
-    p["circle-stroke-opacity"] = num(paint["circle-stroke-opacity"]) * opacity
+    p["circle-opacity"] = scale(paint["circle-opacity"])
+    p["circle-stroke-opacity"] = scale(paint["circle-stroke-opacity"])
   }
   return p
 }
@@ -215,9 +223,18 @@ function GeoSource({
 
   // Bubble map sizes points by a numeric field; it takes over circle-radius.
   const bubbleOn = !!bubble && !!layer.bubbleField
+  // A color override edits the paint property that actually draws this layer —
+  // fill-color for polygons (e.g. the editable choropleth), line-color for
+  // lines, circle-color for points.
+  const colorKey =
+    layer.style.type === "fill"
+      ? "fill-color"
+      : layer.style.type === "line"
+        ? "line-color"
+        : "circle-color"
   const basePaint: Paint = {
     ...(layer.style.paint ?? {}),
-    ...(colorOverride ? { "circle-color": colorOverride } : {}),
+    ...(colorOverride ? { [colorKey]: colorOverride } : {}),
     ...(bubbleOn ? { "circle-radius": bubbleRadius(layer.bubbleField!) } : {}),
   }
   const paint = withOpacity(basePaint, layer.style.type, opacity)

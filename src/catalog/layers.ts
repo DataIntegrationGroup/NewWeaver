@@ -1114,12 +1114,66 @@ const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
   ...(w.formatValue && { formatValue: w.formatValue }),
 }))
 
+// Choropleth polygon layers: shade each region by well density. Drawn as a
+// fill whose color is a single editable base (colorOverride sets fill-color)
+// and whose opacity ramps with `wells_per_sq_km` — so the color mapping is
+// editable while the density gradient is preserved. The ramp saturates near
+// 0.5 wells/km² (both layers are right-skewed, so a linear ramp to the max
+// would wash out nearly every region).
+const DENSITY_SECTION = "Well density"
+const DENSITY_RAMP_MAX = 0.5
+
+function densityFill(color: string): LayerStyle {
+  return {
+    type: "fill",
+    paint: {
+      "fill-color": color,
+      "fill-opacity": [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["to-number", ["get", "wells_per_sq_km"]], 0],
+        0, 0.05,
+        DENSITY_RAMP_MAX, 0.8,
+      ],
+      "fill-outline-color": "rgba(31,41,55,0.45)",
+    },
+  }
+}
+
+const densityLayers: FeaturesLayer[] = [
+  {
+    id: "wells-density-basin",
+    title: "Well Density by Basin",
+    description:
+      "Wells per km² by groundwater basin. Darker = denser; click a basin for its counts. Edit the color from the swatch.",
+    source: "features",
+    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+    collectionId: "die:nm_well_density_by_basin",
+    measurementType: "wells",
+    section: DENSITY_SECTION,
+    style: densityFill("#b45309"),
+  },
+  {
+    id: "wells-density-county",
+    title: "Well Density by County",
+    description:
+      "Wells per km² by county. Darker = denser; click a county for its counts. Edit the color from the swatch.",
+    source: "features",
+    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+    collectionId: "die:nm_well_density_by_county",
+    measurementType: "wells",
+    section: DENSITY_SECTION,
+    style: densityFill("#1d4ed8"),
+  },
+]
+
 export const LAYER_CATALOG: LayerConfig[] = [
   ...integratedLayers,
   ...st2AgencyLayers,
   ...ocotilloLayers,
   ...oseGisLayers,
   ...nwisLayers,
+  ...densityLayers,
 ]
 
 /**
@@ -1183,6 +1237,8 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
     "Per-location groundwater-level summary products — levels, trends, seasonal amplitude, and depletion projections.",
   "Groundwater Chemistry":
     "Per-location groundwater-chemistry summary products — arsenic, TDS, major-ion chemistry, water type, SAR, water quality index, and drinking-water exceedances.",
+  "Well density":
+    "Choropleth polygons shading each region by well density (wells per km²), by groundwater basin and by county. Edit a layer's color from its swatch.",
 }
 
 export function getLayer(id: string): LayerConfig | undefined {
