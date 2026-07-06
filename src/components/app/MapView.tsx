@@ -109,8 +109,6 @@ interface MapViewProps {
   filters: FeatureFilters
   /** Layer id → opacity (0–1). */
   opacityById?: Record<string, number>
-  /** Layer id → whether "not enough data" points are hidden. */
-  hideNoDataById?: Record<string, boolean>
   /** Layer id → free-text attribute filter (settings popover). */
   attributeQueryById?: Record<string, string>
   /** Layer id → selected values for the layer's facet (settings popover). */
@@ -163,7 +161,6 @@ export function MapView({
   layers,
   filters,
   opacityById,
-  hideNoDataById,
   attributeQueryById,
   facetValuesById,
   clusterById,
@@ -484,7 +481,6 @@ export function MapView({
             layer={layer}
             filters={filters}
             opacity={opacityById?.[layer.id] ?? 1}
-            hideNoData={hideNoDataById?.[layer.id] ?? false}
             attributeQuery={attributeQueryById?.[layer.id]}
             facetValues={facetValuesById?.[layer.id]}
             clusterOverride={clusterById?.[layer.id]}

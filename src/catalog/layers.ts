@@ -668,6 +668,17 @@ const WFS_LAYERS: {
       include: ["name", "trend_category", "well_depth", "slope_per_year", "span_years", "record_count", "source"],
     },
     mapProperties: mergeWellDepth,
+    // Multi-select trend classes; none selected shows every category.
+    facet: {
+      field: "trend_category",
+      label: "Trend",
+      options: [
+        { value: "increasing", label: "Increasing" },
+        { value: "decreasing", label: "Decreasing" },
+        { value: "stable", label: "Stable" },
+        { value: "not enough data", label: "Not enough data" },
+      ],
+    },
     legend: [
       { label: "Increasing", color: "#dc2626" },
       { label: "Decreasing", color: "#16a34a" },

@@ -115,7 +115,6 @@ export function AppShell() {
     { section: "location" | "regions" | "measure" | "filter"; nonce: number } | null
   >(null)
   const [opacityById, setOpacityById] = useState<Record<string, number>>({})
-  const [hideNoDataById, setHideNoDataById] = useState<Record<string, boolean>>({})
   const [attributeQueryById, setAttributeQueryById] = useState<Record<string, string>>({})
   const [facetValuesById, setFacetValuesById] = useState<Record<string, string[]>>({})
   // Cluster-toggle default state. Color-mapped ("legend") layers default to
@@ -523,10 +522,6 @@ export function AppShell() {
                 onOpacityChange={(id, v) =>
                   setOpacityById((m) => ({ ...m, [id]: v }))
                 }
-                hideNoDataById={hideNoDataById}
-                onHideNoDataChange={(id, hide) =>
-                  setHideNoDataById((m) => ({ ...m, [id]: hide }))
-                }
                 attributeQueryById={attributeQueryById}
                 onAttributeQueryChange={(id, q) =>
                   setAttributeQueryById((m) => ({ ...m, [id]: q }))
@@ -581,7 +576,6 @@ export function AppShell() {
               layers={visibleLayers}
               filters={filters}
               opacityById={opacityById}
-              hideNoDataById={hideNoDataById}
               attributeQueryById={attributeQueryById}
               facetValuesById={facetValuesById}
               clusterById={clusterById}

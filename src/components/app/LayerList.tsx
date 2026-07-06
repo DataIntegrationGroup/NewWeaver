@@ -33,9 +33,6 @@ interface LayerListProps {
   /** Layer id → opacity (0–1); a visible layer gets an opacity slider. */
   opacityById?: Record<string, number>
   onOpacityChange?: (id: string, opacity: number) => void
-  /** Layer id → whether "not enough data" points are hidden. */
-  hideNoDataById?: Record<string, boolean>
-  onHideNoDataChange?: (id: string, hide: boolean) => void
   /** Layer id → free-text attribute filter (settings popover). */
   attributeQueryById?: Record<string, string>
   onAttributeQueryChange?: (id: string, q: string) => void
@@ -86,7 +83,6 @@ function toOption(layer: LayerConfig): LayerOption {
     title: layer.title,
     description: layer.description,
     style: pointStyle(layer),
-    supportsNoDataFilter: layer.id === "wfs-nm-waterlevel-trends",
     facet: layer.facet,
     // Cluster toggle for color-mapped ("legend") layers, where clustering hides
     // the per-point category color behind a flat bubble, and for any point layer
@@ -138,7 +134,7 @@ const DEFAULT_OPEN = ["Groundwater levels", "Groundwater Chemistry"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, classifyById, onClassifyChange, rangeById, onRangeChange, colorById, onColorChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, classifyById, onClassifyChange, rangeById, onRangeChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -228,8 +224,6 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
                 progressById={progressById}
                 opacityById={opacityById}
                 onOpacityChange={onOpacityChange}
-                hideNoDataById={hideNoDataById}
-                onHideNoDataChange={onHideNoDataChange}
                 attributeQueryById={attributeQueryById}
                 onAttributeQueryChange={onAttributeQueryChange}
                 facetValuesById={facetValuesById}

@@ -59,8 +59,6 @@ interface LayerProps2 {
   opacity?: number
   /** Whether the layer is drawn (default true). Hidden via its on-map chip. */
   visible?: boolean
-  /** Hide features where trend_category === "not enough data". */
-  hideNoData?: boolean
   /** Per-layer free-text match against attribute values (settings popover). */
   attributeQuery?: string
   /** Selected values for the layer's facet (`layer.facet.field`); empty/undefined = all. */
@@ -376,18 +374,11 @@ function ArcGisSource({ layer, filters, ...rest }: { layer: ArcGisLayer } & Omit
   return <GeoSource layer={layer} fc={fc} {...rest} />
 }
 
-function WfsSource({ layer, filters, hideNoData, ...rest }: { layer: WfsLayer } & Omit<LayerProps2, "layer">) {
+function WfsSource({ layer, filters, ...rest }: { layer: WfsLayer } & Omit<LayerProps2, "layer">) {
   // useWfsLayer already applies layer.mapProperties, so `data` here is the
   // same transformed shape the table and inspect panel see.
   const { data } = useWfsLayer(layer)
-  const fc = useMemo(() => {
-    if (!data) return undefined
-    let out = filterFeatures(data, filters)
-    if (hideNoData) {
-      out = { ...out, features: out.features.filter((f) => f.properties?.trend_category !== "not enough data") }
-    }
-    return out
-  }, [data, filters, hideNoData])
+  const fc = useMemo(() => (data ? filterFeatures(data, filters) : undefined), [data, filters])
   if (!fc) return null
   return <GeoSource layer={layer} fc={fc} {...rest} />
 }

@@ -188,8 +188,6 @@ export interface LayerOption {
   description?: string
   /** Point style used to draw the legend swatch. */
   style: PointStyle
-  /** Shows a "hide no-data points" toggle in the settings popover. */
-  supportsNoDataFilter?: boolean
   /** Categorical facet; shown as multi-select chips instead of free text. */
   facet?: LayerFacet
   /** Shows a "cluster points" toggle in the settings popover. */
@@ -224,9 +222,6 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → opacity (0–1). A visible layer gets an opacity slider. */
   opacityById?: Record<string, number>
   onOpacityChange?: (id: string, opacity: number) => void
-  /** Layer id → whether "not enough data" points are hidden. */
-  hideNoDataById?: Record<string, boolean>
-  onHideNoDataChange?: (id: string, hide: boolean) => void
   /** Layer id → free-text attribute filter, shown in the settings popover.
    *  Ignored for a layer with a `facet` — chips replace free text there. */
   attributeQueryById?: Record<string, string>
@@ -264,8 +259,6 @@ function LayerSelector({
   progressById,
   opacityById,
   onOpacityChange,
-  hideNoDataById,
-  onHideNoDataChange,
   attributeQueryById,
   onAttributeQueryChange,
   facetValuesById,
@@ -414,16 +407,6 @@ function LayerSelector({
                               />
                             </div>
                           )
-                        )}
-                        {option.supportsNoDataFilter && onHideNoDataChange && (
-                          <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                            <span className="text-xs text-muted-foreground">Hide no-data points</span>
-                            <Switch
-                              checked={hideNoDataById?.[option.id] ?? false}
-                              onCheckedChange={(v) => onHideNoDataChange(option.id, v)}
-                              aria-label="Hide no-data points"
-                            />
-                          </div>
                         )}
                         {option.supportsClusterToggle && onClusterChange && (
                           <div className="flex items-center justify-between mt-2 pt-2 border-t">
