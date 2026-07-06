@@ -71,6 +71,8 @@ interface LayerProps2 {
   colorOverride?: string
   /** Size points by the layer's `bubbleField` (proportional-symbol map). */
   bubble?: boolean
+  /** Color points by which `rangePresets` bin their `rangeField` value falls in. */
+  classify?: boolean
   /** Min/max bounds filtering features by the layer's `rangeField` value. */
   range?: [number, number]
   /** Reports the filtered feature count after rendering. */
@@ -95,6 +97,35 @@ function bubbleRadius(field: string): unknown {
     5000, 16,
     15000, 26,
   ]
+}
+
+/** Presets whose bins fully define a classification color ramp (every preset
+ *  carries a color). Returned sorted ascending by `min`. */
+export function classifyPresets(
+  layer: LayerConfig
+): { label: string; min: number; max: number; color: string }[] | undefined {
+  const p = layer.rangePresets
+  if (!layer.rangeField || !p || p.length === 0 || !p.every((x) => x.color)) return undefined
+  return [...p].sort((a, b) => a.min - b.min) as {
+    label: string
+    min: number
+    max: number
+    color: string
+  }[]
+}
+
+/**
+ * Data-driven `circle-color`: tint each point by which preset bin its numeric
+ * `field` value falls in (a `step` over the bin edges). Missing/null values
+ * draw grey. Assumes contiguous, ascending bins (as `classifyPresets` returns).
+ */
+function classifyColor(
+  field: string,
+  presets: { min: number; color: string }[]
+): unknown {
+  const step: unknown[] = ["step", ["to-number", ["get", field]], presets[0].color]
+  for (let i = 1; i < presets.length; i++) step.push(presets[i].min, presets[i].color)
+  return ["case", ["==", ["get", field], null], "#9ca3af", step]
 }
 
 /** Scale a paint's opacity channels by `opacity` (no-op at 1). Preserves a
@@ -182,6 +213,7 @@ function GeoSource({
   clusterOverride,
   colorOverride,
   bubble,
+  classify,
   range,
   onCount,
 }: {
@@ -195,6 +227,7 @@ function GeoSource({
   clusterOverride?: boolean
   colorOverride?: string
   bubble?: boolean
+  classify?: boolean
   range?: [number, number]
   onCount?: (id: string, count: number) => void
 }) {
@@ -223,6 +256,9 @@ function GeoSource({
 
   // Bubble map sizes points by a numeric field; it takes over circle-radius.
   const bubbleOn = !!bubble && !!layer.bubbleField
+  // Classification tints each point by its rangeField bin; takes over circle-color.
+  const classPresets = classify ? classifyPresets(layer) : undefined
+  const classifyOn = !!classPresets
   // A color override edits the paint property that actually draws this layer —
   // fill-color for polygons (e.g. the editable choropleth), line-color for
   // lines, circle-color for points.
@@ -236,6 +272,10 @@ function GeoSource({
     ...(layer.style.paint ?? {}),
     ...(colorOverride ? { [colorKey]: colorOverride } : {}),
     ...(bubbleOn ? { "circle-radius": bubbleRadius(layer.bubbleField!) } : {}),
+    // Classification wins over a single-color override for the point fill.
+    ...(classifyOn
+      ? { "circle-color": classifyColor(layer.rangeField!, classPresets!) }
+      : {}),
   }
   const paint = withOpacity(basePaint, layer.style.type, opacity)
   // MapLibre layout visibility: hides the layer (no draw, no clicks) while
@@ -244,7 +284,7 @@ function GeoSource({
 
   // Clustering aggregates points, which hides per-point magnitude — so a
   // bubble map is drawn unclustered even if clustering is otherwise on.
-  const clustered = isClustered(layer, clusterOverride) && !bubbleOn
+  const clustered = isClustered(layer, clusterOverride) && !bubbleOn && !classifyOn
   // react-map-gl's <Source> only calls setData() when props change on an
   // existing geojson source — `cluster`/`clusterRadius` are frozen at first
   // creation and silently ignored after that. Keying on `clustered` forces a

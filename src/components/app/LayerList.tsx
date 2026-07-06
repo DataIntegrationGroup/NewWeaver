@@ -48,6 +48,9 @@ interface LayerListProps {
   /** Layer id → whether the bubble map (size-by-value) is on (settings popover). */
   bubbleById?: Record<string, boolean>
   onBubbleChange?: (id: string, bubble: boolean) => void
+  /** Layer id → whether color-by-class is on (settings popover). */
+  classifyById?: Record<string, boolean>
+  onClassifyChange?: (id: string, classify: boolean) => void
   /** Layer id → [min, max] value range filter (settings popover). */
   rangeById?: Record<string, [number, number]>
   onRangeChange?: (id: string, range: [number, number]) => void
@@ -85,11 +88,18 @@ function toOption(layer: LayerConfig): LayerOption {
     style: pointStyle(layer),
     supportsNoDataFilter: layer.id === "wfs-nm-waterlevel-trends",
     facet: layer.facet,
-    // Cluster toggle is for color-mapped ("legend") layers, where clustering
-    // hides the per-point category color behind a flat bubble.
-    supportsClusterToggle: !!layer.legend,
+    // Cluster toggle for color-mapped ("legend") layers, where clustering hides
+    // the per-point category color behind a flat bubble, and for any point layer
+    // that clusters by default so the user can spread points back out.
+    supportsClusterToggle: !!layer.legend || layer.cluster === true,
     // Bubble map is offered for layers that declare a numeric field to size by.
     supportsBubbleToggle: !!layer.bubbleField,
+    // Color-by-class is offered when the range presets carry a full color palette.
+    supportsClassifyToggle: !!(
+      layer.rangeField &&
+      layer.rangePresets?.length &&
+      layer.rangePresets.every((p) => p.color)
+    ),
     // Value range slider for layers that declare a numeric field + domain.
     range:
       layer.rangeField && layer.rangeDomain
@@ -98,6 +108,8 @@ function toOption(layer: LayerConfig): LayerOption {
             min: layer.rangeDomain[0],
             max: layer.rangeDomain[1],
             unit: layer.rangeUnit,
+            presets: layer.rangePresets,
+            presetsRef: layer.rangePresetsSource,
           }
         : undefined,
   }
@@ -126,7 +138,7 @@ const DEFAULT_OPEN = ["Groundwater levels", "Groundwater Chemistry"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, rangeById, onRangeChange, colorById, onColorChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hideNoDataById, onHideNoDataChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, classifyById, onClassifyChange, rangeById, onRangeChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -229,6 +241,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, hid
                 onClusterChange={onClusterChange}
                 bubbleById={bubbleById}
                 onBubbleChange={onBubbleChange}
+                classifyById={classifyById}
+                onClassifyChange={onClassifyChange}
                 rangeById={rangeById}
                 onRangeChange={onRangeChange}
                 colorById={colorById}

@@ -100,6 +100,13 @@ interface BaseLayer {
   rangeDomain?: [number, number]
   /** Unit label shown beside the range slider (e.g. "mg/L"). */
   rangeUnit?: string
+  /** Named quick-pick ranges shown as buttons above the range slider (e.g. the
+   *  TDS salinity classes). Each button sets the slider to [min, max]. A `color`
+   *  (all presets or none) also enables the "color by class" toggle, which tints
+   *  each point by which preset bin its `rangeField` value falls in. */
+  rangePresets?: { label: string; min: number; max: number; color?: string }[]
+  /** Citation for the preset classification, linked under the preset buttons. */
+  rangePresetsSource?: { label: string; url: string }
   /** Multi-select attribute filter shown in the layer's settings popover. */
   facet?: AttributeFacet
   /** Swatch/label pairs for the map legend, when points are categorically
@@ -589,6 +596,10 @@ const WFS_LAYERS: {
   rangeDomain?: [number, number]
   /** Unit label shown beside the range slider. */
   rangeUnit?: string
+  /** Named quick-pick ranges shown as buttons above the range slider. */
+  rangePresets?: { label: string; min: number; max: number; color?: string }[]
+  /** Citation for the preset classification, linked under the preset buttons. */
+  rangePresetsSource?: { label: string; url: string }
   style?: LayerStyle
   fields?: FieldDisplay
   facet?: AttributeFacet
@@ -633,6 +644,18 @@ const WFS_LAYERS: {
     rangeField: "mean",
     rangeDomain: [0, 35000],
     rangeUnit: "mg/L",
+    // Salinity classes (mg/L TDS) after USGS/Heath (1983): quick-pick buttons
+    // over the slider, and the palette for the "color by class" toggle.
+    rangePresets: [
+      { label: "Fresh", min: 0, max: 1000, color: "#2563eb" },
+      { label: "Slightly brackish", min: 1000, max: 3000, color: "#14b8a6" },
+      { label: "Brackish", min: 3000, max: 10000, color: "#f59e0b" },
+      { label: "Saline", min: 10000, max: 35000, color: "#b91c1c" },
+    ],
+    rangePresetsSource: {
+      label: "USGS salinity classes",
+      url: "https://www.usgs.gov/special-topics/water-science-school/science/saline-water-and-salinity",
+    },
   },
   {
     typeName: "die:nm_waterlevel_trends",
@@ -1107,6 +1130,8 @@ const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
   ...(w.rangeField && { rangeField: w.rangeField }),
   ...(w.rangeDomain && { rangeDomain: w.rangeDomain }),
   ...(w.rangeUnit && { rangeUnit: w.rangeUnit }),
+  ...(w.rangePresets && { rangePresets: w.rangePresets }),
+  ...(w.rangePresetsSource && { rangePresetsSource: w.rangePresetsSource }),
   ...(w.fields && { fields: w.fields }),
   ...(w.facet && { facet: w.facet }),
   ...(w.legend && { legend: w.legend }),

@@ -196,9 +196,21 @@ export interface LayerOption {
   supportsClusterToggle?: boolean
   /** Shows a "bubble map" (size points by value) toggle in the settings popover. */
   supportsBubbleToggle?: boolean
+  /** Shows a "color by class" toggle in the settings popover (tints points by
+   *  which `range.presets` bin their value falls in). */
+  supportsClassifyToggle?: boolean
   /** Shows a min/max value range slider in the settings popover, filtering by
-   *  `field` over the full [min, max] domain. */
-  range?: { field: string; min: number; max: number; unit?: string }
+   *  `field` over the full [min, max] domain. `presets` render as quick-pick
+   *  buttons above the slider, each setting it to a named [min, max];
+   *  `presetsRef` links a citation for the classification underneath. */
+  range?: {
+    field: string
+    min: number
+    max: number
+    unit?: string
+    presets?: { label: string; min: number; max: number; color?: string }[]
+    presetsRef?: { label: string; url: string }
+  }
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -228,6 +240,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → whether the bubble map (size-by-value) is on (settings popover). */
   bubbleById?: Record<string, boolean>
   onBubbleChange?: (id: string, bubble: boolean) => void
+  /** Layer id → whether color-by-class is on (settings popover). */
+  classifyById?: Record<string, boolean>
+  onClassifyChange?: (id: string, classify: boolean) => void
   /** Layer id → current [min, max] value range (settings popover slider). */
   rangeById?: Record<string, [number, number]>
   onRangeChange?: (id: string, range: [number, number]) => void
@@ -259,6 +274,8 @@ function LayerSelector({
   onClusterChange,
   bubbleById,
   onBubbleChange,
+  classifyById,
+  onClassifyChange,
   rangeById,
   onRangeChange,
   colorById,
@@ -428,8 +445,18 @@ function LayerSelector({
                             />
                           </div>
                         )}
+                        {option.supportsClassifyToggle && onClassifyChange && (
+                          <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                            <span className="text-xs text-muted-foreground">Color by class</span>
+                            <Switch
+                              checked={classifyById?.[option.id] ?? false}
+                              onCheckedChange={(v) => onClassifyChange(option.id, v)}
+                              aria-label="Color by class"
+                            />
+                          </div>
+                        )}
                         {option.range && onRangeChange && (() => {
-                          const { min, max, unit } = option.range!
+                          const { min, max, unit, presets, presetsRef } = option.range!
                           const [lo, hi] = rangeById?.[option.id] ?? [min, max]
                           const step = Math.max(1, Math.round((max - min) / 200))
                           return (
@@ -441,6 +468,42 @@ function LayerSelector({
                                   {unit ? ` ${unit}` : ""}
                                 </span>
                               </div>
+                              {presets && presets.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {presets.map((p) => {
+                                    const active = lo === p.min && hi === p.max
+                                    return (
+                                      <button
+                                        key={p.label}
+                                        type="button"
+                                        aria-pressed={active}
+                                        data-testid={`layer-range-preset-${option.id}-${p.label}`}
+                                        onClick={() =>
+                                          onRangeChange(option.id, [p.min, p.max])
+                                        }
+                                        className={cn(
+                                          "rounded-full border px-2 py-0.5 text-xs transition-colors",
+                                          active
+                                            ? "border-primary bg-primary text-primary-foreground"
+                                            : "border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                                        )}
+                                      >
+                                        {p.label}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                              {presetsRef && (
+                                <a
+                                  href={presetsRef.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                                >
+                                  {presetsRef.label} ↗
+                                </a>
+                              )}
                               <Slider
                                 min={min}
                                 max={max}

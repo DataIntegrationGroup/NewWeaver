@@ -118,13 +118,23 @@ export function AppShell() {
   const [hideNoDataById, setHideNoDataById] = useState<Record<string, boolean>>({})
   const [attributeQueryById, setAttributeQueryById] = useState<Record<string, string>>({})
   const [facetValuesById, setFacetValuesById] = useState<Record<string, string[]>>({})
-  // Color-mapped ("legend") layers default to unclustered so their per-point
-  // category color is visible; the settings popover lets a user cluster back.
+  // Cluster-toggle default state. Color-mapped ("legend") layers default to
+  // unclustered so their per-point category color is visible; other clustering
+  // point layers default to clustered (matching their `cluster: true`). The
+  // settings popover lets a user flip either. Kept in sync with the toggle
+  // visibility rule in LayerList.toOption (legend || cluster === true).
   const [clusterById, setClusterById] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(LAYER_CATALOG.filter((l) => l.legend).map((l) => [l.id, false]))
+    Object.fromEntries(
+      LAYER_CATALOG.filter((l) => l.legend || l.cluster === true).map((l) => [
+        l.id,
+        l.legend ? false : true,
+      ])
+    )
   )
   // Per-layer bubble-map (proportional-symbol) toggle; off by default.
   const [bubbleById, setBubbleById] = useState<Record<string, boolean>>({})
+  // Per-layer color-by-class toggle (tints points by their rangeField bin); off by default.
+  const [classifyById, setClassifyById] = useState<Record<string, boolean>>({})
   // Per-layer [min, max] value range filter over the layer's rangeField.
   const [rangeById, setRangeById] = useState<Record<string, [number, number]>>({})
   const [colorById, setColorById] = useState<Record<string, string>>({})
@@ -533,6 +543,10 @@ export function AppShell() {
             onBubbleChange={(id, bubble) =>
               setBubbleById((m) => ({ ...m, [id]: bubble }))
             }
+            classifyById={classifyById}
+            onClassifyChange={(id, classify) =>
+              setClassifyById((m) => ({ ...m, [id]: classify }))
+            }
             rangeById={rangeById}
             onRangeChange={(id, range) =>
               setRangeById((m) => ({ ...m, [id]: range }))
@@ -570,6 +584,7 @@ export function AppShell() {
               facetValuesById={facetValuesById}
               clusterById={clusterById}
               bubbleById={bubbleById}
+              classifyById={classifyById}
               rangeById={rangeById}
               colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}

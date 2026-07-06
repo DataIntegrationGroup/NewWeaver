@@ -119,6 +119,8 @@ interface MapViewProps {
   clusterById?: Record<string, boolean>
   /** Layer id → bubble-map (size-by-value) toggle (settings popover). */
   bubbleById?: Record<string, boolean>
+  /** Layer id → color-by-class toggle (settings popover). */
+  classifyById?: Record<string, boolean>
   /** Layer id → [min, max] value range filter over the layer's rangeField. */
   rangeById?: Record<string, [number, number]>
   /** Layer id → color override hex string. */
@@ -166,6 +168,7 @@ export function MapView({
   facetValuesById,
   clusterById,
   bubbleById,
+  classifyById,
   rangeById,
   colorById,
   hiddenLayerIds,
@@ -486,6 +489,7 @@ export function MapView({
             facetValues={facetValuesById?.[layer.id]}
             clusterOverride={clusterById?.[layer.id]}
             bubble={bubbleById?.[layer.id]}
+            classify={classifyById?.[layer.id]}
             range={rangeById?.[layer.id]}
             colorOverride={colorById?.[layer.id]}
             visible={!hiddenLayerIds?.includes(layer.id)}
@@ -609,7 +613,7 @@ export function MapView({
         />
       )}
 
-      <MapLegend layers={layers} hiddenLayerIds={hiddenLayerIds} />
+      <MapLegend layers={layers} hiddenLayerIds={hiddenLayerIds} classifyById={classifyById} />
 
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
         <Popover>
