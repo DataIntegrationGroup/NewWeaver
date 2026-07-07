@@ -91,6 +91,26 @@ export function useStaLayer(layer: StaLayer) {
   })
 }
 
+/**
+ * Guarantee every OGC feature carries a stable `properties.id` (and a matching
+ * top-level `id`). GeoServer's OGC API Features promotes a layer's id column to
+ * the feature id and omits it from `properties` — but map selection, the
+ * highlight layer (`["get","id"]`), the hover popup, and the inspect panel all
+ * key on `properties.id`, so a clicked feature couldn't be matched back to the
+ * cached FeatureCollection ("Feature not found"). Prefer an existing
+ * `properties.id`, else the top-level feature id, else the row index.
+ */
+function ensureFeatureIds(fc: FeatureCollection): FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: fc.features.map((f, i) => {
+      const p = (f.properties ?? {}) as Record<string, unknown>
+      const id = String(p.id ?? f.id ?? i)
+      return { ...f, id, properties: { ...p, id } }
+    }),
+  }
+}
+
 /** Vector items from an OGC API Features collection, as GeoJSON. */
 export function useFeaturesLayer(layer: FeaturesLayer) {
   return useQuery({
@@ -108,7 +128,7 @@ export function useFeaturesLayer(layer: FeaturesLayer) {
           maxPages,
           (n) => setLoadProgress(layer.id, n)
         )
-        return fc as FeatureCollection
+        return ensureFeatureIds(fc as FeatureCollection)
       } finally {
         clearLoadProgress(layer.id)
       }
