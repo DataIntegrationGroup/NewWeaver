@@ -25,6 +25,8 @@ interface DrawControlsProps {
   map: MaplibreMap | null
   /** Reports the current set of drawn polygons (rectangles included). */
   onShapesChange: (shapes: Polygon[]) => void
+  /** Reports whether a draw tool is armed (rectangle/polygon mode active). */
+  onActiveChange?: (active: boolean) => void
 }
 
 /**
@@ -32,10 +34,16 @@ interface DrawControlsProps {
  * map (terra-draw). Drawn polygons are reported up so the export selection can
  * include the points inside them. See features/export/design.md.
  */
-export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
+export function DrawControls({ map, onShapesChange, onActiveChange }: DrawControlsProps) {
   const posthog = usePostHog()
   const drawRef = useRef<TerraDraw | null>(null)
   const [mode, setMode] = useState<DrawMode | null>(null)
+
+  // Surface the armed/disarmed state so the map can suppress feature hover
+  // popups while a draw tool is active.
+  useEffect(() => {
+    onActiveChange?.(mode !== null)
+  }, [mode, onActiveChange])
 
   useEffect(() => {
     if (!map) return
@@ -76,26 +84,25 @@ export function DrawControls({ map, onShapesChange }: DrawControlsProps) {
     draw.start()
     drawRef.current = draw
 
-    const emit = () => {
+    // Emit only on gesture end (terra-draw "finish"), not on every intermediate
+    // "change" during a drag — downstream point-clipping is expensive, so it
+    // recomputes on mouse-up. "finish" covers draw completion and every edit
+    // (vertex drag/insert/delete, whole-shape drag).
+    const onFinish = (_id: unknown, context: { action: string }) => {
       const polys = draw
         .getSnapshot()
         .map((f) => f.geometry)
         .filter((g): g is Polygon => g.type === "Polygon")
       onShapesChange(polys)
-    }
-    const onFinish = () => {
-      const polys = draw
-        .getSnapshot()
-        .map((f) => f.geometry)
-        .filter((g): g is Polygon => g.type === "Polygon")
-      posthog.capture("draw_shape_completed", { shape_count: polys.length })
-      onShapesChange(polys)
-      // Drop into select mode so the shape can be edited right away.
-      draw.setMode("select")
-      setMode(null)
+      // Only a freshly drawn shape drops into select mode; edit-finishes keep
+      // the current selection so a vertex drag isn't deselected each move.
+      if (context.action === "draw") {
+        posthog.capture("draw_shape_completed", { shape_count: polys.length })
+        draw.setMode("select")
+        setMode(null)
+      }
     }
     draw.on("finish", onFinish)
-    draw.on("change", emit)
 
     return () => {
       // On route change the MapLibre map may be torn down before this cleanup

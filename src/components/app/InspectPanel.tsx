@@ -283,7 +283,7 @@ function AttributeInspect({
   onZoomTo?: (lng: number, lat: number) => void
 }) {
   const feature = fc?.features.find(
-    (f) => String(f.id ?? f.properties?.id) === featureId
+    (f) => String(f.properties?.id ?? f.id) === featureId
   )
   const pos = firstPosition(feature)
 

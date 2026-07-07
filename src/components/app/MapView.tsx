@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Layers, Maximize } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import type { Map as MaplibreMap, GeoJSONSource } from "maplibre-gl"
@@ -270,6 +270,19 @@ export function MapView({
     layers.filter((l) => isClustered(l, clusterById?.[l.id])).map(clusterLayerId)
   )
   const [drawMap, setDrawMap] = useState<MaplibreMap | null>(null)
+  // While a draw tool is armed, suppress feature hover popups so the pointer is
+  // free to draw without popups fighting the crosshair.
+  const [drawActive, setDrawActive] = useState(false)
+  // Drawn polygons kept locally so point layers can clip to their interior.
+  // Also bubbled up (onShapesChange) for the export selection.
+  const [drawnShapes, setDrawnShapes] = useState<Polygon[]>([])
+  const handleShapesChange = useCallback(
+    (shapes: Polygon[]) => {
+      setDrawnShapes(shapes)
+      onShapesChange(shapes)
+    },
+    [onShapesChange],
+  )
 
   const [hoverInfo, setHoverInfo] = useState<{
     longitude: number
@@ -283,10 +296,20 @@ export function MapView({
     format?: (key: string, value: unknown) => string
   } | null>(null)
 
+  // Arming a draw tool clears any popup left over from the last hover.
+  useEffect(() => {
+    if (drawActive) setHoverInfo(null)
+  }, [drawActive])
+
   // Hit-test on move: a feature under the pointer drives the hover popup and
   // the pointer cursor; empty space clears both.
   const handleMouseMove = (e: MapLayerMouseEvent) => {
     setCursor([e.lngLat.lng, e.lngLat.lat])
+    // Drawing in progress: keep the coord readout but never raise hover popups.
+    if (drawActive) {
+      setHoverInfo((prev) => (prev ? null : prev))
+      return
+    }
     const hit = e.features?.[0]
     // Clusters get a pointer cursor but no attribute popup.
     if (!hit || hit.properties?.cluster) {
@@ -304,7 +327,7 @@ export function MapView({
     const cached = layer
       ? queryClient
           .getQueryData<FeatureCollection>(layerCacheKey(layer))
-          ?.features.find((f) => String(f.id ?? f.properties?.id) === featureId)
+          ?.features.find((f) => String(f.properties?.id ?? f.id) === featureId)
       : undefined
     const properties = (cached?.properties ?? hitProperties) as Record<string, unknown>
     const override = layer ? colorById?.[layer.id] : undefined
@@ -488,6 +511,7 @@ export function MapView({
             classify={classifyById?.[layer.id]}
             range={rangeById?.[layer.id]}
             colorOverride={colorById?.[layer.id]}
+            shapes={drawnShapes}
             visible={!hiddenLayerIds?.includes(layer.id)}
             onCount={handleLayerCount}
             selectedFeatureId={
@@ -647,7 +671,7 @@ export function MapView({
           <Maximize />
         </Button>
 
-        <DrawControls map={drawMap} onShapesChange={onShapesChange} />
+        <DrawControls map={drawMap} onShapesChange={handleShapesChange} onActiveChange={setDrawActive} />
       </div>
 
       {cursor && (

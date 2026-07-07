@@ -58,7 +58,7 @@ interface AttributeTableProps {
 }
 
 function featureId(f: Feature): string {
-  return String(f.id ?? f.properties?.id ?? "")
+  return String(f.properties?.id ?? f.id ?? "")
 }
 
 /** A dismissible chip describing one active filter, shown in the table footer. */

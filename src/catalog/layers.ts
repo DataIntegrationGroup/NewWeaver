@@ -1230,8 +1230,8 @@ const densityLayers: FeaturesLayer[] = [
 ]
 
 export const LAYER_CATALOG: LayerConfig[] = [
-  ...integratedLayers,
   hydrographLayer,
+  ...integratedLayers,
   ...st2AgencyLayers,
   ...ocotilloLayers,
   ...oseGisLayers,

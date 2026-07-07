@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react"
-import type { FeatureCollection } from "geojson"
+import type { FeatureCollection, Polygon } from "geojson"
 
+import { pointInAnyShape } from "@/lib/geo"
 import { Source, Layer } from "@/components/ui/map"
 import type { LayerProps } from "@/components/ui/map"
 import {
@@ -73,6 +74,8 @@ interface LayerProps2 {
   classify?: boolean
   /** Min/max bounds filtering features by the layer's `rangeField` value. */
   range?: [number, number]
+  /** Drawn selection polygons; when present, point layers hide points outside them. */
+  shapes?: Polygon[]
   /** Reports the filtered feature count after rendering. */
   onCount?: (id: string, count: number) => void
 }
@@ -220,6 +223,7 @@ function GeoSource({
   bubble,
   classify,
   range,
+  shapes,
   onCount,
 }: {
   layer: LayerConfig
@@ -234,12 +238,20 @@ function GeoSource({
   bubble?: boolean
   classify?: boolean
   range?: [number, number]
+  shapes?: Polygon[]
   onCount?: (id: string, count: number) => void
 }) {
   const facetField = layer.facet?.field
   const facetKey = facetValues?.join(",")
   const rangeField = layer.rangeField
   const rangeKey = range?.join(",")
+  // A drawn selection restricts point layers to their interior. Only point
+  // layers are clipped — polygon/line layers (boundaries, choropleth) are not
+  // point-in-polygon testable and stay whole.
+  const clipToShapes = layer.style.type === "circle" && !!shapes && shapes.length > 0
+  // Key on geometry, not identity/length, so dragging a vertex (same count)
+  // still recomputes the clip.
+  const shapesKey = clipToShapes ? JSON.stringify(shapes!.map((s) => s.coordinates)) : ""
   const filteredFc = useMemo(() => {
     let out = fc
     if (attributeQuery) {
@@ -252,9 +264,12 @@ function GeoSource({
       const domainMin = layer.rangeDomain?.[0]
       out = { ...out, features: out.features.filter((f) => matchesRange(f, rangeField, range[0], range[1], domainMin)) }
     }
+    if (clipToShapes) {
+      out = { ...out, features: out.features.filter((f) => pointInAnyShape(f, shapes!)) }
+    }
     return out
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues/range compared via facetKey/rangeKey, not identity
-  }, [fc, attributeQuery, facetField, facetKey, rangeField, rangeKey])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues/range compared via facetKey/rangeKey, shapes via shapesKey, not identity
+  }, [fc, attributeQuery, facetField, facetKey, rangeField, rangeKey, clipToShapes, shapesKey])
   const count = filteredFc.features.length
   useEffect(() => {
     onCount?.(layer.id, count)
