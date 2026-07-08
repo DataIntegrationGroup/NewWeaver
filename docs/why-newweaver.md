@@ -124,6 +124,14 @@ DIE started as a command-line tool: `pip install nmuwd`, then `die weave …` wr
 
 The point isn't that the CLI was wrong — it's the right engine. The shift is **who runs it and where the output lives**: from *N users each producing a private, divergent, instantly-stale copy* to *one scheduled run producing a canonical, versioned, live-served product* that NewWeaver is simply a window onto. That inversion is what makes "always fresh, multi-agency, integrated" true for everyone, not just people who can run Python.
 
+> **Does this deprecate the CLI?** Not today, and no decision has been made — it's an open question the team is actively weighing. What's settled: the hosted pipeline *is* the CLI — Dagster runs the same `nmuwd` engine on a schedule; it doesn't fork or replace it — and the tool is still published on PyPI (`pip install nmuwd`) today for the cases the hosted product isn't meant to cover (ad-hoc/custom integrations, one-off analyses, local development, reproducing a result offline, feeding a non-NewWeaver pipeline). What's undecided is the CLI's long-term fate, and the guiding trade-off is **maintenance cost vs. value**:
+>
+> - **Keep it** while the human-facing CLI is cheap to maintain and still useful to real users.
+> - **Deprecate it** if it becomes expensive to maintain, or if carrying a human CLI holds DIE back from its potential as a **machine-to-machine service**.
+> - **Possible middle path:** split the two — DataServices maintains the hosted/Dagster path, and the CLI continues as a community-maintained open-source fork.
+>
+> Bottom line for readers: the hosted Dagster path is the maintained default for the public product; whether a first-party local CLI persists is a deliberate, still-open call — not something this doc settles.
+
 ## Core value prop, expanded
 
 - **Always fresh.** No manual exports, no snapshots. DIE publishes; NewWeaver reads live on every page load. Even the home-dashboard counts and activity feed come from a nightly DIE-written stats JSON, read read-only — Weaver computes none of it. ([SPEC.md §V13–V14](../SPEC.md), [src/config.ts `STATS_URL`](../src/config.ts))
