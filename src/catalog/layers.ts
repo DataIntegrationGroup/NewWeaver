@@ -107,6 +107,14 @@ interface BaseLayer {
   rangePresets?: { label: string; min: number; max: number; color?: string }[]
   /** Citation for the preset classification, linked under the preset buttons. */
   rangePresetsSource?: { label: string; url: string }
+  /** Numeric property offered as a "minimum record count" threshold in the
+   *  settings popover. Presence renders quick-pick buttons that keep only
+   *  features whose value is >= the chosen threshold. Open-ended (no upper
+   *  bound), unlike `rangeField`. */
+  minRecordsField?: string
+  /** Threshold options (ascending) for the min-records buttons; the first is
+   *  the default. Include a low value (e.g. 1) as the "show all" option. */
+  minRecordsOptions?: number[]
   /** Multi-select attribute filter shown in the layer's settings popover. */
   facet?: AttributeFacet
   /** Swatch/label pairs for the map legend, when points are categorically
@@ -250,6 +258,11 @@ const hydrographLayer: FeaturesLayer = {
   measurementType: "water_level",
   section: "Groundwater levels",
   hydrograph: true,
+  // Wells span 1 → ~48k readings; a min-records threshold trims the sparse
+  // wells (too few points to plot a meaningful hydrograph). observation_count
+  // is the raw reading count (points on the chart). Default keeps all.
+  minRecordsField: "observation_count",
+  minRecordsOptions: [1, 5, 10, 25, 50, 100],
   style: staPoint("#1e40af"),
 }
 

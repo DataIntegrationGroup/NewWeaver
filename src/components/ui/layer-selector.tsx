@@ -209,6 +209,12 @@ export interface LayerOption {
     presets?: { label: string; min: number; max: number; color?: string }[]
     presetsRef?: { label: string; url: string }
   }
+  /** Shows a "minimum records" threshold in the settings popover: quick-pick
+   *  buttons that keep only features with at least the chosen count. The first
+   *  option is the default (typically a low "show all" value). */
+  minRecords?: {
+    options: number[]
+  }
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -241,6 +247,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → current [min, max] value range (settings popover slider). */
   rangeById?: Record<string, [number, number]>
   onRangeChange?: (id: string, range: [number, number]) => void
+  /** Layer id → current minimum-records threshold (settings popover). */
+  minRecordsById?: Record<string, number>
+  onMinRecordsChange?: (id: string, min: number) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -271,6 +280,8 @@ function LayerSelector({
   onClassifyChange,
   rangeById,
   onRangeChange,
+  minRecordsById,
+  onMinRecordsChange,
   colorById,
   onColorChange,
   onToggle,
@@ -498,6 +509,37 @@ function LayerSelector({
                                   onRangeChange(option.id, [v[0], v[1]] as [number, number])
                                 }
                               />
+                            </div>
+                          )
+                        })()}
+                        {option.minRecords && onMinRecordsChange && (() => {
+                          const opts = option.minRecords!.options
+                          const current = minRecordsById?.[option.id] ?? opts[0]
+                          return (
+                            <div className="mt-2 pt-2 border-t space-y-1.5">
+                              <span className="text-xs text-muted-foreground">Minimum records</span>
+                              <div className="flex flex-wrap gap-1">
+                                {opts.map((n) => {
+                                  const active = current === n
+                                  return (
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      aria-pressed={active}
+                                      data-testid={`layer-min-records-${option.id}-${n}`}
+                                      onClick={() => onMinRecordsChange(option.id, n)}
+                                      className={cn(
+                                        "rounded-full border px-2 py-0.5 text-xs transition-colors",
+                                        active
+                                          ? "border-primary bg-primary text-primary-foreground"
+                                          : "border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                                      )}
+                                    >
+                                      {n <= 1 ? "All" : `≥ ${n.toLocaleString()}`}
+                                    </button>
+                                  )
+                                })}
+                              </div>
                             </div>
                           )
                         })()}

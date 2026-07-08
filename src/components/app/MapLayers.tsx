@@ -74,6 +74,8 @@ interface LayerProps2 {
   classify?: boolean
   /** Min/max bounds filtering features by the layer's `rangeField` value. */
   range?: [number, number]
+  /** Minimum threshold filtering features by the layer's `minRecordsField` value. */
+  minRecords?: number
   /** Drawn selection polygons; when present, point layers hide points outside them. */
   shapes?: Polygon[]
   /** Reports the filtered feature count after rendering. */
@@ -223,6 +225,7 @@ function GeoSource({
   bubble,
   classify,
   range,
+  minRecords,
   shapes,
   onCount,
 }: {
@@ -238,6 +241,7 @@ function GeoSource({
   bubble?: boolean
   classify?: boolean
   range?: [number, number]
+  minRecords?: number
   shapes?: Polygon[]
   onCount?: (id: string, count: number) => void
 }) {
@@ -245,6 +249,7 @@ function GeoSource({
   const facetKey = facetValues?.join(",")
   const rangeField = layer.rangeField
   const rangeKey = range?.join(",")
+  const minRecordsField = layer.minRecordsField
   // A drawn selection restricts point layers to their interior. Only point
   // layers are clipped — polygon/line layers (boundaries, choropleth) are not
   // point-in-polygon testable and stay whole.
@@ -264,12 +269,15 @@ function GeoSource({
       const domainMin = layer.rangeDomain?.[0]
       out = { ...out, features: out.features.filter((f) => matchesRange(f, rangeField, range[0], range[1], domainMin)) }
     }
+    if (minRecordsField && minRecords && minRecords > 1) {
+      out = { ...out, features: out.features.filter((f) => Number(f.properties?.[minRecordsField]) >= minRecords) }
+    }
     if (clipToShapes) {
       out = { ...out, features: out.features.filter((f) => pointInAnyShape(f, shapes!)) }
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues/range compared via facetKey/rangeKey, shapes via shapesKey, not identity
-  }, [fc, attributeQuery, facetField, facetKey, rangeField, rangeKey, clipToShapes, shapesKey])
+  }, [fc, attributeQuery, facetField, facetKey, rangeField, rangeKey, minRecordsField, minRecords, clipToShapes, shapesKey])
   const count = filteredFc.features.length
   useEffect(() => {
     onCount?.(layer.id, count)

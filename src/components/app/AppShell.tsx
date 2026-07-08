@@ -136,6 +136,8 @@ export function AppShell() {
   const [classifyById, setClassifyById] = useState<Record<string, boolean>>({})
   // Per-layer [min, max] value range filter over the layer's rangeField.
   const [rangeById, setRangeById] = useState<Record<string, [number, number]>>({})
+  // Per-layer minimum-records threshold over the layer's minRecordsField.
+  const [minRecordsById, setMinRecordsById] = useState<Record<string, number>>({})
   const [colorById, setColorById] = useState<Record<string, string>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
@@ -546,6 +548,10 @@ export function AppShell() {
                 onRangeChange={(id, range) =>
                   setRangeById((m) => ({ ...m, [id]: range }))
                 }
+                minRecordsById={minRecordsById}
+                onMinRecordsChange={(id, min) =>
+                  setMinRecordsById((m) => ({ ...m, [id]: min }))
+                }
                 colorById={colorById}
                 onColorChange={(id, color) =>
                   setColorById((m) => ({ ...m, [id]: color }))
@@ -582,6 +588,7 @@ export function AppShell() {
               bubbleById={bubbleById}
               classifyById={classifyById}
               rangeById={rangeById}
+              minRecordsById={minRecordsById}
               colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}
