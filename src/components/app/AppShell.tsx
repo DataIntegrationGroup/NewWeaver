@@ -138,6 +138,8 @@ export function AppShell() {
   const [rangeById, setRangeById] = useState<Record<string, [number, number]>>({})
   // Per-layer minimum-records threshold over the layer's minRecordsField.
   const [minRecordsById, setMinRecordsById] = useState<Record<string, number>>({})
+  // Per-layer recency window (years, 0 = All) over the layer's recencyField.
+  const [recencyById, setRecencyById] = useState<Record<string, number>>({})
   const [colorById, setColorById] = useState<Record<string, string>>({})
   // Layers hidden from the map via their chip (still enabled/listed, just not
   // drawn). Distinct from toggleLayer, which removes a layer outright.
@@ -552,6 +554,10 @@ export function AppShell() {
                 onMinRecordsChange={(id, min) =>
                   setMinRecordsById((m) => ({ ...m, [id]: min }))
                 }
+                recencyById={recencyById}
+                onRecencyChange={(id, years) =>
+                  setRecencyById((m) => ({ ...m, [id]: years }))
+                }
                 colorById={colorById}
                 onColorChange={(id, color) =>
                   setColorById((m) => ({ ...m, [id]: color }))
@@ -589,6 +595,7 @@ export function AppShell() {
               classifyById={classifyById}
               rangeById={rangeById}
               minRecordsById={minRecordsById}
+              recencyById={recencyById}
               colorById={colorById}
               hiddenLayerIds={hiddenLayerIds}
               onToggleLayerHidden={handleToggleLayerHidden}

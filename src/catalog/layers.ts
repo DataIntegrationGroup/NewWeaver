@@ -115,6 +115,13 @@ interface BaseLayer {
   /** Threshold options (ascending) for the min-records buttons; the first is
    *  the default. Include a low value (e.g. 1) as the "show all" option. */
   minRecordsOptions?: number[]
+  /** Datetime property offered as a "measured within" recency filter in the
+   *  settings popover. Presence renders quick-pick buttons that keep only
+   *  features whose value is within the chosen number of years of now. */
+  recencyField?: string
+  /** Lookback windows in years (ascending) for the recency buttons. An "All"
+   *  button (no cutoff) is always shown alongside them and is the default. */
+  recencyOptions?: number[]
   /** Multi-select attribute filter shown in the layer's settings popover. */
   facet?: AttributeFacet
   /** Swatch/label pairs for the map legend, when points are categorically
@@ -258,11 +265,18 @@ const hydrographLayer: FeaturesLayer = {
   measurementType: "water_level",
   section: "Groundwater levels",
   hydrograph: true,
+  // parameter_name is a constant ("waterlevels") and record_count duplicates
+  // the finer observations count — noise in the inspector table.
+  fields: { exclude: ["parameter_name", "record_count"] },
   // Wells span 1 → ~48k readings; a min-records threshold trims the sparse
   // wells (too few points to plot a meaningful hydrograph). observation_count
   // is the raw reading count (points on the chart). Default keeps all.
   minRecordsField: "observation_count",
   minRecordsOptions: [1, 5, 10, 25, 50, 100],
+  // Recency filter: keep only wells measured within N years of now, off the
+  // last reading date. "All" (no cutoff) is the default.
+  recencyField: "last_observation_datetime",
+  recencyOptions: [1, 2, 5, 10],
   style: staPoint("#1e40af"),
 }
 
@@ -583,15 +597,6 @@ const CHEM_SECTION = "Groundwater Chemistry"
 // The integrated `die:` products span both sections (persisted together).
 const INTEGRATED_SECTIONS = new Set([WFS_SECTION, CHEM_SECTION])
 
-// Summary products carry well depth as separate value + unit columns; merge
-// into one human display field (e.g. "185 ft"). Shared by every WFS product.
-function mergeWellDepth(props: Record<string, unknown>): Record<string, unknown> {
-  const { well_depth, well_depth_units, ...rest } = props
-  const depth =
-    well_depth != null ? `${well_depth} ${well_depth_units ?? ""}`.trim() : "—"
-  return { ...rest, well_depth: depth }
-}
-
 // MCL Exceedances carries value/mcl/mcl_type/exceeds as four separate columns
 // per analyte (e.g. chloride, chloride_mcl, chloride_mcl_type, chloride_exceeds).
 // Collapse those into one display row per analyte that actually exceeds —
@@ -615,7 +620,7 @@ function expandMclExceedances(props: Record<string, unknown>): Record<string, un
       rest[a] = `${props[a]} (MCL ${props[`${a}_mcl`]}, ${props[`${a}_mcl_type`]})`
     }
   }
-  return mergeWellDepth(rest)
+  return rest
 }
 
 const WFS_LAYERS: {
@@ -706,7 +711,6 @@ const WFS_LAYERS: {
     fields: {
       include: ["name", "trend_category", "well_depth", "slope_per_year", "span_years", "record_count", "source"],
     },
-    mapProperties: mergeWellDepth,
     // Multi-select trend classes; none selected shows every category.
     facet: {
       field: "trend_category",
@@ -768,7 +772,6 @@ const WFS_LAYERS: {
         "well_depth",
       ],
     },
-    mapProperties: mergeWellDepth,
     facet: {
       field: "status",
       label: "Status",
@@ -819,7 +822,6 @@ const WFS_LAYERS: {
         "well_depth",
       ],
     },
-    mapProperties: mergeWellDepth,
     facet: {
       field: "direction",
       label: "Direction",
@@ -904,7 +906,6 @@ const WFS_LAYERS: {
         "well_depth",
       ],
     },
-    mapProperties: mergeWellDepth,
     facet: {
       field: "dominant_cation",
       label: "Dominant cation",
@@ -961,7 +962,6 @@ const WFS_LAYERS: {
         "well_depth",
       ],
     },
-    mapProperties: mergeWellDepth,
     formatValue: (key, value) =>
       (["mean_amplitude_ft", "max_amplitude_ft", "min_amplitude_ft"].includes(key)
         ? fixed2(value)
@@ -1016,7 +1016,6 @@ const WFS_LAYERS: {
         "well_depth",
       ],
     },
-    mapProperties: mergeWellDepth,
     facet: {
       field: "status",
       label: "Status",
@@ -1080,7 +1079,6 @@ const WFS_LAYERS: {
         "well_depth",
       ],
     },
-    mapProperties: mergeWellDepth,
     formatValue: (key, value) =>
       (["slope_ft_per_year", "remaining_ft", "years_to_depletion"].includes(key)
         ? fixed2(value)
@@ -1131,7 +1129,6 @@ const WFS_LAYERS: {
     // Only pull sites with sufficient data — GeoServer flags rows lacking
     // enough cation/anion coverage as balance_class 'insufficient'.
     cqlFilter: "balance_class <> 'insufficient'",
-    mapProperties: mergeWellDepth,
   },
   {
     typeName: "die:nm_sar",
@@ -1143,7 +1140,6 @@ const WFS_LAYERS: {
     // Only pull sites with sufficient data — rows lacking sodium/calcium/
     // magnesium to compute SAR are flagged sar_class 'insufficient'.
     cqlFilter: "sar_class <> 'insufficient'",
-    mapProperties: mergeWellDepth,
   },
   {
     typeName: "die:nm_wqi",
@@ -1152,7 +1148,6 @@ const WFS_LAYERS: {
       "Per-location water quality index (WQI) for New Mexico — a composite summary of groundwater quality.",
     color: "#9333ea",
     mt: "water_quality",
-    mapProperties: mergeWellDepth,
   },
 ]
 

@@ -76,6 +76,9 @@ interface LayerProps2 {
   range?: [number, number]
   /** Minimum threshold filtering features by the layer's `minRecordsField` value. */
   minRecords?: number
+  /** Recency window in years (0/undefined = All) filtering features by the
+   *  layer's `recencyField` datetime. */
+  recency?: number
   /** Drawn selection polygons; when present, point layers hide points outside them. */
   shapes?: Polygon[]
   /** Reports the filtered feature count after rendering. */
@@ -226,6 +229,7 @@ function GeoSource({
   classify,
   range,
   minRecords,
+  recency,
   shapes,
   onCount,
 }: {
@@ -242,6 +246,7 @@ function GeoSource({
   classify?: boolean
   range?: [number, number]
   minRecords?: number
+  recency?: number
   shapes?: Polygon[]
   onCount?: (id: string, count: number) => void
 }) {
@@ -250,6 +255,7 @@ function GeoSource({
   const rangeField = layer.rangeField
   const rangeKey = range?.join(",")
   const minRecordsField = layer.minRecordsField
+  const recencyField = layer.recencyField
   // A drawn selection restricts point layers to their interior. Only point
   // layers are clipped — polygon/line layers (boundaries, choropleth) are not
   // point-in-polygon testable and stay whole.
@@ -272,12 +278,24 @@ function GeoSource({
     if (minRecordsField && minRecords && minRecords > 1) {
       out = { ...out, features: out.features.filter((f) => Number(f.properties?.[minRecordsField]) >= minRecords) }
     }
+    if (recencyField && recency && recency > 0) {
+      const cutoff = new Date()
+      cutoff.setFullYear(cutoff.getFullYear() - recency)
+      const cutoffMs = cutoff.getTime()
+      out = {
+        ...out,
+        features: out.features.filter((f) => {
+          const t = Date.parse(String(f.properties?.[recencyField] ?? ""))
+          return Number.isFinite(t) && t >= cutoffMs
+        }),
+      }
+    }
     if (clipToShapes) {
       out = { ...out, features: out.features.filter((f) => pointInAnyShape(f, shapes!)) }
     }
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps -- facetValues/range compared via facetKey/rangeKey, shapes via shapesKey, not identity
-  }, [fc, attributeQuery, facetField, facetKey, rangeField, rangeKey, minRecordsField, minRecords, clipToShapes, shapesKey])
+  }, [fc, attributeQuery, facetField, facetKey, rangeField, rangeKey, minRecordsField, minRecords, recencyField, recency, clipToShapes, shapesKey])
   const count = filteredFc.features.length
   useEffect(() => {
     onCount?.(layer.id, count)

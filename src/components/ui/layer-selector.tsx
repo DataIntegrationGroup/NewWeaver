@@ -215,6 +215,12 @@ export interface LayerOption {
   minRecords?: {
     options: number[]
   }
+  /** Shows a "measured within" recency filter in the settings popover:
+   *  quick-pick year windows that keep only features measured within that many
+   *  years of now. An "All" button (no cutoff, value 0) is the default. */
+  recency?: {
+    options: number[]
+  }
 }
 
 interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"> {
@@ -250,6 +256,9 @@ interface LayerSelectorProps extends Omit<React.ComponentProps<"ul">, "onToggle"
   /** Layer id → current minimum-records threshold (settings popover). */
   minRecordsById?: Record<string, number>
   onMinRecordsChange?: (id: string, min: number) => void
+  /** Layer id → current recency window in years, 0 = All (settings popover). */
+  recencyById?: Record<string, number>
+  onRecencyChange?: (id: string, years: number) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -282,6 +291,8 @@ function LayerSelector({
   onRangeChange,
   minRecordsById,
   onMinRecordsChange,
+  recencyById,
+  onRecencyChange,
   colorById,
   onColorChange,
   onToggle,
@@ -536,6 +547,37 @@ function LayerSelector({
                                       )}
                                     >
                                       {n <= 1 ? "All" : `≥ ${n.toLocaleString()}`}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })()}
+                        {option.recency && onRecencyChange && (() => {
+                          const opts = [0, ...option.recency!.options]
+                          const current = recencyById?.[option.id] ?? 0
+                          return (
+                            <div className="mt-2 pt-2 border-t space-y-1.5">
+                              <span className="text-xs text-muted-foreground">Measured within</span>
+                              <div className="flex flex-wrap gap-1">
+                                {opts.map((y) => {
+                                  const active = current === y
+                                  return (
+                                    <button
+                                      key={y}
+                                      type="button"
+                                      aria-pressed={active}
+                                      data-testid={`layer-recency-${option.id}-${y}`}
+                                      onClick={() => onRecencyChange(option.id, y)}
+                                      className={cn(
+                                        "rounded-full border px-2 py-0.5 text-xs transition-colors",
+                                        active
+                                          ? "border-primary bg-primary text-primary-foreground"
+                                          : "border-border bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
+                                      )}
+                                    >
+                                      {y === 0 ? "All" : y === 1 ? "1 yr" : `${y} yr`}
                                     </button>
                                   )
                                 })}

@@ -28,7 +28,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
+import { selectFields, fieldLabel, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { DatastreamChart } from "./DatastreamChart"
 import { Hydrograph } from "./Hydrograph"
 import { FieldValue } from "@/components/ui/field-value"
@@ -212,7 +212,7 @@ function AttributeList({
     <dl data-testid="attribute-list" className="grid grid-cols-1 gap-2 text-sm">
       {keys.map((k) => (
         <div key={k} className="group/row grid grid-cols-[40%_60%] gap-3 border-b py-1">
-          <dt className="min-w-0 break-words font-medium text-muted-foreground">{k}</dt>
+          <dt className="min-w-0 break-words font-medium text-muted-foreground">{fieldLabel(k, properties)}</dt>
           <dd className="flex min-w-0 items-start gap-1.5 break-words">
             <span className="min-w-0 break-words"><FieldValue value={format(k, properties[k])} /></span>
             <CopyButton value={format(k, properties[k])} />
@@ -345,7 +345,7 @@ function HydrographInspect({ layer, featureId, onClose, onZoomTo }: { layer: Fea
               Hydrograph
             </p>
             {wellId ? (
-              <Hydrograph wellId={wellId} name={name} />
+              <Hydrograph wellId={wellId} name={name} status={props.status as string | undefined} />
             ) : (
               <p className="text-sm text-muted-foreground">
                 No well id on this feature — cannot load a hydrograph.

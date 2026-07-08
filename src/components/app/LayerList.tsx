@@ -54,6 +54,9 @@ interface LayerListProps {
   /** Layer id → minimum-records threshold (settings popover). */
   minRecordsById?: Record<string, number>
   onMinRecordsChange?: (id: string, min: number) => void
+  /** Layer id → recency window in years, 0 = All (settings popover). */
+  recencyById?: Record<string, number>
+  onRecencyChange?: (id: string, years: number) => void
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   onColorChange?: (id: string, color: string) => void
@@ -116,6 +119,11 @@ function toOption(layer: LayerConfig): LayerOption {
       layer.minRecordsField && layer.minRecordsOptions?.length
         ? { options: layer.minRecordsOptions }
         : undefined,
+    // Recency window buttons for layers declaring a datetime field.
+    recency:
+      layer.recencyField && layer.recencyOptions?.length
+        ? { options: layer.recencyOptions }
+        : undefined,
   }
 }
 
@@ -142,7 +150,7 @@ const DEFAULT_OPEN = ["Groundwater levels", "Groundwater Chemistry"]
  * grouped by their `section` into collapsible accordion groups (all open by
  * default; each can be toggled independently).
  */
-export function LayerList({ visible, onToggle, opacityById, onOpacityChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, classifyById, onClassifyChange, rangeById, onRangeChange, minRecordsById, onMinRecordsChange, colorById, onColorChange }: LayerListProps) {
+export function LayerList({ visible, onToggle, opacityById, onOpacityChange, attributeQueryById, onAttributeQueryChange, facetValuesById, onFacetChange, clusterById, onClusterChange, bubbleById, onBubbleChange, classifyById, onClassifyChange, rangeById, onRangeChange, minRecordsById, onMinRecordsChange, recencyById, onRecencyChange, colorById, onColorChange }: LayerListProps) {
   const loadingIds = [...useLayerLoading()]
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
@@ -246,6 +254,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
                 onRangeChange={onRangeChange}
                 minRecordsById={minRecordsById}
                 onMinRecordsChange={onMinRecordsChange}
+                recencyById={recencyById}
+                onRecencyChange={onRecencyChange}
                 colorById={colorById}
                 onColorChange={onColorChange}
                 onToggle={onToggle}

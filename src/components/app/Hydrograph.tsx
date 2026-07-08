@@ -8,6 +8,14 @@ interface HydrographProps {
   wellId: string
   /** Well name, used as the series label. */
   name?: string
+  /** Water-level status class (e.g. "much below normal"), shown as a chip in
+   *  the stats header and colored by class. Omit to hide the chip. */
+  status?: string
+  /** Force the series to draw as a connected line (a continuous datastream).
+   *  When omitted, continuity is inferred from reading density — a series
+   *  averaging multiple readings per day is a logger (line), otherwise the
+   *  readings are drawn as an unconnected scatter. */
+  continuous?: boolean
   /** Tune axis/line colors for a dark surface (default: light). */
   dark?: boolean
 }
@@ -17,12 +25,25 @@ const fmtDate = (iso: string) =>
 
 const fmtNum = (n: number) => n.toFixed(2)
 
+/** Water-level percentile class → chip color. Depth-to-water below normal means
+ *  a low water table (dry, warm colors); above normal means a high one (wet,
+ *  cool colors). Checks the compound classes ("much …") before their bare form. */
+function statusColor(status: string): string {
+  const s = status.toLowerCase()
+  if (s.includes("much below")) return "#b91c1c"
+  if (s.includes("below")) return "#f59e0b"
+  if (s.includes("much above")) return "#1d4ed8"
+  if (s.includes("above")) return "#60a5fa"
+  if (s.includes("normal")) return "#16a34a"
+  return "#6b7280"
+}
+
 /**
  * One well's water-level hydrograph: depth to water over time, fetched live on
  * demand via `useWellSeries`. Depth increases downward, so the y-axis is
  * inverted (0 at the top). Shared by the planning page and the map inspector.
  */
-export function Hydrograph({ wellId, name, dark = false }: HydrographProps) {
+export function Hydrograph({ wellId, name, status, continuous, dark = false }: HydrographProps) {
   const { data, isLoading, isError } = useWellSeries(wellId)
 
   if (isLoading) {
@@ -49,6 +70,31 @@ export function Hydrograph({ wellId, name, dark = false }: HydrographProps) {
   const axis = dark ? "#9ca3af" : "#6b7280"
   const line = dark ? "#38bdf8" : "#0369a1"
 
+  // Continuous datastreams (loggers) draw as a connected line; discrete
+  // manual readings draw as an unconnected scatter. When the caller doesn't
+  // state it, infer from density: a logger averages several readings per
+  // distinct day, a manual record roughly one.
+  const distinctDays = new Set(points.map((p) => p.t.slice(0, 10))).size
+  const isContinuous = continuous ?? (distinctDays > 0 && points.length / distinctDays >= 2)
+  const seriesData = points.map((p) => [p.t, p.v])
+  const series = isContinuous
+    ? {
+        type: "line",
+        showSymbol: false,
+        smooth: false,
+        lineStyle: { width: 1.25, color: line },
+        itemStyle: { color: line },
+        data: seriesData,
+        name: name ?? wellId,
+      }
+    : {
+        type: "scatter",
+        symbolSize: 5,
+        itemStyle: { color: line },
+        data: seriesData,
+        name: name ?? wellId,
+      }
+
   const option = {
     animation: false,
     grid: { left: 64, right: 16, top: 16, bottom: 56 },
@@ -71,22 +117,24 @@ export function Hydrograph({ wellId, name, dark = false }: HydrographProps) {
       },
     },
     dataZoom: [{ type: "inside" }, { type: "slider", height: 20, bottom: 8 }],
-    series: [
-      {
-        type: "line",
-        showSymbol: false,
-        smooth: false,
-        lineStyle: { width: 1.25, color: line },
-        itemStyle: { color: line },
-        data: points.map((p) => [p.t, p.v]),
-        name: name ?? wellId,
-      },
-    ],
+    series: [series],
   }
 
   return (
     <div data-testid="hydrograph">
-      <dl className="mb-2 grid grid-cols-4 gap-2 rounded-md border bg-muted/30 p-2 text-center">
+      <div className="mb-2 rounded-md border bg-muted/30 p-2">
+        {status && (
+          <div className="mb-2 flex justify-center">
+            <span
+              data-testid="hydrograph-status"
+              className="rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
+              style={{ backgroundColor: statusColor(status) }}
+            >
+              {status}
+            </span>
+          </div>
+        )}
+        <dl className="grid grid-cols-4 gap-2 text-center">
         {[
           { k: "Latest", v: `${fmtNum(latest)} ${units}` },
           { k: "Shallowest", v: fmtNum(min) },
@@ -100,7 +148,8 @@ export function Hydrograph({ wellId, name, dark = false }: HydrographProps) {
             <dd className="text-sm font-semibold tabular-nums">{s.v}</dd>
           </div>
         ))}
-      </dl>
+        </dl>
+      </div>
       <p className="mb-1 text-[11px] text-muted-foreground">
         Period of record: {fmtDate(points[0].t)} – {fmtDate(points[points.length - 1].t)}
       </p>

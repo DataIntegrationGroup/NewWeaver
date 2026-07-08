@@ -27,7 +27,7 @@ import {
 
 import type { LayerConfig } from "@/catalog/layers"
 import type { FeatureFilters } from "@/lib/filterFeatures"
-import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
+import { selectFields, fieldLabel, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import {
   staLayerKey,
   featuresLayerKey,
@@ -123,6 +123,8 @@ interface MapViewProps {
   rangeById?: Record<string, [number, number]>
   /** Layer id → minimum-records threshold over the layer's minRecordsField. */
   minRecordsById?: Record<string, number>
+  /** Layer id → recency window (years, 0 = All) over the layer's recencyField. */
+  recencyById?: Record<string, number>
   /** Layer id → color override hex string. */
   colorById?: Record<string, string>
   /** Ids of enabled layers hidden from the map via their chip (still listed). */
@@ -170,6 +172,7 @@ export function MapView({
   classifyById,
   rangeById,
   minRecordsById,
+  recencyById,
   colorById,
   hiddenLayerIds,
   onLayerCount,
@@ -514,6 +517,7 @@ export function MapView({
             classify={classifyById?.[layer.id]}
             range={rangeById?.[layer.id]}
             minRecords={minRecordsById?.[layer.id]}
+            recency={recencyById?.[layer.id]}
             colorOverride={colorById?.[layer.id]}
             shapes={drawnShapes}
             visible={!hiddenLayerIds?.includes(layer.id)}
@@ -581,7 +585,7 @@ export function MapView({
                       {shown.map((k) => (
                         <Fragment key={k}>
                           <dt className="whitespace-nowrap border-b border-border/40 py-1 pr-4 align-top font-medium text-muted-foreground">
-                            {k}
+                            {fieldLabel(k, hoverInfo.properties)}
                           </dt>
                           <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top tabular-nums">
                             <FieldValue

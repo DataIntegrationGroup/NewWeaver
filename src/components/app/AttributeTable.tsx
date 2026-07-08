@@ -22,7 +22,7 @@ import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer, Attri
 import { useFeaturesLayer, useStaLayer, useArcGisLayer, useWfsLayer } from "@/hooks/useLayerData"
 import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from "@/lib/filterFeatures"
 import { pointInAnyShape } from "@/lib/geo"
-import { selectFields, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
+import { selectFields, fieldLabel, WELL_DEPTH_UNITS_KEY, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FieldValue } from "@/components/ui/field-value"
 import {
@@ -130,10 +130,16 @@ function TableView({
     for (const f of rows.slice(0, 50)) {
       Object.keys(f.properties ?? {}).forEach((k) => keys.add(k))
     }
+    // A column header is layer-wide, so read the well-depth unit from the first
+    // row that carries it (units are uniform across a layer) to label the
+    // `well_depth` column as `well_depth (ft)`.
+    const labelProps =
+      (rows.find((f) => (f.properties as Record<string, unknown>)?.[WELL_DEPTH_UNITS_KEY] != null)
+        ?.properties as Record<string, unknown>) ?? {}
     return selectFields([...keys], fields).map((key) => ({
       id: key,
       accessorFn: (f: Feature) => f.properties?.[key],
-      header: key,
+      header: fieldLabel(key, labelProps),
       cell: (ctx) => <FieldValue value={format(key, ctx.getValue())} />,
     }))
   }, [rows, fields, format])
