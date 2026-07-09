@@ -243,6 +243,35 @@ export function useWfsLayer(layer: WfsLayer) {
   })
 }
 
+/**
+ * One feature from an OGC API Features collection, matched by its location
+ * `id` (the per-well key every DIE water-level product shares). Fetched with a
+ * CQL `filter=id=<wellId>` so the server returns just that row instead of the
+ * whole collection — cheap enough to fan out across several products in the
+ * inspector. Returns null when no row matches.
+ */
+export function useProductFeature(
+  collectionId: string,
+  wellId: string | undefined,
+  baseUrl?: string
+) {
+  return useQuery({
+    queryKey: ["features-item", baseUrl ?? "default", collectionId, wellId],
+    enabled: !!wellId,
+    queryFn: async () => {
+      // Quote the CQL literal — ids are often non-numeric (e.g.
+      // "USGS-343753106430601"), which errors unquoted; GeoServer coerces
+      // numeric ids from the quoted form fine. Double any embedded quote.
+      const literal = String(wellId).replace(/'/g, "''")
+      const fc = await featuresClient(baseUrl).getItems(collectionId, {
+        filter: `id='${literal}'`,
+        limit: 1,
+      })
+      return fc.features[0] ?? null
+    },
+  })
+}
+
 /** Datastreams available at an STA monitoring location. */
 export function useDatastreams(
   locationId: string | undefined,

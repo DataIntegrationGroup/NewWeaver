@@ -21,6 +21,7 @@ import {
   useArcGisLayer,
   useWfsLayer,
   useStaThings,
+  useProductFeature,
 } from "@/hooks/useLayerData"
 import {
   Tooltip,
@@ -28,7 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { selectFields, fieldLabel, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
+import { selectFields, fieldLabel, roundedFieldValue, fixed2, type FieldDisplay } from "@/lib/fields"
 import { DatastreamChart } from "./DatastreamChart"
 import { Hydrograph } from "./Hydrograph"
 import { ObservationTable } from "./ObservationTable"
@@ -318,6 +319,79 @@ function FeatureInspect({ layer, featureId, onClose, onZoomTo }: { layer: Featur
   return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
 }
 
+/**
+ * The other DIE water-level products, folded into the hydrograph inspector so a
+ * well shows its summary, trend, change, and depletion figures alongside the
+ * status data the hydrograph layer itself carries. Each is a separate OGC
+ * Features collection keyed by the same location `id`; a section is hidden when
+ * that product has no row for the well. `include` lists keep each section to
+ * that product's distinctive fields (site metadata like name/well_depth already
+ * shows in the status "Details" section above).
+ */
+const WATERLEVEL_PRODUCTS: {
+  collectionId: string
+  label: string
+  fields: FieldDisplay
+  format?: (key: string, value: unknown) => string
+}[] = [
+  {
+    collectionId: "die:nm_waterlevels_summary",
+    label: "Water-level summary",
+    fields: {
+      include: ["nrecords", "min", "max", "mean", "earliest_value", "earliest_date", "latest_value", "latest_date"],
+    },
+    format: (key, value) =>
+      (["min", "max", "mean", "earliest_value", "latest_value"].includes(key)
+        ? fixed2(value)
+        : undefined) ?? defaultFormat(key, value),
+  },
+  {
+    collectionId: "die:nm_waterlevel_trends",
+    label: "Groundwater trend",
+    fields: { include: ["trend_category", "slope_per_year", "span_years", "mk_p_value", "mk_tau"] },
+  },
+  {
+    collectionId: "die:nm_waterlevel_change",
+    label: "Water-level change",
+    fields: { include: ["direction", "change_ft", "window_years", "dtw_start", "dtw_end", "end_date", "status"] },
+  },
+  {
+    collectionId: "die:nm_depletion_projection",
+    label: "Depletion projection",
+    fields: {
+      include: ["status", "trend_category", "slope_ft_per_year", "latest_dtw", "latest_dtw_date", "remaining_ft", "years_to_depletion", "projected_depletion_year"],
+    },
+    format: (key, value) =>
+      (["slope_ft_per_year", "remaining_ft", "years_to_depletion"].includes(key)
+        ? fixed2(value)
+        : undefined) ?? defaultFormat(key, value),
+  },
+]
+
+/** One folded-in water-level product for a well. Fetches just that product's
+ *  row by location id; renders nothing while loading or when the well is absent
+ *  from the product. */
+function ProductSection({
+  collectionId,
+  label,
+  fields,
+  format,
+  wellId,
+  baseUrl,
+}: (typeof WATERLEVEL_PRODUCTS)[number] & { wellId: string; baseUrl?: string }) {
+  const { data: feature } = useProductFeature(collectionId, wellId, baseUrl)
+  if (!feature) return null
+  const props = (feature.properties ?? {}) as Record<string, unknown>
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <AttributeList properties={props} fields={fields} format={format} />
+    </div>
+  )
+}
+
 /** Feature-layer inspector that leads with the well's water-level hydrograph
  *  (depth to water over time), then its site metadata. Used for layers flagged
  *  `hydrograph` (e.g. die:nm_waterlevel_status), whose feature `id` keys the
@@ -362,6 +436,16 @@ function HydrographInspect({ layer, featureId, onClose, onZoomTo }: { layer: Fea
             </p>
             <AttributeList properties={props} fields={layer.fields} format={layer.formatValue} />
           </div>
+          {/* Fold in the other DIE water-level products for this well. */}
+          {wellId &&
+            WATERLEVEL_PRODUCTS.map((p) => (
+              <ProductSection
+                key={p.collectionId}
+                {...p}
+                wellId={wellId}
+                baseUrl={layer.featuresBaseUrl}
+              />
+            ))}
         </div>
       )}
     </PanelShell>

@@ -17,18 +17,26 @@ import { wfsClient } from "@/clients/wfsClient"
 import { pointInAnyShape } from "@/lib/geo"
 import { polygonsBbox } from "@/lib/regions"
 
+/**
+ * Workspace prefix for the integrated DIE products on GeoServer — shared by the
+ * WFS typeNames here and the OGC API Features collectionIds in
+ * catalog/layers.ts. (GeoServer briefly exposed a parallel `DIEDataProducts`
+ * workspace during a rename; `die` is the live one.)
+ */
+const WFS_WORKSPACE = "die"
+
 /** WFS typeNames of the integrated data products this page summarises. */
 export const PLANNING_TYPENAMES = {
-  status: "die:nm_waterlevel_status",
-  trends: "die:nm_waterlevel_trends",
-  depletion: "die:nm_depletion_projection",
-  recency: "die:nm_monitoring_recency",
-  amplitude: "die:nm_seasonal_amplitude",
-  mcl: "die:nm_mcl_exceedance",
+  status: `${WFS_WORKSPACE}:nm_waterlevel_status`,
+  trends: `${WFS_WORKSPACE}:nm_waterlevel_trends`,
+  depletion: `${WFS_WORKSPACE}:nm_depletion_projection`,
+  recency: `${WFS_WORKSPACE}:nm_monitoring_recency`,
+  amplitude: `${WFS_WORKSPACE}:nm_seasonal_amplitude`,
+  mcl: `${WFS_WORKSPACE}:nm_mcl_exceedance`,
 } as const
 
 /** Per-observation water-level series (one row per reading), keyed by well id. */
-export const TIMESERIES_TYPENAME = "die:nm_waterlevels_timeseries"
+export const TIMESERIES_TYPENAME = `${WFS_WORKSPACE}:nm_waterlevels_timeseries`
 
 export type PlanningDataset = keyof typeof PLANNING_TYPENAMES
 

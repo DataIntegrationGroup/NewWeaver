@@ -264,6 +264,7 @@ const hydrographLayer: FeaturesLayer = {
   collectionId: "die:nm_waterlevel_status",
   measurementType: "water_level",
   section: "Groundwater levels",
+  defaultVisible: true,
   hydrograph: true,
   // parameter_name is a constant ("waterlevels") and record_count duplicates
   // the finer observations count — noise in the inspector table.
@@ -660,22 +661,6 @@ const WFS_LAYERS: {
     mt: "water_quality",
   },
   {
-    typeName: "die:nm_waterlevels_summary",
-    title: "Water Levels Summary",
-    description:
-      "Per-location water-level summary for New Mexico.",
-    color: "#1d4ed8",
-    mt: "water_level",
-    // Shares GeoServer's generic min/max/mean/latest_value summary schema
-    // with the TDS/arsenic layers above, so these can't be rounded by field
-    // name alone (lib/fields.ts's roundedFieldValue) without also rounding
-    // water-quality concentrations — round explicitly here instead.
-    formatValue: (key, value) =>
-      (["min", "max", "mean", "earliest_value", "latest_value"].includes(key)
-        ? fixed2(value)
-        : undefined) ?? String(value ?? ""),
-  },
-  {
     typeName: "die:nm_tds_summary",
     title: "TDS Summary",
     description:
@@ -988,68 +973,6 @@ const WFS_LAYERS: {
           "match",
           ["get", "status"],
           "ok", "#0d9488",
-          /* default */ "#9ca3af",
-        ],
-      },
-    },
-  },
-  {
-    typeName: "die:nm_waterlevel_status",
-    title: "Water Level Status",
-    description:
-      "Per-location current water-level status for New Mexico — percentile rank relative to the period of record.",
-    color: "#ca8a04",
-    mt: "water_level",
-    fields: {
-      include: [
-        "name",
-        "source",
-        "status",
-        "latest_dtw",
-        "latest_dtw_date",
-        "dtw_percentile",
-        "median_dtw",
-        "min_dtw",
-        "max_dtw",
-        "span_years",
-        "record_count",
-        "well_depth",
-      ],
-    },
-    facet: {
-      field: "status",
-      label: "Status",
-      options: [
-        { value: "much below normal", label: "Much below normal" },
-        { value: "below normal", label: "Below normal" },
-        { value: "normal", label: "Normal" },
-        { value: "above normal", label: "Above normal" },
-        { value: "much above normal", label: "Much above normal" },
-        { value: "insufficient", label: "Insufficient data" },
-      ],
-    },
-    legend: [
-      { label: "Much below normal", color: "#b91c1c" },
-      { label: "Below normal", color: "#f97316" },
-      { label: "Normal", color: "#16a34a" },
-      { label: "Above normal", color: "#38bdf8" },
-      { label: "Much above normal", color: "#1e40af" },
-      { label: "Insufficient data", color: "#9ca3af" },
-    ],
-    style: {
-      type: "circle",
-      paint: {
-        "circle-radius": 3.75,
-        "circle-stroke-width": 1,
-        "circle-stroke-color": SCATTER_STROKE,
-        "circle-color": [
-          "match",
-          ["get", "status"],
-          "much below normal", "#b91c1c",
-          "below normal",      "#f97316",
-          "normal",            "#16a34a",
-          "above normal",      "#38bdf8",
-          "much above normal", "#1e40af",
           /* default */ "#9ca3af",
         ],
       },
