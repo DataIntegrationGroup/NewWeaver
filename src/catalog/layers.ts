@@ -1212,23 +1212,34 @@ function densityFill(color: string): LayerStyle {
 
 // Choropleth ramp for the recent-POD-by-county layer: shade each county by its
 // count of recent Points of Diversion (well completions). Same single-editable-
-// base-color + opacity-ramp scheme as densityFill, but keyed on
-// `total_recent_pods`. RAMP_MAX is a placeholder — the source collection is
-// near-empty at time of wiring (max count ~1 statewide), so tune this once the
-// per-county counts are populated.
-const POD_AGE_RAMP_MAX = 25
+// base-color + opacity-ramp scheme as densityFill (the swatch overrides
+// fill-color, so the ramp must stay single-hue), but keyed on an integer count.
+//
+// Uses a `step` (class-break) ramp rather than a linear one: POD counts are
+// heavily right-skewed, so a linear ramp to the max washes out nearly every
+// county. Fixed breaks make a single completion already visible and saturate
+// the high tail, and are robust to the unknown eventual max (the source is
+// near-empty at wiring time). Break opacities climb 0.15 → 0.9; zero stays
+// near-transparent so empty counties read as "no data", not "lowest class".
+const COUNT_BREAKS: [number, number][] = [
+  [1, 0.15],
+  [3, 0.3],
+  [10, 0.45],
+  [25, 0.6],
+  [50, 0.75],
+  [100, 0.9],
+]
 
-function countFill(color: string, field: string, rampMax: number): LayerStyle {
+function countFill(color: string, field: string): LayerStyle {
   return {
     type: "fill",
     paint: {
       "fill-color": color,
       "fill-opacity": [
-        "interpolate",
-        ["linear"],
+        "step",
         ["coalesce", ["to-number", ["get", field]], 0],
-        0, 0.05,
-        rampMax, 0.8,
+        0.04,
+        ...COUNT_BREAKS.flat(),
       ],
       "fill-outline-color": "rgba(31,41,55,0.45)",
     },
@@ -1282,7 +1293,7 @@ const densityLayers: FeaturesLayer[] = [
     collectionId: "die:nm_pod_age_by_county",
     measurementType: "wells",
     section: DENSITY_SECTION,
-    style: countFill("#0f766e", "total_recent_pods", POD_AGE_RAMP_MAX),
+    style: countFill("#0f766e", "total_recent_pods"),
   },
   {
     id: "pod-age-points",
