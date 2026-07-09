@@ -305,10 +305,11 @@ const OCOTILLO_COLLECTIONS: {
   mt?: MeasurementType
 }[] = [
   { id: "locations", title: "Locations", color: "#2563eb", description: "All monitoring locations.", mt: "wells" },
-  // Statewide well coverage — default-on so the first map paint shows data
-  // across New Mexico, not one clustered network (SPEC §V.V5). Map-context
-  // only: it must not hijack the table's default subject (SPEC §V.V12).
-  { id: "actively_monitored_wells", title: "Actively Monitored Wells", color: "#1d4ed8", defaultVisible: true, excludeFromAutoTable: true, mt: "wells" },
+  // Statewide well coverage — user toggles it on. The hydrograph layer is the
+  // sole default and itself seeds the first paint with statewide data (SPEC
+  // §V.V5). Map-context only: it must not hijack the table's default subject
+  // (SPEC §V.V12).
+  { id: "actively_monitored_wells", title: "Actively Monitored Wells", color: "#1d4ed8", excludeFromAutoTable: true, mt: "wells" },
   { id: "water_wells", title: "Water Wells", color: "#0ea5e9", mt: "wells" },
   { id: "water_well_summary", title: "Water Well Summary", color: "#0891b2", mt: "wells" },
   { id: "latest_depth_to_water_wells", title: "Latest Depth to Water (Wells)", color: "#0e7490", mt: "water_level" },
