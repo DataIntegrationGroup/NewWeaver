@@ -31,6 +31,7 @@ import {
 import { selectFields, fieldLabel, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { DatastreamChart } from "./DatastreamChart"
 import { Hydrograph } from "./Hydrograph"
+import { ObservationTable } from "./ObservationTable"
 import { FieldValue } from "@/components/ui/field-value"
 
 interface InspectPanelProps {
@@ -345,7 +346,10 @@ function HydrographInspect({ layer, featureId, onClose, onZoomTo }: { layer: Fea
               Hydrograph
             </p>
             {wellId ? (
-              <Hydrograph wellId={wellId} name={name} status={props.status as string | undefined} />
+              <>
+                <Hydrograph wellId={wellId} name={name} status={props.status as string | undefined} />
+                <ObservationTable wellId={wellId} name={name} />
+              </>
             ) : (
               <p className="text-sm text-muted-foreground">
                 No well id on this feature — cannot load a hydrograph.
