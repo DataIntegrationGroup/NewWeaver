@@ -22,14 +22,27 @@ export interface FieldDisplay {
 export const WELL_DEPTH_KEY = "well_depth"
 export const WELL_DEPTH_UNITS_KEY = "well_depth_units"
 
+/** Property key carrying the depth-to-water unit string (e.g. "ft"). Like
+ *  `well_depth_units`, it's never its own field — it's folded into every
+ *  depth-to-water field's label (e.g. `min_dtw (ft)`), see `fieldLabel`. */
+export const DTW_UNITS_KEY = "dtw_units"
+
+/** True for a depth-to-water *measurement* field (feet), which carries the
+ *  `dtw_units` label suffix. Excludes the unit key itself, the percentile
+ *  (`dtw_percentile`, a rank not a depth), and date fields (`*_dtw_date`). */
+function isDtwDepthField(key: string): boolean {
+  return /dtw/i.test(key) && key !== DTW_UNITS_KEY && key !== "dtw_percentile" && !/_date$/i.test(key)
+}
+
 /**
  * Resolve the visible, ordered field keys for a feature given a layer's
  * `FieldDisplay`. `keys` is the feature's property keys in natural order.
- * `well_depth_units` is always dropped — it's merged into the `well_depth`
- * label rather than shown as its own row/column.
+ * `well_depth_units` and `dtw_units` are always dropped — each is merged into
+ * its measurement's label (`well_depth (ft)`, `min_dtw (ft)`) rather than shown
+ * as its own row/column.
  */
 export function selectFields(keys: string[], fields?: FieldDisplay): string[] {
-  const shown = keys.filter((k) => k !== WELL_DEPTH_UNITS_KEY)
+  const shown = keys.filter((k) => k !== WELL_DEPTH_UNITS_KEY && k !== DTW_UNITS_KEY)
   if (!fields) return shown
   let out = shown
   if (fields.include) {
@@ -49,17 +62,23 @@ const FIELD_LABEL_OVERRIDES: Record<string, string> = {
 }
 
 /**
- * Display label for a property key. `well_depth` folds its companion
- * `well_depth_units` into the label — `well_depth (ft)` — so the value renders
- * as a bare number (e.g. `140`). Keys in `FIELD_LABEL_OVERRIDES` get a
- * friendlier name; every other key renders as-is.
+ * Display label for a property key. `well_depth` / depth-to-water fields fold
+ * their companion unit into the label — `well depth (ft)`, `min depth to water
+ * (ft)` — so the value renders as a bare number. Keys in `FIELD_LABEL_OVERRIDES`
+ * get a friendlier name; every other key renders humanized: underscores become
+ * spaces and the `dtw` abbreviation expands to `depth to water` (labels display
+ * uppercased by the UI).
  */
 export function fieldLabel(key: string, props: Record<string, unknown>): string {
+  let label = FIELD_LABEL_OVERRIDES[key] ?? key
   if (key === WELL_DEPTH_KEY) {
     const unit = props[WELL_DEPTH_UNITS_KEY]
-    if (unit != null && String(unit).trim() !== "") return `${WELL_DEPTH_KEY} (${String(unit).trim()})`
+    if (unit != null && String(unit).trim() !== "") label = `${WELL_DEPTH_KEY} (${String(unit).trim()})`
+  } else if (isDtwDepthField(key)) {
+    const unit = props[DTW_UNITS_KEY]
+    if (unit != null && String(unit).trim() !== "") label = `${key} (${String(unit).trim()})`
   }
-  return FIELD_LABEL_OVERRIDES[key] ?? key
+  return label.replace(/_/g, " ").replace(/\bdtw\b/gi, "depth to water")
 }
 
 /** Format a finite number to exactly 2 decimal places (e.g. `2` → `"2.00"`);

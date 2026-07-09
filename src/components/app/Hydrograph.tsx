@@ -2,6 +2,7 @@ import ReactECharts from "echarts-for-react"
 
 import { useWellSeries } from "@/hooks/usePlanning"
 import { Skeleton } from "@/components/ui/skeleton"
+import { StatusChip } from "@/components/ui/metadata-chips"
 
 interface HydrographProps {
   /** Well id — keys the die:nm_waterlevels_timeseries fetch. */
@@ -24,19 +25,6 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 
 const fmtNum = (n: number) => n.toFixed(2)
-
-/** Water-level percentile class → chip color. Depth-to-water below normal means
- *  a low water table (dry, warm colors); above normal means a high one (wet,
- *  cool colors). Checks the compound classes ("much …") before their bare form. */
-function statusColor(status: string): string {
-  const s = status.toLowerCase()
-  if (s.includes("much below")) return "#b91c1c"
-  if (s.includes("below")) return "#f59e0b"
-  if (s.includes("much above")) return "#1d4ed8"
-  if (s.includes("above")) return "#60a5fa"
-  if (s.includes("normal")) return "#16a34a"
-  return "#6b7280"
-}
 
 /**
  * One well's water-level hydrograph: depth to water over time, fetched live on
@@ -124,21 +112,15 @@ export function Hydrograph({ wellId, name, status, continuous, dark = false }: H
     <div data-testid="hydrograph">
       <div className="mb-2 rounded-md border bg-muted/30 p-2">
         {status && (
-          <div className="mb-2 flex justify-center">
-            <span
-              data-testid="hydrograph-status"
-              className="rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white"
-              style={{ backgroundColor: statusColor(status) }}
-            >
-              {status}
-            </span>
+          <div data-testid="hydrograph-status" className="mb-2 flex justify-center">
+            <StatusChip value={status} />
           </div>
         )}
         <dl className="grid grid-cols-4 gap-2 text-center">
         {[
           { k: "Latest", v: `${fmtNum(latest)} ${units}` },
-          { k: "Shallowest", v: fmtNum(min) },
-          { k: "Deepest", v: fmtNum(max) },
+          { k: "Shallowest", v: `${fmtNum(min)} ${units}` },
+          { k: "Deepest", v: `${fmtNum(max)} ${units}` },
           { k: "Readings", v: values.length.toLocaleString() },
         ].map((s) => (
           <div key={s.k}>

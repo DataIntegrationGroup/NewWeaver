@@ -140,7 +140,7 @@ function TableView({
       id: key,
       accessorFn: (f: Feature) => f.properties?.[key],
       header: fieldLabel(key, labelProps),
-      cell: (ctx) => <FieldValue value={format(key, ctx.getValue())} />,
+      cell: (ctx) => <FieldValue field={key} value={format(key, ctx.getValue())} />,
     }))
   }, [rows, fields, format])
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import { Check, Copy, Crosshair, X } from "lucide-react"
+import { Check, Copy, Crosshair, Info, X } from "lucide-react"
 import type { Feature, Position } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
@@ -216,12 +216,207 @@ function AttributeList({
         <div key={k} className="group/row grid grid-cols-[40%_60%] gap-3 border-b py-1">
           <dt className="min-w-0 break-words font-medium text-muted-foreground">{fieldLabel(k, properties)}</dt>
           <dd className="flex min-w-0 items-start gap-1.5 break-words">
-            <span className="min-w-0 break-words"><FieldValue value={format(k, properties[k])} /></span>
+            <span className="min-w-0 break-words"><FieldValue field={k} value={format(k, properties[k])} /></span>
             <CopyButton value={format(k, properties[k])} />
           </dd>
         </div>
       ))}
     </dl>
+  )
+}
+
+/** Fields that render as a chip (status pill / trend arrow) rather than a number
+ *  — promoted to a lead row above the metric grid so a section leads with its
+ *  headline classification. Kept in sync with the dispatch in FieldValue. */
+const CHIP_FIELDS = new Set(["status", "trend_category", "direction"])
+
+/** Plain-language help for fields whose name/value is opaque. When a metric
+ *  tile's key is here, an info popover explains what the number means. */
+const FIELD_HELP: Record<string, { title: string; body: string }> = {
+  mk_p_value: {
+    title: "Mann-Kendall p-value",
+    body:
+      "The probability that a trend this strong could appear by chance if the water level were actually flat. Smaller is stronger evidence of a real trend — values below 0.05 are conventionally called statistically significant.",
+  },
+  mk_tau: {
+    title: "Kendall's tau",
+    body:
+      "A rank correlation from −1 to +1 measuring how consistently the depth to water moves in one direction over time. Near +1 means it rises almost every step, near −1 falls almost every step, and near 0 means no consistent trend. It reports direction and consistency, not the rate of change.",
+  },
+  remaining_ft: {
+    title: "Remaining feet",
+    body:
+      "Feet of water still standing above the bottom of the well — its total depth minus the current depth to water. This is the buffer left before the well runs dry.",
+  },
+  years_to_depletion: {
+    title: "Years to depletion",
+    body:
+      "Estimated years until the remaining water is gone, if the current rate of decline holds: the remaining feet divided by the yearly drop in water level.",
+  },
+  projected_depletion_year: {
+    title: "Projected depletion year",
+    body:
+      "The calendar year the water level is projected to reach the bottom of the well if the current decline continues — the latest reading's year plus the years to depletion.",
+  },
+}
+
+/** Product-specific help for `status` values, keyed by the (lowercased) value.
+ *  Only the depletion / change status words are covered; percentile classes
+ *  ("much below normal") intentionally get no popover. */
+const STATUS_HELP: Record<string, { title: string; body: string }> = {
+  projected: {
+    title: "Status: projected",
+    body:
+      "A depletion date could be estimated for this well — it has a recorded depth and a measurable declining trend. The projected year and years-to-depletion appear in this section.",
+  },
+  "no well depth": {
+    title: "Status: no well depth",
+    body:
+      "The well's total depth isn't recorded, so there's nothing to project depletion against — no depletion date can be computed.",
+  },
+  "not enough data": {
+    title: "Status: not enough data",
+    body:
+      "Too few readings, or too short a record, to establish a reliable trend — so no depletion date is projected.",
+  },
+  insufficient: {
+    title: "Status: insufficient",
+    body: "Not enough data to compute a result for this product.",
+  },
+}
+
+/** Resolve help for a field, falling back to value-specific help for `status`. */
+function fieldHelp(field: string, value: string): { title: string; body: string } | undefined {
+  if (FIELD_HELP[field]) return FIELD_HELP[field]
+  if (field === "status") return STATUS_HELP[value.trim().toLowerCase()]
+  return undefined
+}
+
+/** Small info marker that reveals a field/value explanation on hover (see
+ *  FIELD_HELP / STATUS_HELP). Opens on mouse enter, closes on mouse leave.
+ *  Renders nothing when there's no help. */
+function FieldInfo({ field, value }: { field: string; value: string }) {
+  const help = fieldHelp(field, value)
+  if (!help) return null
+  return (
+    <TooltipProvider delayDuration={120}>
+      <Tooltip>
+        <TooltipTrigger
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`What is ${help.title}?`}
+          className="shrink-0 text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none"
+        >
+          <Info className="size-3" />
+        </TooltipTrigger>
+        <TooltipContent
+          side="top"
+          align="start"
+          className="max-w-64 flex-col items-start gap-1 whitespace-normal text-left normal-case tracking-normal"
+        >
+          <p className="text-xs font-semibold">{help.title}</p>
+          <p className="text-xs font-normal leading-snug opacity-90">{help.body}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
+/** The selected field keys that actually have a value to show — empty-valued
+ *  fields are dropped so the redesigned sections never render blank tiles.
+ *  Shared so a caller can decide whether a whole section is worth rendering. */
+function visibleKeys(
+  properties: Record<string, unknown>,
+  fields: FieldDisplay | undefined,
+  format: (key: string, value: unknown) => string
+): string[] {
+  return selectFields(Object.keys(properties), fields).filter(
+    (k) => format(k, properties[k]).trim() !== ""
+  )
+}
+
+/**
+ * Modern replacement for the two-column attribute table used in the hydrograph
+ * inspector: a section leads with its chip-valued fields (status, trend,
+ * direction) as a wrap of chips, then lays the remaining numbers/dates out as a
+ * grid of compact stat tiles (label above value). Empty-valued fields are
+ * dropped entirely rather than shown as blank rows. Returns null when the
+ * section has nothing to show.
+ */
+function MetricGrid({
+  properties,
+  fields,
+  format = defaultFormat,
+}: {
+  properties: Record<string, unknown>
+  fields?: FieldDisplay
+  format?: (key: string, value: unknown) => string
+}) {
+  const nonEmpty = visibleKeys(properties, fields, format)
+  const chipKeys = nonEmpty.filter((k) => CHIP_FIELDS.has(k))
+  const metricKeys = nonEmpty.filter((k) => !CHIP_FIELDS.has(k))
+  if (nonEmpty.length === 0) return null
+
+  return (
+    <div className="space-y-2.5">
+      {chipKeys.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {chipKeys.map((k) => {
+            const val = format(k, properties[k])
+            return (
+              <span key={k} className="inline-flex items-center gap-1">
+                <FieldValue field={k} value={val} />
+                <FieldInfo field={k} value={val} />
+              </span>
+            )
+          })}
+        </div>
+      )}
+      {metricKeys.length > 0 && (
+        <dl data-testid="metric-grid" className="grid grid-cols-2 gap-2">
+          {metricKeys.map((k) => {
+            const val = format(k, properties[k])
+            return (
+              <div key={k} className="group/row min-w-0 rounded-md bg-muted/40 px-2.5 py-2">
+                <dt className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <span className="truncate">{fieldLabel(k, properties)}</span>
+                  <FieldInfo field={k} value={val} />
+                </dt>
+                <dd className="mt-0.5 flex items-start gap-1.5 break-words text-sm font-semibold tabular-nums">
+                  <span className="min-w-0 break-words">
+                    <FieldValue field={k} value={val} />
+                  </span>
+                  <CopyButton value={val} />
+                </dd>
+              </div>
+            )
+          })}
+        </dl>
+      )}
+    </div>
+  )
+}
+
+/** A titled, bordered card grouping one section's metrics — the modern unit of
+ *  the hydrograph inspector. Callers gate on `visibleKeys` so an empty section
+ *  is skipped before this renders. */
+function SectionCard({
+  title,
+  children,
+  className,
+}: {
+  title: string
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <section className={cn("overflow-hidden rounded-lg border bg-card", className)}>
+      <header className="border-b bg-muted/30 px-3 py-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </h3>
+      </header>
+      <div className="p-3">{children}</div>
+    </section>
   )
 }
 
@@ -382,13 +577,12 @@ function ProductSection({
   const { data: feature } = useProductFeature(collectionId, wellId, baseUrl)
   if (!feature) return null
   const props = (feature.properties ?? {}) as Record<string, unknown>
+  // Skip the section entirely when this product has no populated field.
+  if (visibleKeys(props, fields, format ?? defaultFormat).length === 0) return null
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <AttributeList properties={props} fields={fields} format={format} />
-    </div>
+    <SectionCard title={label}>
+      <MetricGrid properties={props} fields={fields} format={format} />
+    </SectionCard>
   )
 }
 
@@ -415,27 +609,21 @@ function HydrographInspect({ layer, featureId, onClose, onZoomTo }: { layer: Fea
       ) : (
         <div className="space-y-4">
           <PlainLead layer={layer} />
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Hydrograph
-            </p>
+          <SectionCard title="Hydrograph">
             {wellId ? (
-              <>
+              <div className="space-y-2">
                 <Hydrograph wellId={wellId} name={name} status={props.status as string | undefined} />
                 <ObservationTable wellId={wellId} name={name} />
-              </>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">
                 No well id on this feature — cannot load a hydrograph.
               </p>
             )}
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Details
-            </p>
-            <AttributeList properties={props} fields={layer.fields} format={layer.formatValue} />
-          </div>
+          </SectionCard>
+          <SectionCard title="Details">
+            <MetricGrid properties={props} fields={layer.fields} format={layer.formatValue} />
+          </SectionCard>
           {/* Fold in the other DIE water-level products for this well. */}
           {wellId &&
             WATERLEVEL_PRODUCTS.map((p) => (

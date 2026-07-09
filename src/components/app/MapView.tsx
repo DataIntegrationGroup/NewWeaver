@@ -589,6 +589,7 @@ export function MapView({
                           </dt>
                           <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top tabular-nums">
                             <FieldValue
+                              field={k}
                               value={(hoverInfo.format ?? defaultFormat)(k, hoverInfo.properties[k])}
                             />
                           </dd>
