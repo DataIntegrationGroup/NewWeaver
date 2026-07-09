@@ -1190,7 +1190,7 @@ const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
 // editable while the density gradient is preserved. The ramp saturates near
 // 0.5 wells/km² (both layers are right-skewed, so a linear ramp to the max
 // would wash out nearly every region).
-const DENSITY_SECTION = "Well density"
+const DENSITY_SECTION = "Well Metadata"
 const DENSITY_RAMP_MAX = 0.5
 
 function densityFill(color: string): LayerStyle {
@@ -1204,6 +1204,31 @@ function densityFill(color: string): LayerStyle {
         ["coalesce", ["to-number", ["get", "wells_per_sq_km"]], 0],
         0, 0.05,
         DENSITY_RAMP_MAX, 0.8,
+      ],
+      "fill-outline-color": "rgba(31,41,55,0.45)",
+    },
+  }
+}
+
+// Choropleth ramp for the recent-POD-by-county layer: shade each county by its
+// count of recent Points of Diversion (well completions). Same single-editable-
+// base-color + opacity-ramp scheme as densityFill, but keyed on
+// `total_recent_pods`. RAMP_MAX is a placeholder — the source collection is
+// near-empty at time of wiring (max count ~1 statewide), so tune this once the
+// per-county counts are populated.
+const POD_AGE_RAMP_MAX = 25
+
+function countFill(color: string, field: string, rampMax: number): LayerStyle {
+  return {
+    type: "fill",
+    paint: {
+      "fill-color": color,
+      "fill-opacity": [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["to-number", ["get", field]], 0],
+        0, 0.05,
+        rampMax, 0.8,
       ],
       "fill-outline-color": "rgba(31,41,55,0.45)",
     },
@@ -1234,6 +1259,42 @@ const densityLayers: FeaturesLayer[] = [
     measurementType: "wells",
     section: DENSITY_SECTION,
     style: densityFill("#1d4ed8"),
+  },
+  {
+    id: "wells-correlation",
+    title: "Cross-Agency Well Correlation",
+    description:
+      "Wells matched across agencies (NMBGMR, OSE, and others) into correlation clusters — click a well for its linked sites, matching method, and confidence.",
+    source: "features",
+    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+    collectionId: "die:nm_well_correlation",
+    measurementType: "wells",
+    section: DENSITY_SECTION,
+    style: staPoint("#7c3aed"),
+  },
+  {
+    id: "pod-age-by-county",
+    title: "Recent Well (POD) Age by County",
+    description:
+      "Distribution of recent Points of Diversion (well completions) by county over the last decade — click a county for its per-year counts, trend, and peak year.",
+    source: "features",
+    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+    collectionId: "die:nm_pod_age_by_county",
+    measurementType: "wells",
+    section: DENSITY_SECTION,
+    style: countFill("#0f766e", "total_recent_pods", POD_AGE_RAMP_MAX),
+  },
+  {
+    id: "pod-age-points",
+    title: "Recent Wells (PODs) — Last 10 Years",
+    description:
+      "Individual well completions (Points of Diversion) from the last ten years — click a well for its completion year, aquifer, and depth.",
+    source: "features",
+    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+    collectionId: "die:nm_pod_age_points",
+    measurementType: "wells",
+    section: DENSITY_SECTION,
+    style: staPoint("#0891b2"),
   },
 ]
 
@@ -1308,9 +1369,22 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
     "Per-location groundwater-level summary products — levels, trends, seasonal amplitude, and depletion projections.",
   "Groundwater Chemistry":
     "Per-location groundwater-chemistry summary products — arsenic, TDS, major-ion chemistry, water type, SAR, water quality index, and drinking-water exceedances.",
-  "Well density":
-    "Choropleth polygons shading each region by well density (wells per km²), by groundwater basin and by county. Edit a layer's color from its swatch.",
+  "Well Metadata":
+    "Well-level reference datasets — density choropleths (wells per km² by basin and county), cross-agency well correlation, and recent Point-of-Diversion age distributions. Edit a layer's color from its swatch.",
 }
+
+/**
+ * Sections folded under the collapsible "Advanced" super-group at the end of the
+ * layer list, in display order. Rendered as nested accordions by LayerList;
+ * everything not listed here stays a top-level group.
+ */
+export const ADVANCED_SECTION = "Advanced"
+export const ADVANCED_SECTIONS = [
+  "Monitoring networks",
+  "NMBGMR GIS",
+  "OSE GIS",
+  "NWIS",
+]
 
 export function getLayer(id: string): LayerConfig | undefined {
   return LAYER_CATALOG.find((l) => l.id === id)

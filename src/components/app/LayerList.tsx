@@ -1,6 +1,8 @@
 import { useState } from "react"
 
 import {
+  ADVANCED_SECTION,
+  ADVANCED_SECTIONS,
   LAYER_CATALOG,
   SECTION_DESCRIPTIONS,
   type LayerConfig,
@@ -140,6 +142,18 @@ const SECTIONS: { section: string; options: LayerOption[] }[] = (() => {
   return [...groups].map(([section, options]) => ({ section, options }))
 })()
 
+type SectionGroup = { section: string; options: LayerOption[] }
+
+/** Top-level groups (everything not folded under "Advanced"), first-seen order. */
+const TOP_SECTIONS: SectionGroup[] = SECTIONS.filter(
+  (s) => !ADVANCED_SECTIONS.includes(s.section)
+)
+
+/** Groups nested inside the "Advanced" super-group, in ADVANCED_SECTIONS order. */
+const ADV_SECTIONS: SectionGroup[] = ADVANCED_SECTIONS.map(
+  (name) => SECTIONS.find((s) => s.section === name)
+).filter((s): s is SectionGroup => !!s)
+
 /** Groundwater levels + chemistry expanded; all others collapsed. */
 const DEFAULT_OPEN = ["Groundwater levels", "Groundwater Chemistry"]
 
@@ -155,23 +169,101 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
   const progressById = useLoadProgress()
   const [search, setSearch] = useState("")
   const [open, setOpen] = useState<string[]>(DEFAULT_OPEN)
+  const [advOpen, setAdvOpen] = useState<string[]>([])
 
   // Filter the catalog by title/description; while searching, every matching
   // section is forced open so results aren't hidden inside a collapsed group.
   const q = search.trim().toLowerCase()
-  const sections = q
-    ? SECTIONS.map((s) => ({
-        section: s.section,
-        options: s.options.filter(
-          (o) =>
-            o.title.toLowerCase().includes(q) ||
-            o.description?.toLowerCase().includes(q)
-        ),
-      })).filter((s) => s.options.length > 0)
-    : SECTIONS
-  const openValue = q ? sections.map((s) => s.section) : open
+  const filterSections = (arr: SectionGroup[]) =>
+    q
+      ? arr
+          .map((s) => ({
+            section: s.section,
+            options: s.options.filter(
+              (o) =>
+                o.title.toLowerCase().includes(q) ||
+                o.description?.toLowerCase().includes(q)
+            ),
+          }))
+          .filter((s) => s.options.length > 0)
+      : arr
+  const topSections = filterSections(TOP_SECTIONS)
+  const advSections = filterSections(ADV_SECTIONS)
+  const showAdvanced = advSections.length > 0
 
-  const allSections = SECTIONS.map((s) => s.section)
+  // While searching, force matching groups open (and the Advanced parent if any
+  // of its children match); otherwise honor the user's manual open state.
+  const topOpen = q
+    ? [...topSections.map((s) => s.section), ...(showAdvanced ? [ADVANCED_SECTION] : [])]
+    : open
+  const advOpenValue = q ? advSections.map((s) => s.section) : advOpen
+
+  const expandAll = () => {
+    setOpen([...TOP_SECTIONS.map((s) => s.section), ADVANCED_SECTION])
+    setAdvOpen(ADV_SECTIONS.map((s) => s.section))
+  }
+  const collapseAll = () => {
+    setOpen([])
+    setAdvOpen([])
+  }
+
+  // One accordion group (heading + tooltip + layer toggles). Reused for both
+  // top-level groups and the nested groups inside "Advanced".
+  const renderItem = ({ section, options }: SectionGroup) => {
+    const help = SECTION_DESCRIPTIONS[section]
+    const trigger = (
+      <AccordionTrigger className="!text-xs !font-semibold uppercase tracking-wide text-muted-foreground/80">
+        {section}
+      </AccordionTrigger>
+    )
+    return (
+      <AccordionItem key={section} value={section}>
+        {help ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+            <TooltipContent
+              side="right"
+              className="max-w-72"
+              data-testid={`layer-group-tooltip-${section}`}
+            >
+              {help}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          trigger
+        )}
+        <AccordionContent>
+          <LayerSelector
+            options={options}
+            value={visible}
+            loadingIds={loadingIds}
+            progressById={progressById}
+            opacityById={opacityById}
+            onOpacityChange={onOpacityChange}
+            attributeQueryById={attributeQueryById}
+            onAttributeQueryChange={onAttributeQueryChange}
+            facetValuesById={facetValuesById}
+            onFacetChange={onFacetChange}
+            clusterById={clusterById}
+            onClusterChange={onClusterChange}
+            bubbleById={bubbleById}
+            onBubbleChange={onBubbleChange}
+            classifyById={classifyById}
+            onClassifyChange={onClassifyChange}
+            rangeById={rangeById}
+            onRangeChange={onRangeChange}
+            minRecordsById={minRecordsById}
+            onMinRecordsChange={onMinRecordsChange}
+            recencyById={recencyById}
+            onRecencyChange={onRecencyChange}
+            colorById={colorById}
+            onColorChange={onColorChange}
+            onToggle={onToggle}
+          />
+        </AccordionContent>
+      </AccordionItem>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -180,7 +272,7 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
           <button
             type="button"
             data-testid="layers-expand-all"
-            onClick={() => setOpen(allSections)}
+            onClick={expandAll}
             className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             Expand all
@@ -189,7 +281,7 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
           <button
             type="button"
             data-testid="layers-collapse-all"
-            onClick={() => setOpen([])}
+            onClick={collapseAll}
             className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             Collapse all
@@ -204,66 +296,32 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
-      {sections.length === 0 ? (
+      {topSections.length === 0 && !showAdvanced ? (
         <p className="text-sm text-muted-foreground">No layers match “{search}”.</p>
       ) : (
       <TooltipProvider delayDuration={200}>
-      <Accordion type="multiple" value={openValue} onValueChange={setOpen}>
-        {sections.map(({ section, options }) => {
-          const help = SECTION_DESCRIPTIONS[section]
-          const trigger = (
-            <AccordionTrigger className="!text-xs !font-semibold uppercase tracking-wide text-muted-foreground/80">
-              {section}
+      <Accordion type="multiple" value={topOpen} onValueChange={setOpen}>
+        {topSections.map(renderItem)}
+        {showAdvanced && (
+          <AccordionItem key={ADVANCED_SECTION} value={ADVANCED_SECTION}>
+            <AccordionTrigger
+              data-testid="layer-group-advanced"
+              className="!text-xs !font-semibold uppercase tracking-wide text-muted-foreground/80"
+            >
+              {ADVANCED_SECTION}
             </AccordionTrigger>
-          )
-          return (
-          <AccordionItem key={section} value={section}>
-            {help ? (
-              <Tooltip>
-                <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  className="max-w-72"
-                  data-testid={`layer-group-tooltip-${section}`}
-                >
-                  {help}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              trigger
-            )}
             <AccordionContent>
-              <LayerSelector
-                options={options}
-                value={visible}
-                loadingIds={loadingIds}
-                progressById={progressById}
-                opacityById={opacityById}
-                onOpacityChange={onOpacityChange}
-                attributeQueryById={attributeQueryById}
-                onAttributeQueryChange={onAttributeQueryChange}
-                facetValuesById={facetValuesById}
-                onFacetChange={onFacetChange}
-                clusterById={clusterById}
-                onClusterChange={onClusterChange}
-                bubbleById={bubbleById}
-                onBubbleChange={onBubbleChange}
-                classifyById={classifyById}
-                onClassifyChange={onClassifyChange}
-                rangeById={rangeById}
-                onRangeChange={onRangeChange}
-                minRecordsById={minRecordsById}
-                onMinRecordsChange={onMinRecordsChange}
-                recencyById={recencyById}
-                onRecencyChange={onRecencyChange}
-                colorById={colorById}
-                onColorChange={onColorChange}
-                onToggle={onToggle}
-              />
+              <Accordion
+                type="multiple"
+                value={advOpenValue}
+                onValueChange={setAdvOpen}
+                className="ml-1 border-l pl-2"
+              >
+                {advSections.map(renderItem)}
+              </Accordion>
             </AccordionContent>
           </AccordionItem>
-          )
-        })}
+        )}
       </Accordion>
       </TooltipProvider>
       )}
