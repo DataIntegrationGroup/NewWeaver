@@ -31,6 +31,8 @@ A rewrite is only a win if it **preserves what already works**. The legacy Weave
 - **View a hydrograph of up-to-date data** — pick a monitoring location, see its time-series (water level / depth-to-water / chemistry) plotted from *live* data, not a stale export. This is a primary reason people open Weaver at all.
 - **Download the data behind the hydrograph** — get the underlying observations as a file (CSV) to use in their own analysis.
 - **Share a link to a specific view** — send someone a URL that opens the exact location and its hydrograph, so they see current data without hunting for it.
+- **Don't break the links already in the wild** — legacy Weaver location URLs like `location/MG-030` live in bookmarks, reports, and emails, and people reach well details through them. At cutover they must not 404.
+- **Don't break existing links.** Legacy Weaver URLs like `location/MG-030` are in the wild — bookmarks, reports, emails — and people reach a well's details through them. At cutover these must **not** 404: at minimum a message page, ideally a redirect/alternate route to that location's info. The exact behavior needs user research (what did those users actually want when they followed the link), but "old links keep working" is a hard cutover requirement, not a later nicety.
 - Plus the map itself: browse monitoring networks, inspect a point's attributes, filter/search.
 
 > **Why this section exists:** at a recent hydrology management meeting, **AMP** raised a concrete pain point — *they can't send a user a link to view a hydrograph of up-to-date data*. Viewing hydrographs and downloading their data is a big part of why people use Weaver, so any replacement has to nail it.
@@ -42,8 +44,13 @@ A rewrite is only a win if it **preserves what already works**. The legacy Weave
 | Hydrograph of live data | ✅ Monitoring location → datastreams → ECharts time-series, fetched live from SensorThings | [`DatastreamChart.tsx`](../src/components/app/DatastreamChart.tsx), [`InspectPanel.tsx`](../src/components/app/InspectPanel.tsx) |
 | Download the observations | ✅ Time-series CSV export gathers observations across the selected datastreams | [`src/lib/export/timeSeries.ts`](../src/lib/export/timeSeries.ts) |
 | Shareable link to that view | ✅ Selection (`<layerId>~<featureId>`), visible layers, and extent are URL-encoded → every view is a shareable, Back-navigable link | [`src/lib/urlState.ts`](../src/lib/urlState.ts) |
+| Legacy `location/{id}` links keep working | ⚠️ **Not yet handled.** NewWeaver has no `/location/:id` route ([`src/router.tsx`](../src/router.tsx) has `/`, `/map`, `/about`, `/help`, `/catalog`, `/planning`); its point access uses `/map` with URL-encoded selection instead. Legacy links would 404 at cutover. | — (needs work) |
 
 So AMP's exact ask — a link that opens a specific monitoring point's up-to-date hydrograph, with the data downloadable — is **already achievable** in NewWeaver via URL-encoded selection + the live datastream chart + CSV export. The job now is to keep these paths first-class (and easy to reach — cf. [SPEC §V9](../SPEC.md), export reachable from a narrowed result), verify them against real AMP locations, and make the shareable-hydrograph link obvious in the UI. Treat any regression here as a release blocker.
+
+> **Cutover checklist (seed).** These belong on a formal cutover checklist, not just this doc: (1) legacy `location/{id}` URLs resolve — redirect or message page, never a 404; (2) shareable hydrograph links verified against real AMP locations; (3) hydrograph CSV export verified end-to-end; (4) the old domain (`weaver.newmexicowaterdata.org`) points at the new app once the above pass. NewWeaver's current routes are `/`, `/map`, `/about`, `/help`, `/catalog`, `/planning` — there is **no `location/{id}` route today** ([`src/router.tsx`](../src/router.tsx)), so the legacy-link handler is net-new work.
+
+**Cutover requirement — legacy link preservation.** The one gap above is real and belongs on the cutover checklist: legacy `location/{id}` URLs must resolve to *something* useful, not a 404. Options range from a redirect that resolves the id to the new `/map` selection deep-link, down to a friendly "this location moved" page that routes the user to its info — the right shape needs a little user research (how many distinct legacy URLs exist, whether the id maps cleanly to a current feature id). Flagged here so it isn't discovered at go-live.
 
 ## Old Weaver → NewWeaver
 
@@ -108,6 +115,17 @@ flowchart LR
 The seam is the point: because the contract between components is a **public OGC endpoint**, each side evolves independently, and the same endpoints external GIS tools consume are the ones NewWeaver reads.
 
 > Aqueduct → FROST and DIE → pygeoapi live in other repos and are referenced only. ([README.md](../README.md#status))
+
+## Open upstream questions (not settled here)
+
+The clean seams above describe the *serving* contract NewWeaver reads. Upstream of that contract, several decisions are surfaced by this doc but **not settled by it** — they're ecosystem/governance calls that need explicit owners and, in some cases, user research. Captured here so they're tracked, not lost. (These feed the `Aqueduct – DIE – Weaver` roadmap drafting now underway — a kickoff point for user research and formal next-steps planning, not conclusions.)
+
+- **How do Ocotillo observations reach DIE?** Ocotillo's OGC API Features collections carry **no time-series** — only features. So the path for observations flowing into DIE isn't pinned down: presumably via Aqueduct, or an STA server + DAG that Ocotillo owns. This should be an **explicit decision**, not something that emerges by default.
+- **Manual vs continuous data may need different serving strategies.** Attaching every measurement to a feature would explode the GeoJSON. For **manual** measurements, observations as a JSON array on the feature is probably fine. For **continuous** data, responses get very large — the likely answer is **pre-computed files for bulk pulls** with the API covering single-well requests. "One service does everything" is the goal, but manual and continuous may genuinely split. This directly **shapes the export UX**, so it belongs in scope here.
+- **One shared FROST, or a partition?** Out of the Aqueduct discovery: single shared STA instance, or an **Ocotillo-vs-Aqueduct split** if STA is chosen to serve Ocotillo continuous data? Related: **WellPy** could feed the bureau side with QC control. This sits on the **ecosystem-governance track** and should be flagged as work to be done.
+- **A single, granular ecosystem diagram is wanted.** One diagram of **all** sources and downstream apps in the Data Services ecosystem — granular enough to distinguish **manual water levels from continuous data**, cover other source types (e.g. **water chemistry**), and clarify known **Ocotillo vs Aqueduct boundaries** where defined. It would carry weight for both internal alignment and external communication, and would surface pain points / TODO integrations across the ecosystem. The Mermaid diagram above is deliberately scoped to *what NewWeaver reads*; the encompassing version is **its own ticket** for a sprint, not this doc.
+
+None of these block this doc — they're the upstream questions it makes visible.
 
 ## Why hosted DIE beats "everyone runs DIE locally"
 
