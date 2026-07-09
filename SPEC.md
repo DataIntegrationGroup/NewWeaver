@@ -50,7 +50,9 @@ P1-3 underserved today; fix their entry.
 - V4 measurement facet selection enables relevant layers across ALL networks at once +
   zooms to their extent. Not per-agency hunting.
 - V5 default map view ≠ single clustered blob (CABQ). First paint communicates
-  "data across NM", via fit-to-data-extent or arrival-location.
+  "data across NM", via fit-to-data-extent or arrival-location. Hydrograph layer
+  (die:nm_waterlevel_status) = SOLE default-visible; itself statewide, seeds the
+  first paint. actively_monitored_wells no longer default-on (user-toggled).
 - V6 feature/point panel leads plain-language (what is it, who measures) BEFORE tech
   terms (datastream/SensorThings/OGC). Tech ids secondary, not removed.
 - V7 no interface-mechanics copy anywhere ("click X to view/inspect Y"). Scope/
@@ -62,7 +64,7 @@ P1-3 underserved today; fix their entry.
 - V10 no backend datastore added for user data (C3).
 - V11 T1 codebase-map (docs/codebase-map.md) exists before feature code; later tasks
   cite facts from it.
-- V12 a default-on map-context layer (e.g. statewide wells for V5 first paint) must
+- V12 a default-on map-context layer (e.g. hydrograph, the V5 first-paint seed) must
   NOT auto-become the attribute table's active layer. Table auto-pick skips layers
   flagged `excludeFromAutoTable`; explicit selection still opens them. Catalog order +
   "first visible features layer" heuristic else lets a dense empty default layer
