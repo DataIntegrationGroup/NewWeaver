@@ -76,3 +76,33 @@ export function TrendChip({ value }: { value: string }) {
     </span>
   )
 }
+
+/** Normalized QA/approval word → tone. Approved reads trustworthy (green),
+ *  provisional as caution (amber), unknown/other stay neutral. */
+function approvalTone(value: string): Tone {
+  const s = value.toLowerCase()
+  if (s.includes("approv")) return "green"
+  if (s.includes("provisional")) return "amber"
+  return "slate"
+}
+
+export function ApprovalChip({ value }: { value: string }) {
+  const tone = approvalTone(value)
+  return (
+    <span data-testid="approval-chip" className={cn(chipBase, TONE[tone])}>
+      <span className={cn("size-1.5 shrink-0 rounded-full", DOT[tone])} />
+      {value}
+    </span>
+  )
+}
+
+/** Neutral labeled pill for a plain provenance value (source, qualifier): a
+ *  muted label followed by its value, both inline. */
+export function MetaChip({ label, value }: { label: string; value: string }) {
+  return (
+    <span data-testid="meta-chip" className={cn(chipBase, TONE.slate)}>
+      <span className="opacity-60">{label}</span>
+      {value}
+    </span>
+  )
+}

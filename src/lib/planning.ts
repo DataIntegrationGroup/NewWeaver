@@ -138,6 +138,13 @@ export function mergeRegionWaterData(parts: RegionWaterData[]): RegionWaterData 
 const num = (v: unknown): number | undefined =>
   typeof v === "number" && Number.isFinite(v) ? v : undefined
 
+/** Trim a raw property to a non-empty string, or `undefined` for null/blank. */
+const str = (v: unknown): string | undefined => {
+  if (v == null) return undefined
+  const s = String(v).trim()
+  return s === "" ? undefined : s
+}
+
 function median(values: number[]): number | undefined {
   if (values.length === 0) return undefined
   const s = [...values].sort((a, b) => a - b)
@@ -353,6 +360,12 @@ export interface SeriesPoint {
   t: string
   /** Depth to water below ground surface (ft). */
   v: number
+  /** Upstream data source for this reading, e.g. `ST2/BernCo`. */
+  source?: string
+  /** Normalized QA/approval state, e.g. `approved`, `provisional`, `unknown`. */
+  approval?: string
+  /** Data qualifier flag when the source attaches one. */
+  qualifier?: string
 }
 
 export interface WellSeries {
@@ -380,7 +393,15 @@ export async function fetchWellSeries(id: string): Promise<WellSeries> {
     const t = String(p.datetime ?? "")
     const v = num(p.parameter_value)
     if (p.parameter_units) units = String(p.parameter_units)
-    if (t && v !== undefined) points.push({ t, v })
+    if (t && v !== undefined) {
+      points.push({
+        t,
+        v,
+        source: str(p.source),
+        approval: str(p.approval_status_normalized),
+        qualifier: str(p.qualifier),
+      })
+    }
   }
   points.sort((a, b) => a.t.localeCompare(b.t))
   return { points, units }

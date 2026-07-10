@@ -29,6 +29,9 @@ interface ObservationTableProps {
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 
+/** Title-case a normalized approval flag like `provisional` → `Provisional`. */
+const fmtApproval = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
 /**
  * Collapsible table of a well's raw water-level observations, with a CSV
  * download. Shares the `useWellSeries` cache with the Hydrograph chart, so it
@@ -47,8 +50,8 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
 
   const download = () => {
     const csv = toCsv(
-      ["datetime", `depth_to_water_${units}`],
-      points.map((p) => [p.t, p.v])
+      ["datetime", `depth_to_water_${units}`, "source", "approval_status", "qualifier"],
+      points.map((p) => [p.t, p.v, p.source ?? "", p.approval ?? "", p.qualifier ?? ""])
     )
     downloadFile(
       `${exportFilename(`observations-${name ?? wellId}`)}.csv`,
@@ -75,12 +78,15 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
               Download CSV
             </Button>
           </div>
-          <div className="max-h-64 overflow-y-auto rounded-md border">
+          <div className="max-h-64 overflow-auto rounded-md border">
             <Table>
               <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Depth to water ({units})</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Approval</TableHead>
+                  <TableHead>Qualifier</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -88,6 +94,13 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
                   <TableRow key={`${p.t}-${i}`}>
                     <TableCell className="tabular-nums">{fmtDate(p.t)}</TableCell>
                     <TableCell className="text-right tabular-nums">{p.v.toFixed(2)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {p.source ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {p.approval ? fmtApproval(p.approval) : "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{p.qualifier ?? "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
