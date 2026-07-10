@@ -598,6 +598,12 @@ const WFS_SECTION = "Groundwater levels"
 const CHEM_SECTION = "Groundwater Chemistry"
 // The integrated `die:` products span both sections (persisted together).
 const INTEGRATED_SECTIONS = new Set([WFS_SECTION, CHEM_SECTION])
+// Secondary integrated products — per-well trend/summary/density layers that
+// parallel the primary summaries but are lower-traffic. Folded under the
+// collapsible "Advanced" super-group (ADVANCED_SECTIONS) rather than shown
+// top-level. A WFS_LAYERS entry with `section` set overrides the default
+// mt-based section routing, dropping it here.
+const ADVANCED_PRODUCTS_SECTION = "Additional Products"
 
 // MCL Exceedances carries value/mcl/mcl_type/exceeds as four separate columns
 // per analyte (e.g. chloride, chloride_mcl, chloride_mcl_type, chloride_exceeds).
@@ -625,12 +631,92 @@ function expandMclExceedances(props: Record<string, unknown>): Record<string, un
   return rest
 }
 
+// Mann-Kendall trend classification shared by the arsenic/nitrate trend layers
+// (same `trend_category` field and categories as nm_waterlevel_trends). Rising
+// concentration reads as a concern (red); falling as improvement (green).
+const TREND_FACET: AttributeFacet = {
+  field: "trend_category",
+  label: "Trend",
+  options: [
+    { value: "increasing", label: "Increasing" },
+    { value: "decreasing", label: "Decreasing" },
+    { value: "stable", label: "Stable" },
+    { value: "not enough data", label: "Not enough data" },
+  ],
+}
+const TREND_LEGEND = [
+  { label: "Increasing", color: "#dc2626" },
+  { label: "Decreasing", color: "#16a34a" },
+  { label: "Stable", color: "#6b7280" },
+  { label: "Not enough data", color: "#9ca3af" },
+]
+function trendStyle(): LayerStyle {
+  return {
+    type: "circle",
+    paint: {
+      "circle-radius": 3.75,
+      "circle-stroke-width": 1,
+      "circle-stroke-color": SCATTER_STROKE,
+      "circle-color": [
+        "match",
+        ["get", "trend_category"],
+        "increasing", "#dc2626",
+        "decreasing", "#16a34a",
+        "stable",     "#6b7280",
+        /* default */ "#9ca3af",
+      ],
+    },
+  }
+}
+
+// Total-hardness (CaCO3) classification for nm_hardness. Values from the
+// source's `hardness_class` field (USGS classes: soft ≤60, moderate 61–120,
+// hard 121–180, very hard >180 mg/L; 'insufficient' when uncomputable).
+const HARDNESS_FACET: AttributeFacet = {
+  field: "hardness_class",
+  label: "Hardness",
+  options: [
+    { value: "soft", label: "Soft" },
+    { value: "moderate", label: "Moderate" },
+    { value: "hard", label: "Hard" },
+    { value: "very hard", label: "Very hard" },
+  ],
+}
+const HARDNESS_LEGEND = [
+  { label: "Soft", color: "#2563eb" },
+  { label: "Moderate", color: "#14b8a6" },
+  { label: "Hard", color: "#f59e0b" },
+  { label: "Very hard", color: "#b91c1c" },
+]
+function hardnessStyle(): LayerStyle {
+  return {
+    type: "circle",
+    paint: {
+      "circle-radius": 3.75,
+      "circle-stroke-width": 1,
+      "circle-stroke-color": SCATTER_STROKE,
+      "circle-color": [
+        "match",
+        ["get", "hardness_class"],
+        "soft",      "#2563eb",
+        "moderate",  "#14b8a6",
+        "hard",      "#f59e0b",
+        "very hard", "#b91c1c",
+        /* default */ "#9ca3af",
+      ],
+    },
+  }
+}
+
 const WFS_LAYERS: {
   typeName: string
   title: string
   description: string
   color: string
   mt: MeasurementType
+  /** Override the group heading. Defaults to CHEM_SECTION / WFS_SECTION by `mt`;
+   *  set to ADVANCED_PRODUCTS_SECTION to fold under the "Advanced" super-group. */
+  section?: string
   /** Server-side CQL filter applied at fetch — e.g. to pull only sites with
    *  sufficient data. Becomes the layer's WFS `cql_filter`. */
   cqlFilter?: string
@@ -1073,6 +1159,92 @@ const WFS_LAYERS: {
     color: "#9333ea",
     mt: "water_quality",
   },
+  // --- Additional Products (folded under the "Advanced" super-group) ---
+  {
+    typeName: "die:nm_arsenic_trend",
+    title: "Arsenic Trends",
+    description:
+      "Per-location arsenic concentration trend (Mann-Kendall slope and category) for New Mexico groundwater.",
+    color: "#b91c1c",
+    mt: "water_quality",
+    section: ADVANCED_PRODUCTS_SECTION,
+    fields: {
+      include: ["name", "trend_category", "slope_per_year", "slope_units", "span_years", "record_count", "well_depth", "source"],
+    },
+    facet: TREND_FACET,
+    legend: TREND_LEGEND,
+    style: trendStyle(),
+  },
+  {
+    typeName: "die:nm_nitrate_trend",
+    title: "Nitrate Trends",
+    description:
+      "Per-location nitrate concentration trend (Mann-Kendall slope and category) for New Mexico groundwater.",
+    color: "#65a30d",
+    mt: "water_quality",
+    section: ADVANCED_PRODUCTS_SECTION,
+    fields: {
+      include: ["name", "trend_category", "slope_per_year", "slope_units", "span_years", "record_count", "well_depth", "source"],
+    },
+    facet: TREND_FACET,
+    legend: TREND_LEGEND,
+    style: trendStyle(),
+  },
+  {
+    typeName: "die:nm_hardness",
+    title: "Water Hardness",
+    description:
+      "Per-location total hardness as CaCO₃ (calcium + magnesium) for New Mexico groundwater. Turn on the bubble map to size points by hardness.",
+    color: "#0d9488",
+    mt: "water_quality",
+    section: ADVANCED_PRODUCTS_SECTION,
+    fields: {
+      include: ["name", "hardness_caco3", "hardness_class", "calcium", "magnesium", "well_depth", "source"],
+    },
+    bubbleField: "hardness_caco3",
+    rangeField: "hardness_caco3",
+    rangeDomain: [0, 2000],
+    rangeUnit: "mg/L CaCO₃",
+    rangePresets: [
+      { label: "Soft", min: 0, max: 60, color: "#2563eb" },
+      { label: "Moderate", min: 60, max: 120, color: "#14b8a6" },
+      { label: "Hard", min: 120, max: 180, color: "#f59e0b" },
+      { label: "Very hard", min: 180, max: 2000, color: "#b91c1c" },
+    ],
+    rangePresetsSource: {
+      label: "USGS hardness classes",
+      url: "https://www.usgs.gov/special-topics/water-science-school/science/hardness-water",
+    },
+    facet: HARDNESS_FACET,
+    legend: HARDNESS_LEGEND,
+    style: hardnessStyle(),
+  },
+  {
+    typeName: "die:nm_waterlevel_data_density",
+    title: "Water Level Data Density",
+    description:
+      "Per-location water-level measurement coverage and frequency for New Mexico. Turn on the bubble map to size points by observations per year.",
+    color: "#2563eb",
+    mt: "water_level",
+    section: ADVANCED_PRODUCTS_SECTION,
+    fields: {
+      include: ["name", "observations_per_year", "mean_interval_days", "observation_count", "record_count", "span_years", "first_observation_datetime", "last_observation_datetime", "source"],
+    },
+    bubbleField: "observations_per_year",
+  },
+  {
+    typeName: "die:nm_waterlevels_summary",
+    title: "Water Levels Summary",
+    description:
+      "Per-location depth-to-water summary statistics (min / mean / max) for New Mexico. Turn on the bubble map to size points by mean depth.",
+    color: "#0891b2",
+    mt: "water_level",
+    section: ADVANCED_PRODUCTS_SECTION,
+    fields: {
+      include: ["name", "mean", "min", "max", "nrecords", "latest_value", "latest_date", "well_depth", "parameter_units", "source"],
+    },
+    bubbleField: "mean",
+  },
 ]
 
 // The integrated `die` products are served by GeoServer's OGC API Features
@@ -1089,7 +1261,7 @@ const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
   featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
   collectionId: w.typeName,
   measurementType: w.mt,
-  section: w.mt === "water_quality" ? CHEM_SECTION : WFS_SECTION,
+  section: w.section ?? (w.mt === "water_quality" ? CHEM_SECTION : WFS_SECTION),
   cluster: true,
   style: w.style ?? staPoint(w.color),
   ...(w.cqlFilter && {
@@ -1306,6 +1478,8 @@ export const SECTION_DESCRIPTIONS: Record<string, string> = {
     "Per-location groundwater-chemistry summary products — arsenic, TDS, major-ion chemistry, water type, SAR, water quality index, and drinking-water exceedances.",
   "Well Metadata":
     "Well-level reference datasets — density choropleths (wells per km² by basin and county), cross-agency well correlation, and recent Point-of-Diversion age distributions. Edit a layer's color from its swatch.",
+  "Additional Products":
+    "Secondary per-location summary products — arsenic and nitrate concentration trends, water hardness, and water-level data density and summary statistics.",
 }
 
 /**
@@ -1319,6 +1493,7 @@ export const ADVANCED_SECTIONS = [
   "NMBGMR GIS",
   "OSE GIS",
   "NWIS",
+  ADVANCED_PRODUCTS_SECTION,
 ]
 
 export function getLayer(id: string): LayerConfig | undefined {
