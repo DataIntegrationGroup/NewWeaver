@@ -586,11 +586,14 @@ function ProductSection({
   )
 }
 
-/** Feature-layer inspector that leads with the well's water-level hydrograph
- *  (depth to water over time), then its site metadata. Used for layers flagged
- *  `hydrograph` (e.g. die:nm_waterlevel_status), whose feature `id` keys the
- *  timeseries fetch. */
-function HydrographInspect({ layer, featureId, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
+/** Standard DIE water-level well inspector: leads with the well's hydrograph
+ *  (depth to water over time), then its site metadata, then folds in every other
+ *  water-level product (summary, trend, change, depletion) for the same well —
+ *  so the panel shows the same standard set regardless of which well layer the
+ *  feature was selected from (flag `wellMetadata`; e.g. die:nm_waterlevel_status,
+ *  die:nm_waterlevel_trends). The feature's `id` is the shared key that fetches
+ *  the timeseries and every folded product. */
+function WellInspect({ layer, featureId, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useFeaturesLayer(layer)
   const feature = data?.features.find((f) => String(f.id ?? f.properties?.id) === featureId)
   const pos = firstPosition(feature)
@@ -754,8 +757,8 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
 }
 
 export function InspectPanel({ layer, featureId, onClose, onZoomTo }: InspectPanelProps) {
-  if (layer.source === "features" && layer.hydrograph)
-    return <HydrographInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
+  if (layer.source === "features" && layer.wellMetadata)
+    return <WellInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "sta")
     return <StaInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "arcgis")

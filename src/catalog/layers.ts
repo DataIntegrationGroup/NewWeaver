@@ -127,10 +127,12 @@ interface BaseLayer {
   /** Swatch/label pairs for the map legend, when points are categorically
    *  color-mapped (e.g. trend direction). Omit for a single-color layer. */
   legend?: { label: string; color: string }[]
-  /** When true, the inspector renders this feature's water-level hydrograph
-   *  (depth to water over time, from die:nm_waterlevels_timeseries) above the
-   *  attribute metadata. The feature's `id` keys the timeseries fetch. */
-  hydrograph?: boolean
+  /** When true, the inspector renders the standard DIE water-level well block
+   *  for this feature — its hydrograph (depth to water over time, from
+   *  die:nm_waterlevels_timeseries) plus the folded-in summary / trend / change
+   *  / depletion products — regardless of which well layer it was selected from.
+   *  The feature's `id` is the shared well location key that fetches all of them. */
+  wellMetadata?: boolean
   style: LayerStyle
 }
 
@@ -265,7 +267,7 @@ const hydrographLayer: FeaturesLayer = {
   measurementType: "water_level",
   section: "Groundwater levels",
   defaultVisible: true,
-  hydrograph: true,
+  wellMetadata: true,
   // parameter_name is a constant ("waterlevels") and record_count duplicates
   // the finer observations count — noise in the inspector table.
   fields: { exclude: ["parameter_name", "record_count"] },
@@ -717,6 +719,10 @@ const WFS_LAYERS: {
   /** Override the group heading. Defaults to CHEM_SECTION / WFS_SECTION by `mt`;
    *  set to ADVANCED_PRODUCTS_SECTION to fold under the "Advanced" super-group. */
   section?: string
+  /** DIE water-level well product: selecting a well opens the standard
+   *  well-metadata inspector (hydrograph + summary/trend/change/depletion),
+   *  keyed by the shared well location `id`. See BaseLayer.wellMetadata. */
+  wellMetadata?: boolean
   /** Server-side CQL filter applied at fetch — e.g. to pull only sites with
    *  sufficient data. Becomes the layer's WFS `cql_filter`. */
   cqlFilter?: string
@@ -780,6 +786,7 @@ const WFS_LAYERS: {
       "Per-location groundwater level trend summary for New Mexico.",
     color: "#6b7280",
     mt: "water_level",
+    wellMetadata: true,
     fields: {
       include: ["name", "trend_category", "well_depth", "slope_per_year", "span_years", "record_count", "source"],
     },
@@ -832,6 +839,7 @@ const WFS_LAYERS: {
       "Per-location monitoring recency for New Mexico — days since the last observation and active/stale status.",
     color: "#0891b2",
     mt: "wells",
+    wellMetadata: true,
     fields: {
       include: [
         "name",
@@ -879,6 +887,7 @@ const WFS_LAYERS: {
       "Per-location water-level change over a multi-year window for New Mexico — rising/declining direction and net change in feet.",
     color: "#1d4ed8",
     mt: "water_level",
+    wellMetadata: true,
     fields: {
       include: [
         "name",
@@ -1072,6 +1081,7 @@ const WFS_LAYERS: {
       "Per-location groundwater depletion projection for New Mexico — years until water level reaches well depth, based on the current trend.",
     color: "#c026d3",
     mt: "water_level",
+    wellMetadata: true,
     fields: {
       include: [
         "name",
@@ -1227,6 +1237,7 @@ const WFS_LAYERS: {
     color: "#2563eb",
     mt: "water_level",
     section: ADVANCED_PRODUCTS_SECTION,
+    wellMetadata: true,
     fields: {
       include: ["name", "observations_per_year", "mean_interval_days", "observation_count", "record_count", "span_years", "first_observation_datetime", "last_observation_datetime", "source"],
     },
@@ -1240,6 +1251,7 @@ const WFS_LAYERS: {
     color: "#0891b2",
     mt: "water_level",
     section: ADVANCED_PRODUCTS_SECTION,
+    wellMetadata: true,
     fields: {
       include: ["name", "mean", "min", "max", "nrecords", "latest_value", "latest_date", "well_depth", "parameter_units", "source"],
     },
@@ -1273,6 +1285,7 @@ const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
   ...(w.rangeUnit && { rangeUnit: w.rangeUnit }),
   ...(w.rangePresets && { rangePresets: w.rangePresets }),
   ...(w.rangePresetsSource && { rangePresetsSource: w.rangePresetsSource }),
+  ...(w.wellMetadata && { wellMetadata: true }),
   ...(w.fields && { fields: w.fields }),
   ...(w.facet && { facet: w.facet }),
   ...(w.legend && { legend: w.legend }),
