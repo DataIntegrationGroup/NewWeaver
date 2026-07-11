@@ -1,7 +1,16 @@
+import { useState } from "react"
 import ReactECharts from "echarts-for-react"
+import { Maximize2 } from "lucide-react"
 
 import { useWellSeries } from "@/hooks/usePlanning"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { StatusChip, ApprovalChip, MetaChip } from "@/components/ui/metadata-chips"
 
 interface HydrographProps {
@@ -19,6 +28,11 @@ interface HydrographProps {
   continuous?: boolean
   /** Tune axis/line colors for a dark surface (default: light). */
   dark?: boolean
+  /** Plot height in px (default 300). The expanded modal renders taller. */
+  chartHeight?: number
+  /** Show the "expand to modal" button (default true). The modal renders a
+   *  second Hydrograph with this off, so the button never nests. */
+  expandable?: boolean
 }
 
 const fmtDate = (iso: string) =>
@@ -76,8 +90,17 @@ function conditionClass(qualifier?: string): ConditionClass {
  * demand via `useWellSeries`. Depth increases downward, so the y-axis is
  * inverted (0 at the top). Shared by the planning page and the map inspector.
  */
-export function Hydrograph({ wellId, name, status, continuous, dark = false }: HydrographProps) {
+export function Hydrograph({
+  wellId,
+  name,
+  status,
+  continuous,
+  dark = false,
+  chartHeight = 300,
+  expandable = true,
+}: HydrographProps) {
   const { data, isLoading, isError } = useWellSeries(wellId)
+  const [expanded, setExpanded] = useState(false)
 
   if (isLoading) {
     return (
@@ -256,9 +279,23 @@ export function Hydrograph({ wellId, name, status, continuous, dark = false }: H
           </div>
         )}
       </div>
-      <p className="mb-1 text-[11px] text-muted-foreground">
-        Period of record: {fmtDate(points[0].t)} – {fmtDate(points[points.length - 1].t)}
-      </p>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <p className="text-[11px] text-muted-foreground">
+          Period of record: {fmtDate(points[0].t)} – {fmtDate(points[points.length - 1].t)}
+        </p>
+        {expandable && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-muted-foreground"
+            onClick={() => setExpanded(true)}
+            aria-label="Expand hydrograph"
+            data-testid="hydrograph-expand"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
       {showApprovalLegend && (
         <div
           data-testid="hydrograph-approval-legend"
@@ -287,7 +324,31 @@ export function Hydrograph({ wellId, name, status, continuous, dark = false }: H
           ))}
         </div>
       )}
-      <ReactECharts option={option} style={{ height: 300 }} notMerge />
+      <ReactECharts option={option} style={{ height: chartHeight }} notMerge />
+
+      {expandable && (
+        <Dialog open={expanded} onOpenChange={setExpanded}>
+          <DialogContent
+            className="max-w-[calc(100%-2rem)] sm:max-w-4xl"
+            data-testid="hydrograph-modal"
+          >
+            <DialogHeader>
+              <DialogTitle>{name ?? wellId}</DialogTitle>
+            </DialogHeader>
+            {/* Reuses the cached useWellSeries data — no refetch. `expandable`
+                off so the modal's chart carries no further expand button. */}
+            <Hydrograph
+              wellId={wellId}
+              name={name}
+              status={status}
+              continuous={continuous}
+              dark={dark}
+              chartHeight={520}
+              expandable={false}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
