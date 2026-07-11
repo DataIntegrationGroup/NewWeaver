@@ -26,34 +26,49 @@ const fmtDate = (iso: string) =>
 
 const fmtNum = (n: number) => n.toFixed(2)
 
-/** Approval word → tooltip color, matching ApprovalChip tones (emerald/amber,
- *  else muted). Hydrograph tooltips are raw HTML, so this returns a hex. */
-const approvalColor = (s: string) => {
-  const v = s.toLowerCase()
-  if (v.includes("approv")) return "#10b981"
-  if (v.includes("provisional")) return "#f59e0b"
-  return ""
+/**
+ * Approval (QA) state → point/line COLOR, following USGS hydrograph convention:
+ * approved data blue, provisional data red, everything else (missing state)
+ * gray. Color encodes approval and nothing else, so it never collides with the
+ * measurement-condition signal (which is carried by SYMBOL SHAPE below). Blues
+ * are dark-mode-aware to stay legible on both surfaces; the approved blue tracks
+ * the neutral line color. Tooltips are raw HTML, so this returns a hex.
+ */
+type ApprovalClass = { key: string; label: string; color: string }
+function approvalClass(approval: string | undefined, dark: boolean): ApprovalClass {
+  const s = (approval ?? "").toLowerCase()
+  if (s.includes("approv"))
+    return { key: "approved", label: "Approved", color: dark ? "#38bdf8" : "#0369a1" }
+  if (s.includes("provisional"))
+    return { key: "provisional", label: "Provisional", color: dark ? "#f87171" : "#dc2626" }
+  return { key: "unknown", label: "Unknown", color: "#9ca3af" }
 }
 
-/** The raw qualifier is one of ~20 verbose USGS condition strings — too many to
- *  color distinctly. Bucket each into a handful of semantic classes so points
- *  color by measurement condition, with a compact legend. */
-type QualifierClass = { key: string; label: string; color: string }
-const QUALIFIER_UNSPECIFIED: QualifierClass = {
-  key: "none",
-  label: "Unspecified",
-  color: "#9ca3af",
+/** The raw qualifier is one of ~20 verbose USGS `lev_status` strings — too many
+ *  to distinguish individually. Bucket each into a handful of measurement
+ *  conditions carried by SYMBOL SHAPE (USGS keys color to approval, not
+ *  condition), so a point's approval and its condition read on independent
+ *  channels. `symbol` is an ECharts symbol name; `glyph` mirrors it in the
+ *  HTML legend. */
+type ConditionClass = { key: string; label: string; symbol: string; glyph: string }
+const CONDITION_NORMAL: ConditionClass = {
+  key: "normal",
+  label: "Normal / static",
+  symbol: "circle",
+  glyph: "●",
 }
-function qualifierClass(qualifier?: string): QualifierClass {
+function conditionClass(qualifier?: string): ConditionClass {
   const s = (qualifier ?? "").toLowerCase()
-  if (!s) return QUALIFIER_UNSPECIFIED
+  // No qualifier, an explicit "static", or "not affected" are all a normal,
+  // unaffected reading.
+  if (!s || s.includes("static") || s.includes("not affected")) return CONDITION_NORMAL
   // Pumping wins over "Above" etc. — "Above, Pumping" is a pumping condition.
-  if (s.includes("pump")) return { key: "pumping", label: "Pumping-affected", color: "#f59e0b" }
+  if (s.includes("pump")) return { key: "pumping", label: "Pumping-affected", symbol: "triangle", glyph: "▲" }
   if (/(dry|flow|obstruction|cascad)/.test(s))
-    return { key: "impaired", label: "Dry / flowing / obstructed", color: "#ef4444" }
-  if (s.includes("static") || s.includes("not affected"))
-    return { key: "static", label: "Static", color: "#10b981" }
-  return { key: "other", label: "Other conditions", color: "#3b82f6" }
+    return { key: "impaired", label: "Dry / flowing / obstructed", symbol: "diamond", glyph: "◆" }
+  // Everything else that still affects the level (atmospheric, nearby surface
+  // water, foreign substance, unspecified "other" remarks).
+  return { key: "other", label: "Other affected", symbol: "rect", glyph: "■" }
 }
 
 /**
@@ -97,42 +112,68 @@ export function Hydrograph({ wellId, name, status, continuous, dark = false }: H
   const distinctDays = new Set(points.map((p) => p.t.slice(0, 10))).size
   const isContinuous = continuous ?? (distinctDays > 0 && points.length / distinctDays >= 2)
   // Carry per-observation provenance as extra data dims so the tooltip can show
-  // each point's approval/qualifier (ignored by the cartesian axes), and color
-  // each point by its qualifier class.
+  // each point's approval/qualifier (ignored by the cartesian axes). Color each
+  // point by its approval class and shape it by its measurement condition — two
+  // independent channels, so provisional (red) never reads as pumping again.
   const seriesData = points.map((p) => {
-    const cls = qualifierClass(p.qualifier)
+    const ac = approvalClass(p.approval, dark)
+    const cc = conditionClass(p.qualifier)
     return {
       value: [p.t, p.v, p.approval ?? "", p.qualifier ?? ""],
-      itemStyle: { color: cls.color },
+      itemStyle: { color: ac.color },
+      symbol: cc.symbol,
     }
   })
-  // Qualifier classes present in this series, for the chart legend. Ordered by
-  // first appearance so the legend is stable across renders.
-  const legend: QualifierClass[] = []
-  const seen = new Set<string>()
+  // Approval (color) and condition (shape) classes present in this series, each
+  // ordered by first appearance so the two legends are stable across renders.
+  const approvalLegend: ApprovalClass[] = []
+  const conditionLegend: ConditionClass[] = []
+  const seenApproval = new Set<string>()
+  const seenCondition = new Set<string>()
   for (const p of points) {
-    const cls = qualifierClass(p.qualifier)
-    if (!seen.has(cls.key)) {
-      seen.add(cls.key)
-      legend.push(cls)
+    const ac = approvalClass(p.approval, dark)
+    if (!seenApproval.has(ac.key)) {
+      seenApproval.add(ac.key)
+      approvalLegend.push(ac)
+    }
+    const cc = conditionClass(p.qualifier)
+    if (!seenCondition.has(cc.key)) {
+      seenCondition.add(cc.key)
+      conditionLegend.push(cc)
     }
   }
-  // Only worth showing when qualifiers actually distinguish points.
-  const showLegend = legend.length > 1 || (legend.length === 1 && legend[0].key !== "none")
+  // Approval legend earns its space when a series mixes states, or when the sole
+  // state is a meaningful one (approved/provisional, not "unknown").
+  const showApprovalLegend =
+    approvalLegend.length > 1 ||
+    (approvalLegend.length === 1 && approvalLegend[0].key !== "unknown")
+  // Condition legend (scatter only — a connected line has no per-point symbol)
+  // shows when conditions actually distinguish points.
+  const showConditionLegend =
+    !isContinuous &&
+    (conditionLegend.length > 1 ||
+      (conditionLegend.length === 1 && conditionLegend[0].key !== "normal"))
+  // A connected logger line can't color per point; take the USGS cue and draw
+  // the whole line red if any reading is provisional, else the approved/neutral
+  // blue (unknown loggers keep the neutral blue rather than washing out gray).
+  const lineColor = points.some((p) => approvalClass(p.approval, dark).key === "provisional")
+    ? approvalClass("provisional", dark).color
+    : line
   const series = isContinuous
     ? {
         type: "line",
         showSymbol: false,
         smooth: false,
-        lineStyle: { width: 1.25, color: line },
-        itemStyle: { color: line },
+        lineStyle: { width: 1.25, color: lineColor },
+        itemStyle: { color: lineColor },
         data: seriesData,
         name: name ?? wellId,
       }
     : {
         type: "scatter",
-        symbolSize: 5,
-        // Per-point color comes from each data item's itemStyle (qualifier class).
+        symbolSize: 6,
+        // Per-point color (approval) and symbol (condition) come from each data
+        // item's itemStyle/symbol set above.
         data: seriesData,
         name: name ?? wellId,
       }
@@ -159,10 +200,10 @@ export function Hydrograph({ wellId, name, status, continuous, dark = false }: H
         const [t, v, approval, qualifier] = p.value
         const parts: string[] = []
         if (approval) {
-          const c = approvalColor(approval)
+          const ac = approvalClass(approval, dark)
           parts.push(
-            c
-              ? `<span style="color:${c};font-weight:600">${approval}</span>`
+            ac.key !== "unknown"
+              ? `<span style="color:${ac.color};font-weight:600">${approval}</span>`
               : `<span style="opacity:0.7">${approval}</span>`
           )
         }
@@ -218,14 +259,29 @@ export function Hydrograph({ wellId, name, status, continuous, dark = false }: H
       <p className="mb-1 text-[11px] text-muted-foreground">
         Period of record: {fmtDate(points[0].t)} – {fmtDate(points[points.length - 1].t)}
       </p>
-      {showLegend && (
+      {showApprovalLegend && (
         <div
-          data-testid="hydrograph-qualifier-legend"
+          data-testid="hydrograph-approval-legend"
           className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground"
         >
-          {legend.map((c) => (
+          <span className="font-medium uppercase tracking-wide">Approval</span>
+          {approvalLegend.map((c) => (
             <span key={c.key} className="inline-flex items-center gap-1">
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: c.color }} />
+              {c.label}
+            </span>
+          ))}
+        </div>
+      )}
+      {showConditionLegend && (
+        <div
+          data-testid="hydrograph-condition-legend"
+          className="mb-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground"
+        >
+          <span className="font-medium uppercase tracking-wide">Condition</span>
+          {conditionLegend.map((c) => (
+            <span key={c.key} className="inline-flex items-center gap-1">
+              <span className="shrink-0 leading-none" aria-hidden>{c.glyph}</span>
               {c.label}
             </span>
           ))}
