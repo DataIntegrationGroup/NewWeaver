@@ -379,11 +379,13 @@ export function bareWellId(key: string): string {
  */
 export async function fetchWellSeries(id: string): Promise<WellSeries> {
   const client = featuresClient(DIE_FEATURES_BASE_URL)
+  // 10000 is the server's page cap; fewer, larger pages load fastest since it
+  // serves requests serially.
   const fc = await client.getAllItems(
     TIMESERIES_COLLECTION,
     { id: bareWellId(id) },
-    5000,
-    40
+    10000,
+    20
   )
   let units = "ft"
   const points: SeriesPoint[] = []
