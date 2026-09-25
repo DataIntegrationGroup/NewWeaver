@@ -1,5 +1,5 @@
 import { useIsFetching, useQuery } from "@tanstack/react-query"
-import type { FeatureCollection } from "geojson"
+import type { Feature, FeatureCollection } from "geojson"
 
 import { staClient, type Location } from "@/clients/sensorThings"
 import { featuresClient } from "@/clients/ogcFeatures"
@@ -98,14 +98,15 @@ export function useStaLayer(layer: StaLayer) {
  * highlight layer (`["get","id"]`), the hover popup, and the inspect panel all
  * key on `properties.id`, so a clicked feature couldn't be matched back to the
  * cached FeatureCollection ("Feature not found"). Prefer an existing
- * `properties.id`, else the top-level feature id, else the row index.
+ * `properties.id` (the top-level id under `keyByFeatureId`), then the other,
+ * else the row index.
  */
-function ensureFeatureIds(fc: FeatureCollection): FeatureCollection {
+function ensureFeatureIds(fc: FeatureCollection, keyByFeatureId = false): FeatureCollection {
   return {
     type: "FeatureCollection",
     features: fc.features.map((f, i) => {
       const p = (f.properties ?? {}) as Record<string, unknown>
-      const id = String(p.id ?? f.id ?? i)
+      const id = String((keyByFeatureId ? f.id ?? p.id : p.id ?? f.id) ?? i)
       return { ...f, id, properties: { ...p, id } }
     }),
   }
@@ -128,7 +129,12 @@ export function useFeaturesLayer(layer: FeaturesLayer) {
           maxPages,
           (n) => setLoadProgress(layer.id, n)
         )
-        return ensureFeatureIds(fc as FeatureCollection)
+        const { where, mapProperties: map } = layer
+        let { features } = ensureFeatureIds(fc as FeatureCollection, layer.keyByFeatureId)
+        const props = (f: Feature) => (f.properties ?? {}) as Record<string, unknown>
+        if (where) features = features.filter((f) => where(props(f)))
+        if (map) features = features.map((f) => ({ ...f, properties: map(props(f)) }))
+        return { type: "FeatureCollection" as const, features }
       } finally {
         clearLoadProgress(layer.id)
       }

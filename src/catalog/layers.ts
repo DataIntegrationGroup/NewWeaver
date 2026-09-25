@@ -150,6 +150,13 @@ export interface FeaturesLayer extends BaseLayer {
    * millions of rows. Omit to load every matching feature.
    */
   maxFeatures?: number
+  /** Per-feature property transform applied after fetch. Must preserve `id`. */
+  mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
+  /** Key features by the top-level id rather than `properties.id`. DIE's
+   *  feature ids are unique (`ST2/BernCo:10493`); its bare well ids are not. */
+  keyByFeatureId?: boolean
+  /** Client-side row filter (the DIE pygeoapi ignores CQL `filter`). */
+  where?: (props: Record<string, unknown>) => boolean
 }
 
 /** Monitoring-point layer read from STA Locations. */
