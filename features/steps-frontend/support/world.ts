@@ -108,6 +108,13 @@ async function mockApi(route: Route): Promise<boolean> {
     return json(fx.OSE_AQUIFER_FC).then(() => true)
   }
 
+  // DIE pygeoapi — the integrated water-level / chemistry products. Serve the
+  // shared vector fixture for item pages so toggled layers show data offline.
+  if (/die-pygeoapi-[^/]*\.run\.app/.test(url)) {
+    if (/\/collections\/[^/]+\/items/.test(url)) return json(fx.WATER_LEVELS_ITEMS).then(() => true)
+    return json({}).then(() => true)
+  }
+
   // GeoServer WFS — summary layers (arsenic, water levels, TDS). GetFeature
   // returns GeoJSON; serve the shared vector fixture so a toggled layer shows
   // data without a live network call.

@@ -1,44 +1,37 @@
 /**
  * Regional water-planning decision support — data access and aggregation.
  *
- * Pulls the integrated `die:` per-well summary products (published from NM Water
- * Data's GeoServer via OGC API Features) live for a set of region polygons, then rolls
+ * Pulls the integrated DIE per-well summary products (served by the DIE pygeoapi
+ * as OGC API Features) live for a set of region polygons, then rolls
  * them up into the summary statistics a regional water manager needs: how much
  * is monitored, how water levels sit against their historical range, which way
  * the trend points, depletion risk, seasonal swing, and drinking-water quality.
  *
- * The page reads this data straight from the WFS API (bbox-filtered, then
+ * The page reads this data straight from the Features API (bbox-filtered, then
  * point-in-polygon refined) — it never depends on the map page's cached layers
  * or the nightly precomputed stats file, keeping the client-only constraint.
  */
 import type { Feature, FeatureCollection, Polygon } from "geojson"
-import { GEOSERVER_WFS_BASE_URL } from "@/config"
-import { wfsClient } from "@/clients/wfsClient"
+import { DIE_FEATURES_BASE_URL } from "@/config"
+import { featuresClient } from "@/clients/ogcFeatures"
 import { pointInAnyShape } from "@/lib/geo"
 import { polygonsBbox } from "@/lib/regions"
 
-/**
- * Workspace prefix for the integrated DIE products on GeoServer — shared by the
- * WFS typeNames here and the OGC API Features collectionIds in
- * catalog/layers.ts. (GeoServer briefly exposed a parallel `DIEDataProducts`
- * workspace during a rename; `die` is the live one.)
- */
-const WFS_WORKSPACE = "die"
-
-/** WFS typeNames of the integrated data products this page summarises. */
-export const PLANNING_TYPENAMES = {
-  status: `${WFS_WORKSPACE}:nm_waterlevel_status`,
-  trends: `${WFS_WORKSPACE}:nm_waterlevel_trends`,
-  depletion: `${WFS_WORKSPACE}:nm_depletion_projection`,
-  recency: `${WFS_WORKSPACE}:nm_monitoring_recency`,
-  amplitude: `${WFS_WORKSPACE}:nm_seasonal_amplitude`,
-  mcl: `${WFS_WORKSPACE}:nm_mcl_exceedance`,
+/** DIE pygeoapi collection ids of the integrated data products this page
+ *  summarises (the same collections catalog/layers.ts maps). */
+export const PLANNING_COLLECTIONS = {
+  status: "nm_waterlevel_status",
+  trends: "nm_waterlevel_trends",
+  depletion: "nm_depletion_projection",
+  recency: "nm_monitoring_recency",
+  amplitude: "nm_seasonal_amplitude",
+  mcl: "nm_mcl_exceedance",
 } as const
 
 /** Per-observation water-level series (one row per reading), keyed by well id. */
-export const TIMESERIES_TYPENAME = `${WFS_WORKSPACE}:nm_waterlevels_timeseries`
+export const TIMESERIES_COLLECTION = "nm_waterlevels_timeseries"
 
-export type PlanningDataset = keyof typeof PLANNING_TYPENAMES
+export type PlanningDataset = keyof typeof PLANNING_COLLECTIONS
 
 export interface RegionWaterData {
   status: Feature[]
@@ -60,7 +53,7 @@ const EMPTY: RegionWaterData = {
 
 /**
  * Fetch every planning dataset within the region polygons. Each layer is first
- * narrowed to the polygons' combined bounding box on the server (WFS `bbox`),
+ * narrowed to the polygons' combined bounding box on the server (`bbox`),
  * then refined client-side to the points that actually fall inside a polygon.
  * `onProgress` reports datasets completed (0–6) so the UI can show a progress
  * bar while the six requests run in parallel.
@@ -72,13 +65,13 @@ export async function fetchRegionWaterData(
   const bbox = polygonsBbox(polygons)
   if (!bbox) return EMPTY
 
-  const client = wfsClient(GEOSERVER_WFS_BASE_URL)
-  const names = Object.values(PLANNING_TYPENAMES)
+  const client = featuresClient(DIE_FEATURES_BASE_URL)
+  const names = Object.values(PLANNING_COLLECTIONS)
   const total = names.length
   let done = 0
 
-  const load = async (typeName: string): Promise<Feature[]> => {
-    const fc = await client.getAllFeatures(typeName, { bbox })
+  const load = async (collectionId: string): Promise<Feature[]> => {
+    const fc = await client.getAllItems(collectionId, { bbox })
     const inside = fc.features.filter((f) => pointInAnyShape(f, polygons))
     done += 1
     onProgress?.(done, total)
@@ -86,12 +79,12 @@ export async function fetchRegionWaterData(
   }
 
   const [status, trends, depletion, recency, amplitude, mcl] = await Promise.all([
-    load(PLANNING_TYPENAMES.status),
-    load(PLANNING_TYPENAMES.trends),
-    load(PLANNING_TYPENAMES.depletion),
-    load(PLANNING_TYPENAMES.recency),
-    load(PLANNING_TYPENAMES.amplitude),
-    load(PLANNING_TYPENAMES.mcl),
+    load(PLANNING_COLLECTIONS.status),
+    load(PLANNING_COLLECTIONS.trends),
+    load(PLANNING_COLLECTIONS.depletion),
+    load(PLANNING_COLLECTIONS.recency),
+    load(PLANNING_COLLECTIONS.amplitude),
+    load(PLANNING_COLLECTIONS.mcl),
   ])
   return { status, trends, depletion, recency, amplitude, mcl }
 }
@@ -373,16 +366,22 @@ export interface WellSeries {
   units: string
 }
 
+/** Strip the source from a DIE well key (`ST2/CABQ:9033` → `9033`); bare ids
+ *  pass through. Sources never contain ":". */
+export function bareWellId(key: string): string {
+  return key.slice(key.indexOf(":") + 1)
+}
+
 /**
- * Fetch one well's full water-level time series from the WFS timeseries layer,
- * filtered by well id and ordered oldest→newest. Live from the API.
+ * Fetch one well's full water-level time series (bare or source-qualified id),
+ * ordered oldest→newest. Filters on the bare id only: timeseries source names
+ * don't always match the products' (WQP vs WQP/NWIS).
  */
 export async function fetchWellSeries(id: string): Promise<WellSeries> {
-  const client = wfsClient(GEOSERVER_WFS_BASE_URL)
-  const escaped = id.replace(/'/g, "''")
-  const fc = await client.getAllFeatures(
-    TIMESERIES_TYPENAME,
-    { cqlFilter: `id='${escaped}'` },
+  const client = featuresClient(DIE_FEATURES_BASE_URL)
+  const fc = await client.getAllItems(
+    TIMESERIES_COLLECTION,
+    { id: bareWellId(id) },
     5000,
     40
   )

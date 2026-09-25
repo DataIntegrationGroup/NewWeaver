@@ -14,7 +14,7 @@ import {
 import { StatusChip, ApprovalChip, MetaChip } from "@/components/ui/metadata-chips"
 
 interface HydrographProps {
-  /** Well id — keys the die:nm_waterlevels_timeseries fetch. */
+  /** Well id — keys the nm_waterlevels_timeseries fetch. */
   wellId: string
   /** Well name, used as the series label. */
   name?: string
