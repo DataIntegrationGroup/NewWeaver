@@ -1,7 +1,7 @@
 /**
  * OgcFeaturesClient — thin typed client for OGC API Features. Backs vector
- * map layers and attribute tables. Reads DIE's pygeoapi (the only Features
- * endpoint Weaver touches).
+ * map layers and attribute tables. Reads DIE's pygeoapi plus the other OGC
+ * API Features deployments in config.ts.
  *
  * Implements the slice v1 needs: list collections, fetch a collection's
  * GeoJSON items with bbox + limit/offset paging.
@@ -168,9 +168,10 @@ export class OgcFeaturesClient {
   private followPath(href: string): string | null {
     try {
       const next = new URL(href)
-      const basePath = this.baseUrl.startsWith("http")
-        ? new URL(this.baseUrl).pathname
-        : this.baseUrl
+      // Trim the trailing "/" so a root-hosted base keeps the path's leading "/".
+      const basePath = (
+        this.baseUrl.startsWith("http") ? new URL(this.baseUrl).pathname : this.baseUrl
+      ).replace(/\/+$/, "")
       const path = next.pathname.startsWith(basePath)
         ? next.pathname.slice(basePath.length)
         : next.pathname

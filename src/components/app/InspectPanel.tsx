@@ -530,7 +530,7 @@ const WATERLEVEL_PRODUCTS: {
   format?: (key: string, value: unknown) => string
 }[] = [
   {
-    collectionId: "die:nm_waterlevels_summary",
+    collectionId: "nm_waterlevels_summary",
     label: "Water-level summary",
     fields: {
       include: ["nrecords", "min", "max", "mean", "earliest_value", "earliest_date", "latest_value", "latest_date"],
@@ -541,17 +541,17 @@ const WATERLEVEL_PRODUCTS: {
         : undefined) ?? defaultFormat(key, value),
   },
   {
-    collectionId: "die:nm_waterlevel_trends",
+    collectionId: "nm_waterlevel_trends",
     label: "Groundwater trend",
     fields: { include: ["trend_category", "slope_per_year", "span_years", "mk_p_value", "mk_tau"] },
   },
   {
-    collectionId: "die:nm_waterlevel_change",
+    collectionId: "nm_waterlevel_change",
     label: "Water-level change",
     fields: { include: ["direction", "change_ft", "window_years", "dtw_start", "dtw_end", "end_date", "status"] },
   },
   {
-    collectionId: "die:nm_depletion_projection",
+    collectionId: "nm_depletion_projection",
     label: "Depletion projection",
     fields: {
       include: ["status", "trend_category", "slope_ft_per_year", "latest_dtw", "latest_dtw_date", "remaining_ft", "years_to_depletion", "projected_depletion_year"],
@@ -590,15 +590,16 @@ function ProductSection({
  *  (depth to water over time), then its site metadata, then folds in every other
  *  water-level product (summary, trend, change, depletion) for the same well —
  *  so the panel shows the same standard set regardless of which well layer the
- *  feature was selected from (flag `wellMetadata`; e.g. die:nm_waterlevel_status,
- *  die:nm_waterlevel_trends). The feature's `id` is the shared key that fetches
+ *  feature was selected from (flag `wellMetadata`; e.g. nm_waterlevel_status,
+ *  nm_waterlevel_trends). The feature's `id` is the shared key that fetches
  *  the timeseries and every folded product. */
 function WellInspect({ layer, featureId, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
   const { data } = useFeaturesLayer(layer)
   const feature = data?.features.find((f) => String(f.id ?? f.properties?.id) === featureId)
   const pos = firstPosition(feature)
   const props = (feature?.properties ?? {}) as Record<string, unknown>
-  const wellId = String(props.id ?? feature?.id ?? "")
+  // Source-qualified key (`ST2/BernCo:10493`) — unique, unlike the bare id.
+  const wellId = String(feature?.id ?? props.id ?? "")
   const name = (props.name as string) ?? `Well ${wellId}`
 
   return (

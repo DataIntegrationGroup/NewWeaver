@@ -14,7 +14,7 @@ import type { WfsQuery } from "@/clients/wfsClient"
 import { fixed2, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { formatOseValue } from "@/lib/oseCodes"
 import {
-  GEOSERVER_OGC_FEATURES_BASE_URL,
+  DIE_FEATURES_BASE_URL,
   OCOTILLO_FEATURES_BASE_URL,
   OSE_ARCGIS_BASE_URL,
   STA_ST2_BASE_URL,
@@ -129,7 +129,7 @@ interface BaseLayer {
   legend?: { label: string; color: string }[]
   /** When true, the inspector renders the standard DIE water-level well block
    *  for this feature — its hydrograph (depth to water over time, from
-   *  die:nm_waterlevels_timeseries) plus the folded-in summary / trend / change
+   *  nm_waterlevels_timeseries) plus the folded-in summary / trend / change
    *  / depletion products — regardless of which well layer it was selected from.
    *  The feature's `id` is the shared well location key that fetches all of them. */
   wellMetadata?: boolean
@@ -150,6 +150,13 @@ export interface FeaturesLayer extends BaseLayer {
    * millions of rows. Omit to load every matching feature.
    */
   maxFeatures?: number
+  /** Per-feature property transform applied after fetch. Must preserve `id`. */
+  mapProperties?: (props: Record<string, unknown>) => Record<string, unknown>
+  /** Key features by the top-level id rather than `properties.id`. DIE's
+   *  feature ids are unique (`ST2/BernCo:10493`); its bare well ids are not. */
+  keyByFeatureId?: boolean
+  /** Client-side row filter (the DIE pygeoapi ignores CQL `filter`). */
+  where?: (props: Record<string, unknown>) => boolean
 }
 
 /** Monitoring-point layer read from STA Locations. */
@@ -250,8 +257,8 @@ const st2AgencyLayers: StaLayer[] = ST2_AGENCIES.map((a) => ({
 
 /**
  * Hydrograph — wells with repeat water-level readings, drawn from the integrated
- * DIE water-level status product (die:nm_waterlevel_status, whose `id` keys the
- * die:nm_waterlevels_timeseries series). Clicking a well opens the inspector,
+ * DIE water-level status product (nm_waterlevel_status, whose `id` keys the
+ * nm_waterlevels_timeseries series). Clicking a well opens the inspector,
  * which plots its hydrograph (depth to water over time) above the site
  * metadata. Lives in the "Groundwater levels" section (WFS_SECTION, referenced
  * here by literal since that const is declared later).
@@ -262,8 +269,9 @@ const hydrographLayer: FeaturesLayer = {
   description:
     "Wells with repeat water-level readings — click a well to see its hydrograph (depth to water over time) and site metadata.",
   source: "features",
-  featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
-  collectionId: "die:nm_waterlevel_status",
+  featuresBaseUrl: DIE_FEATURES_BASE_URL,
+  keyByFeatureId: true,
+  collectionId: "nm_waterlevel_status",
   measurementType: "water_level",
   section: "Groundwater levels",
   defaultVisible: true,
@@ -590,15 +598,15 @@ const nwisLayers: FeaturesLayer[] = [
 ]
 
 /**
- * GeoServer WFS — New Mexico Water Data summary layers served from GeoServer
- * (GEOSERVER_WFS_BASE_URL) as a Web Feature Service. Each entry maps 1:1 to a
- * GeoServer typeName in the `die` workspace. Start hidden; users toggle them on
- * from the "Groundwater levels" and "Groundwater Chemistry" sections.
+ * Integrated DIE products — per-well summary layers from the DIE pygeoapi
+ * (DIE_FEATURES_BASE_URL). Each entry maps 1:1 to a collection. Start hidden;
+ * users toggle them on from the "Groundwater levels" and "Groundwater
+ * Chemistry" sections.
  */
 const WFS_SECTION = "Groundwater levels"
 // Water-chemistry integrated products get their own collapsible group.
 const CHEM_SECTION = "Groundwater Chemistry"
-// The integrated `die:` products span both sections (persisted together).
+// The integrated DIE products span both sections (persisted together).
 const INTEGRATED_SECTIONS = new Set([WFS_SECTION, CHEM_SECTION])
 // Secondary integrated products — per-well trend/summary/density layers that
 // parallel the primary summaries but are lower-traffic. Folded under the
@@ -723,9 +731,8 @@ const WFS_LAYERS: {
    *  well-metadata inspector (hydrograph + summary/trend/change/depletion),
    *  keyed by the shared well location `id`. See BaseLayer.wellMetadata. */
   wellMetadata?: boolean
-  /** Server-side CQL filter applied at fetch — e.g. to pull only sites with
-   *  sufficient data. Becomes the layer's WFS `cql_filter`. */
-  cqlFilter?: string
+  /** Client-side row filter — see FeaturesLayer.where. */
+  where?: (props: Record<string, unknown>) => boolean
   /** Numeric field to size points by under the bubble-map toggle. */
   bubbleField?: string
   /** Numeric field to expose as a min/max value range filter. */
@@ -746,7 +753,7 @@ const WFS_LAYERS: {
   formatValue?: (key: string, value: unknown) => string
 }[] = [
   {
-    typeName: "die:nm_arsenic_summary",
+    typeName: "nm_arsenic_summary",
     title: "Arsenic Summary",
     description:
       "Per-location arsenic summary for New Mexico.",
@@ -754,7 +761,7 @@ const WFS_LAYERS: {
     mt: "water_quality",
   },
   {
-    typeName: "die:nm_tds_summary",
+    typeName: "nm_tds_summary",
     title: "TDS Summary",
     description:
       "Per-location total-dissolved-solids summary for New Mexico. Turn on the bubble map to size each point by its mean TDS.",
@@ -780,7 +787,7 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_waterlevel_trends",
+    typeName: "nm_waterlevel_trends",
     title: "Groundwater Trends",
     description:
       "Per-location groundwater level trend summary for New Mexico.",
@@ -825,7 +832,7 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_major_chemistry",
+    typeName: "nm_major_chemistry",
     title: "Major Chemistry",
     description:
       "Major ion chemistry for New Mexico groundwater.",
@@ -833,7 +840,7 @@ const WFS_LAYERS: {
     mt: "water_quality",
   },
   {
-    typeName: "die:nm_monitoring_recency",
+    typeName: "nm_monitoring_recency",
     title: "Monitoring Recency",
     description:
       "Per-location monitoring recency for New Mexico — days since the last observation and active/stale status.",
@@ -881,7 +888,7 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_waterlevel_change",
+    typeName: "nm_waterlevel_change",
     title: "Water Level Change",
     description:
       "Per-location water-level change over a multi-year window for New Mexico — rising/declining direction and net change in feet.",
@@ -932,7 +939,7 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_mcl_exceedance",
+    typeName: "nm_mcl_exceedance",
     title: "MCL Exceedances",
     description:
       "Per-location drinking-water MCL exceedances for New Mexico — which analytes exceed primary/secondary limits.",
@@ -971,7 +978,7 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_water_type",
+    typeName: "nm_water_type",
     title: "Water Type",
     description:
       "Per-location hydrochemical water type (Piper classification) for New Mexico — dominant cation/anion facies.",
@@ -1022,7 +1029,7 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_seasonal_amplitude",
+    typeName: "nm_seasonal_amplitude",
     title: "Seasonal Amplitude",
     description:
       "Per-location seasonal water-level amplitude for New Mexico — average and peak within-year fluctuation.",
@@ -1075,7 +1082,7 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_depletion_projection",
+    typeName: "nm_depletion_projection",
     title: "Depletion Projection",
     description:
       "Per-location groundwater depletion projection for New Mexico — years until water level reaches well depth, based on the current trend.",
@@ -1140,29 +1147,29 @@ const WFS_LAYERS: {
     },
   },
   {
-    typeName: "die:nm_ion_balance",
+    typeName: "nm_ion_balance",
     title: "Ion Balance",
     description:
       "Per-location major-ion charge balance for New Mexico groundwater. Shows only sites with enough cation and anion coverage to compute a balance.",
     color: "#0d9488",
     mt: "water_quality",
-    // Only pull sites with sufficient data — GeoServer flags rows lacking
-    // enough cation/anion coverage as balance_class 'insufficient'.
-    cqlFilter: "balance_class <> 'insufficient'",
+    // Only keep sites with sufficient data — DIE flags rows lacking enough
+    // cation/anion coverage as balance_class 'insufficient'.
+    where: (p) => p.balance_class !== "insufficient",
   },
   {
-    typeName: "die:nm_sar",
+    typeName: "nm_sar",
     title: "Sodium Adsorption Ratio",
     description:
       "Per-location sodium adsorption ratio (SAR) for New Mexico — an indicator of irrigation-water suitability. Shows only sites with enough data to compute SAR.",
     color: "#ca8a04",
     mt: "water_quality",
-    // Only pull sites with sufficient data — rows lacking sodium/calcium/
+    // Only keep sites with sufficient data — rows lacking sodium/calcium/
     // magnesium to compute SAR are flagged sar_class 'insufficient'.
-    cqlFilter: "sar_class <> 'insufficient'",
+    where: (p) => p.sar_class !== "insufficient",
   },
   {
-    typeName: "die:nm_wqi",
+    typeName: "nm_wqi",
     title: "Water Quality Index",
     description:
       "Per-location water quality index (WQI) for New Mexico — a composite summary of groundwater quality.",
@@ -1171,7 +1178,7 @@ const WFS_LAYERS: {
   },
   // --- Additional Products (folded under the "Advanced" super-group) ---
   {
-    typeName: "die:nm_arsenic_trend",
+    typeName: "nm_arsenic_trend",
     title: "Arsenic Trends",
     description:
       "Per-location arsenic concentration trend (Mann-Kendall slope and category) for New Mexico groundwater.",
@@ -1186,7 +1193,7 @@ const WFS_LAYERS: {
     style: trendStyle(),
   },
   {
-    typeName: "die:nm_nitrate_trend",
+    typeName: "nm_nitrate_trend",
     title: "Nitrate Trends",
     description:
       "Per-location nitrate concentration trend (Mann-Kendall slope and category) for New Mexico groundwater.",
@@ -1201,7 +1208,7 @@ const WFS_LAYERS: {
     style: trendStyle(),
   },
   {
-    typeName: "die:nm_hardness",
+    typeName: "nm_hardness",
     title: "Water Hardness",
     description:
       "Per-location total hardness as CaCO₃ (calcium + magnesium) for New Mexico groundwater. Turn on the bubble map to size points by hardness.",
@@ -1230,7 +1237,7 @@ const WFS_LAYERS: {
     style: hardnessStyle(),
   },
   {
-    typeName: "die:nm_waterlevel_data_density",
+    typeName: "nm_waterlevel_data_density",
     title: "Water Level Data Density",
     description:
       "Per-location water-level measurement coverage and frequency for New Mexico. Turn on the bubble map to size points by observations per year.",
@@ -1244,7 +1251,7 @@ const WFS_LAYERS: {
     bubbleField: "observations_per_year",
   },
   {
-    typeName: "die:nm_waterlevels_summary",
+    typeName: "nm_waterlevels_summary",
     title: "Water Levels Summary",
     description:
       "Per-location depth-to-water summary statistics (min / mean / max) for New Mexico. Turn on the bubble map to size points by mean depth.",
@@ -1259,26 +1266,21 @@ const WFS_LAYERS: {
   },
 ]
 
-// The integrated `die` products are served by GeoServer's OGC API Features
-// endpoint (the modern replacement for its WFS). Each maps 1:1 to an OGC
-// collection whose id is the workspace-qualified `die:` layer name. The `wfs-`
-// id stem is kept so bookmarked URLs and layer references stay valid. A
-// server-side CQL filter (e.g. "only sufficient data") rides as an OGC
-// `filter` + `filter-lang=cql2-text`.
+// The `wfs-` id stem (from the GeoServer era) is kept so bookmarked URLs and
+// layer references stay valid.
 const integratedLayers: FeaturesLayer[] = WFS_LAYERS.map((w) => ({
   id: `wfs-${w.typeName.split(":").pop()!.replace(/_/g, "-")}`,
   title: w.title,
   description: w.description,
   source: "features",
-  featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
+  featuresBaseUrl: DIE_FEATURES_BASE_URL,
+  keyByFeatureId: true,
   collectionId: w.typeName,
   measurementType: w.mt,
   section: w.section ?? (w.mt === "water_quality" ? CHEM_SECTION : WFS_SECTION),
   cluster: true,
   style: w.style ?? staPoint(w.color),
-  ...(w.cqlFilter && {
-    query: { filter: w.cqlFilter, "filter-lang": "cql2-text" },
-  }),
+  ...(w.where && { where: w.where }),
   ...(w.bubbleField && { bubbleField: w.bubbleField }),
   ...(w.rangeField && { rangeField: w.rangeField }),
   ...(w.rangeDomain && { rangeDomain: w.rangeDomain }),
@@ -1362,8 +1364,9 @@ const densityLayers: FeaturesLayer[] = [
     description:
       "Wells per km² by groundwater basin. Darker = denser; click a basin for its counts. Edit the color from the swatch.",
     source: "features",
-    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
-    collectionId: "die:nm_well_density_by_basin",
+    featuresBaseUrl: DIE_FEATURES_BASE_URL,
+    keyByFeatureId: true,
+    collectionId: "nm_well_density_by_basin",
     measurementType: "wells",
     section: DENSITY_SECTION,
     style: densityFill("#b45309"),
@@ -1374,8 +1377,9 @@ const densityLayers: FeaturesLayer[] = [
     description:
       "Wells per km² by county. Darker = denser; click a county for its counts. Edit the color from the swatch.",
     source: "features",
-    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
-    collectionId: "die:nm_well_density_by_county",
+    featuresBaseUrl: DIE_FEATURES_BASE_URL,
+    keyByFeatureId: true,
+    collectionId: "nm_well_density_by_county",
     measurementType: "wells",
     section: DENSITY_SECTION,
     style: densityFill("#1d4ed8"),
@@ -1386,8 +1390,9 @@ const densityLayers: FeaturesLayer[] = [
     description:
       "Wells matched across agencies (NMBGMR, OSE, and others) into correlation clusters — click a well for its linked sites, matching method, and confidence.",
     source: "features",
-    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
-    collectionId: "die:nm_well_correlation",
+    featuresBaseUrl: DIE_FEATURES_BASE_URL,
+    keyByFeatureId: true,
+    collectionId: "nm_well_correlation",
     measurementType: "wells",
     section: DENSITY_SECTION,
     style: staPoint("#7c3aed"),
@@ -1398,8 +1403,9 @@ const densityLayers: FeaturesLayer[] = [
     description:
       "Distribution of recent Points of Diversion (well completions) by county over the last decade — click a county for its per-year counts, trend, and peak year.",
     source: "features",
-    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
-    collectionId: "die:nm_pod_age_by_county",
+    featuresBaseUrl: DIE_FEATURES_BASE_URL,
+    keyByFeatureId: true,
+    collectionId: "nm_pod_age_by_county",
     measurementType: "wells",
     section: DENSITY_SECTION,
     style: countFill("#0f766e", "total_recent_pods"),
@@ -1410,8 +1416,9 @@ const densityLayers: FeaturesLayer[] = [
     description:
       "Individual well completions (Points of Diversion) from the last ten years — click a well for its completion year, aquifer, and depth.",
     source: "features",
-    featuresBaseUrl: GEOSERVER_OGC_FEATURES_BASE_URL,
-    collectionId: "die:nm_pod_age_points",
+    featuresBaseUrl: DIE_FEATURES_BASE_URL,
+    keyByFeatureId: true,
+    collectionId: "nm_pod_age_points",
     measurementType: "wells",
     section: DENSITY_SECTION,
     style: staPoint("#0891b2"),
@@ -1432,13 +1439,14 @@ export const LAYER_CATALOG: LayerConfig[] = [
  * Bump when a persisted layer's feature shape changes (new `mapProperties`,
  * renamed fields, etc.) so the IndexedDB cache busts instead of replaying a
  * stale shape. Used as the persist `buster` in main.tsx. Bumped to 4 when the
- * integrated products moved from WFS to OGC API Features (new query keys).
+ * integrated products moved from WFS to OGC API Features (new query keys), and
+ * to 5 when they moved from GeoServer to the DIE pygeoapi.
  */
-export const CATALOG_VERSION = "4"
+export const CATALOG_VERSION = "5"
 
 /**
  * OGC collection ids whose fetched FeatureCollections are persisted to
- * IndexedDB — only the integrated `die:` products (the "Groundwater levels" and
+ * IndexedDB — only the integrated DIE products (the "Groundwater levels" and
  * "Groundwater Chemistry" sections). The features query key carries the
  * collection id, so the persist predicate matches on these.
  */
