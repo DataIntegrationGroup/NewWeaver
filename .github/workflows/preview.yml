@@ -1,0 +1,148 @@
+name: Preview
+
+# Per-PR preview of the SPA on Cloud Run. Every push to a PR builds the merge
+# result into its own service (newweaver-pr-<number>) and posts the URL on the
+# PR; closing or merging the PR deletes the service and its images. Uses the
+# same Workload Identity Federation setup as deploy.yml (see DEPLOY.md).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+# One run per PR at a time. A new push supersedes an in-flight deploy, and a
+# close cancels it before teardown runs.
+concurrency:
+  group: preview-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  REGION: us-central1
+  REPOSITORY: newweaver
+  SERVICE: newweaver-pr-${{ github.event.pull_request.number }}
+
+jobs:
+  deploy:
+    # Fork PRs get no OIDC token, so they cannot authenticate to GCP.
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for Workload Identity Federation
+      pull-requests: write # preview URL comment
+    steps:
+      # On pull_request this checks out refs/pull/<n>/merge, so the preview
+      # shows the PR as it would land on the base branch.
+      - uses: actions/checkout@v5
+
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Resolve image ref
+        id: img
+        run: |
+          echo "ref=${REGION}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${REPOSITORY}/${SERVICE}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      # The docker-container driver is what lets the build export its layer
+      # cache; the default docker driver cannot.
+      - uses: docker/setup-buildx-action@v3
+
+      # No PostHog key: previews should not send events into production
+      # analytics. The app disables tracking when the key is empty.
+      #
+      # GHA cache is scoped to the PR's ref (falling back to the base branch),
+      # so repeat pushes to a PR reuse the pnpm install layer.
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.img.outputs.ref }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${SERVICE}" \
+            --image "${{ steps.img.outputs.ref }}" \
+            --region "${REGION}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --min-instances 0 \
+            --max-instances 2 \
+            --labels "preview=true,pr=${{ github.event.pull_request.number }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}"
+
+      - name: Resolve preview URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe "${SERVICE}" \
+            --region "${REGION}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --format 'value(status.url)')
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+      # Edit one marked comment in place rather than adding a new one per push.
+      - name: Comment preview URL on PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.url.outputs.url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          # The build (and image tag) is the merge commit GITHUB_SHA, not the
+          # head commit, so name both to avoid confusion.
+          MARKER='<!-- newweaver-preview -->'
+          BODY="${MARKER}
+          **Preview:** ${URL}
+
+          Built from the merge of ${HEAD_SHA:0:7} into \`${BASE_REF}\` (merge commit ${GITHUB_SHA:0:7}). Deleted when this PR closes."
+          ID=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
+            --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -n1)
+          if [ -n "$ID" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${ID}" -f body="$BODY" > /dev/null
+          else
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$BODY"
+          fi
+
+  teardown:
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      # Both steps tolerate a missing resource, so closing a PR whose preview
+      # never deployed still succeeds.
+      - name: Delete Cloud Run service
+        run: |
+          gcloud run services delete "${SERVICE}" \
+            --region "${REGION}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --quiet || echo "No service ${SERVICE} to delete."
+
+      - name: Delete preview images
+        run: |
+          gcloud artifacts docker images delete \
+            "${REGION}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${REPOSITORY}/${SERVICE}" \
+            --delete-tags \
+            --quiet || echo "No images for ${SERVICE} to delete."
