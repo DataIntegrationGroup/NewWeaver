@@ -3,9 +3,9 @@ name: Preview
 # Per-PR preview of the SPA on Cloud Run, opt-in with the "preview" label.
 # Adding the label, and every later push while it is on, builds the merge
 # result into its own service (newweaver-pr-<number>) and posts the URL on the
-# PR. Removing the label, or closing/merging the PR, removes the service and
-# its images. Uses the same Workload Identity Federation setup as deploy.yml
-# (see DEPLOY.md).
+# PR. Removing the label, or closing/merging the PR, removes the service.
+# Images stay in Artifact Registry. Uses the same Workload Identity Federation
+# setup as deploy.yml (see DEPLOY.md).
 
 on:
   pull_request:
@@ -145,18 +145,11 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v3
 
-      # Both steps tolerate a missing resource, so closing a PR whose preview
-      # never deployed still succeeds.
+      # Tolerates a missing service, so closing a PR whose preview never
+      # deployed still succeeds.
       - name: Delete Cloud Run service
         run: |
           gcloud run services delete "${SERVICE}" \
             --region "${REGION}" \
             --project "${{ vars.GCP_PROJECT_ID }}" \
             --quiet || echo "No service ${SERVICE} to delete."
-
-      - name: Delete preview images
-        run: |
-          gcloud artifacts docker images delete \
-            "${REGION}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${REPOSITORY}/${SERVICE}" \
-            --delete-tags \
-            --quiet || echo "No images for ${SERVICE} to delete."
