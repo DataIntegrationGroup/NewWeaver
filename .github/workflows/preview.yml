@@ -1,19 +1,15 @@
 name: Preview
 
-# Per-PR preview of the SPA on Cloud Run. Every push to a PR builds the merge
+# Per-PR preview of the SPA on Cloud Run, opt-in with the "preview" label.
+# Adding the label, and every later push while it is on, builds the merge
 # result into its own service (newweaver-pr-<number>) and posts the URL on the
-# PR; closing or merging the PR deletes the service and its images. Uses the
-# same Workload Identity Federation setup as deploy.yml (see DEPLOY.md).
+# PR. Removing the label, or closing/merging the PR, deletes the service and
+# its images. Uses the same Workload Identity Federation setup as deploy.yml
+# (see DEPLOY.md).
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
-
-# One run per PR at a time. A new push supersedes an in-flight deploy, and a
-# close cancels it before teardown runs.
-concurrency:
-  group: preview-pr-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+    types: [opened, synchronize, reopened, labeled, unlabeled, closed]
 
 env:
   REGION: us-central1
@@ -22,10 +18,22 @@ env:
 
 jobs:
   deploy:
-    # Fork PRs get no OIDC token, so they cannot authenticate to GCP.
+    # Runs only while the PR carries the "preview" label. A labeled event for
+    # some other label must not redeploy. Fork PRs get no OIDC token, so they
+    # cannot authenticate to GCP.
     if: >-
       github.event.action != 'closed' &&
+      github.event.action != 'unlabeled' &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview') &&
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
       github.event.pull_request.head.repo.full_name == github.repository
+    # Job-level, not workflow-level: unrelated label events trigger runs whose
+    # jobs all skip, and a workflow-level group would let those cancel a real
+    # deploy. Shared with teardown so a close or unlabel cancels a deploy in
+    # flight, and a new push supersedes the previous one.
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -106,7 +114,7 @@ jobs:
           BODY="${MARKER}
           **Preview:** ${URL}
 
-          Built from the merge of ${HEAD_SHA:0:7} into \`${BASE_REF}\` (merge commit ${GITHUB_SHA:0:7}). Deleted when this PR closes."
+          Built from the merge of ${HEAD_SHA:0:7} into \`${BASE_REF}\` (merge commit ${GITHUB_SHA:0:7}). Deleted when this PR closes or the \`preview\` label is removed."
           ID=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate \
             --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -n1)
           if [ -n "$ID" ]; then
@@ -116,9 +124,15 @@ jobs:
           fi
 
   teardown:
+    # Closing tears down whether or not the label is still on; teardown is a
+    # no-op when no preview exists.
     if: >-
-      github.event.action == 'closed' &&
+      (github.event.action == 'closed' ||
+       (github.event.action == 'unlabeled' && github.event.label.name == 'preview')) &&
       github.event.pull_request.head.repo.full_name == github.repository
+    concurrency:
+      group: preview-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
