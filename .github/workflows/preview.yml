@@ -3,7 +3,7 @@ name: Preview
 # Per-PR preview of the SPA on Cloud Run, opt-in with the "preview" label.
 # Adding the label, and every later push while it is on, builds the merge
 # result into its own service (newweaver-pr-<number>) and posts the URL on the
-# PR. Removing the label, or closing/merging the PR, deletes the service and
+# PR. Removing the label, or closing/merging the PR, removes the service and
 # its images. Uses the same Workload Identity Federation setup as deploy.yml
 # (see DEPLOY.md).
 
