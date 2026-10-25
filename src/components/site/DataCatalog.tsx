@@ -14,7 +14,7 @@ import { Download, ExternalLink, MapPin, Search, Share2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -159,25 +159,23 @@ function DatasetCard({
         </dl>
       </CardContent>
       <CardFooter className="flex-wrap gap-2">
-        <Button
-          size="sm"
+        <Link
+          to="/map"
+          search={datasetMapSearch(d.id)}
+          className={buttonVariants({ size: "sm" })}
           data-testid={`catalog-card-map-${d.id}`}
-          nativeButton={false}
-          render={<Link to="/map" search={datasetMapSearch(d.id)} />}
         >
           <MapPin /> View on map
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        </Link>
+        <Link
+          to="/map"
+          search={datasetMapSearch(d.id)}
+          hash="download"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
           data-testid={`catalog-card-download-${d.id}`}
-          nativeButton={false}
-          render={
-            <Link to="/map" search={datasetMapSearch(d.id)} hash="download" />
-          }
         >
           <Download /> Download
-        </Button>
+        </Link>
         <Button
           variant="outline"
           size="sm"
