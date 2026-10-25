@@ -34,6 +34,7 @@ import { DatastreamChart } from "./DatastreamChart"
 import { Hydrograph } from "./Hydrograph"
 import { ObservationTable } from "./ObservationTable"
 import { FieldValue } from "@/components/ui/field-value"
+import type { Datastream } from "@/clients/sensorThings"
 
 interface InspectPanelProps {
   layer: LayerConfig
@@ -58,6 +59,11 @@ function firstPosition(f: Feature | undefined): Position | undefined {
 }
 
 /** Copy-to-clipboard button; shows a check briefly after copying. */
+function datastreamLabel(d: Datastream): string {
+  const symbol = d.unitOfMeasurement?.symbol
+  return symbol ? `${d.name} (${symbol})` : d.name
+}
+
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
   if (!value) return null
@@ -144,18 +150,20 @@ function PanelShell({
         </h2>
         <div className="flex items-center gap-1">
           {onZoomTo && (
-            <TooltipProvider delayDuration={200}>
+            <TooltipProvider delay={200}>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Zoom to feature"
-                    data-testid="inspect-zoom"
-                    onClick={onZoomTo}
-                  >
-                    <Crosshair />
-                  </Button>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Zoom to feature"
+                      data-testid="inspect-zoom"
+                      onClick={onZoomTo}
+                    />
+                  }
+                >
+                  <Crosshair />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Zoom to feature</TooltipContent>
               </Tooltip>
@@ -299,7 +307,7 @@ function FieldInfo({ field, value }: { field: string; value: string }) {
   const help = fieldHelp(field, value)
   if (!help) return null
   return (
-    <TooltipProvider delayDuration={120}>
+    <TooltipProvider delay={120}>
       <Tooltip>
         <TooltipTrigger
           onClick={(e) => e.stopPropagation()}
@@ -719,8 +727,13 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
             </p>
           ) : (
             <Select
-              value={dsId ?? ""}
+              items={datastreams.map((d) => ({
+                value: String(d["@iot.id"]),
+                label: datastreamLabel(d),
+              }))}
+              value={dsId ?? null}
               onValueChange={(id) => {
+                if (id === null) return
                 const ds = datastreams.find((d) => String(d["@iot.id"]) === id)
                 posthog.capture("datastream_selected", {
                   datastream_id: id,
@@ -737,8 +750,7 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
               <SelectContent>
                 {datastreams.map((d) => (
                   <SelectItem key={String(d["@iot.id"])} value={String(d["@iot.id"])}>
-                    {d.name}
-                    {d.unitOfMeasurement?.symbol ? ` (${d.unitOfMeasurement.symbol})` : ""}
+                    {datastreamLabel(d)}
                   </SelectItem>
                 ))}
               </SelectContent>

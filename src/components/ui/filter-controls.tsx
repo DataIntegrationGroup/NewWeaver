@@ -59,15 +59,17 @@ export function FilterControls({ bbox, q, onBboxChange, onQueryChange }: FilterC
         onChange={(e) => onType(e.target.value)}
       />
       <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-label="About filtering"
-            data-testid="filter-info"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Info className="size-4" />
-          </button>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              aria-label="About filtering"
+              data-testid="filter-info"
+              className="text-muted-foreground hover:text-foreground"
+            />
+          }
+        >
+          <Info className="size-4" />
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-64">
           <strong>Filter to map view</strong> limits data to the current map

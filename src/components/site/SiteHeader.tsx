@@ -23,25 +23,26 @@ const NAV = [
 export function SiteHeader() {
   return (
     <NavBar>
-      <NavBarBrand asChild>
-        <Link to="/">
-          Weaver
-          <span className="text-sm font-normal text-muted-foreground">
-            New Mexico Water Data
-          </span>
-        </Link>
+      <NavBarBrand render={<Link to="/" />}>
+        Weaver
+        <span className="text-sm font-normal text-muted-foreground">
+          New Mexico Water Data
+        </span>
       </NavBarBrand>
       <NavBarNav>
         {NAV.map((item) => (
-          <NavBarLink key={item.to} asChild>
-            <Link
-              to={item.to}
-              activeProps={{ "data-active": "true" }}
-              activeOptions={{ exact: item.exact }}
-              data-testid={`nav-${item.label.toLowerCase()}`}
-            >
-              {item.label}
-            </Link>
+          <NavBarLink
+            key={item.to}
+            render={
+              <Link
+                to={item.to}
+                activeProps={{ "data-active": "true" }}
+                activeOptions={{ exact: item.exact }}
+                data-testid={`nav-${item.label.toLowerCase()}`}
+              />
+            }
+          >
+            {item.label}
           </NavBarLink>
         ))}
         <NavBarActions>

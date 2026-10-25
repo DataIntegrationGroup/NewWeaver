@@ -50,7 +50,12 @@ import {
 } from "@/components/ui/table"
 import { toCsv, downloadFile, exportFilename, type CsvValue } from "@/lib/export/csv"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
-import { REGION_CATALOG, REGION_KINDS, type RegionKind } from "@/catalog/regions"
+import {
+  REGION_CATALOG,
+  REGION_KIND_ITEMS,
+  REGION_KINDS,
+  type RegionKind,
+} from "@/catalog/regions"
 import { useRegionOptions, useRegionFeatures } from "@/hooks/useRegions"
 import { regionPolygons } from "@/lib/regions"
 import { useTheme } from "@/components/theme-provider"
@@ -116,7 +121,11 @@ function RegionPicker({
         </p>
       </div>
 
-      <Select value={kind} onValueChange={(v) => setKind(v as RegionKind)}>
+      <Select
+        items={REGION_KIND_ITEMS}
+        value={kind}
+        onValueChange={(v) => v && setKind(v)}
+      >
         <SelectTrigger className="w-full" aria-label="Region type">
           <SelectValue />
         </SelectTrigger>
@@ -202,15 +211,17 @@ const fmt = (n: number | undefined, digits = 0) =>
 function InfoPopover({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`About ${title}`}
-          data-testid="planning-card-info"
-          className="text-muted-foreground/70 transition-colors hover:text-foreground"
-        >
-          <Info className="size-3.5" />
-        </button>
+      <PopoverTrigger
+        render={
+          <button
+            type="button"
+            aria-label={`About ${title}`}
+            data-testid="planning-card-info"
+            className="text-muted-foreground/70 transition-colors hover:text-foreground"
+          />
+        }
+      >
+        <Info className="size-3.5" />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 text-xs leading-relaxed">
         <p className="mb-1 text-sm font-semibold">{title}</p>

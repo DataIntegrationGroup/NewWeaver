@@ -47,13 +47,16 @@ function Hero() {
           .
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button asChild size="lg">
-            <Link to="/map">
-              Explore the map <ArrowRight />
-            </Link>
+          <Button size="lg" nativeButton={false} render={<Link to="/map" />}>
+            Explore the map <ArrowRight />
           </Button>
-          <Button asChild variant="outline" size="lg">
-            <Link to="/about">About Weaver</Link>
+          <Button
+            variant="outline"
+            size="lg"
+            nativeButton={false}
+            render={<Link to="/about" />}
+          >
+            About Weaver
           </Button>
         </div>
       </div>

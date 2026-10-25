@@ -12,6 +12,7 @@
     "test:bdd:frontend": "NODE_OPTIONS='--import ./bdd-register.mjs' cucumber-js --profile frontend"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@fontsource-variable/outfit": "^5.3.0",
     "@fontsource-variable/public-sans": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
@@ -22,6 +23,7 @@
     "@tanstack/react-table": "^9.3.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cn": "^0.5.0",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "idb-keyval": "^6.3.0",

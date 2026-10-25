@@ -61,7 +61,7 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
   }
 
   return (
-    <Accordion type="single" collapsible data-testid="observation-table">
+    <Accordion data-testid="observation-table">
       <AccordionItem value="observations" className="border-none">
         <AccordionTrigger className="text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:no-underline">
           Observations ({points.length.toLocaleString()})

@@ -300,7 +300,7 @@ function LayerSelector({
   ...props
 }: LayerSelectorProps) {
   return (
-    <TooltipProvider delayDuration={200}>
+    <TooltipProvider delay={200}>
       <ul
         data-slot="layer-selector"
         role="group"
@@ -355,7 +355,7 @@ function LayerSelector({
                   )}
                   {option.description ? (
                     <Tooltip>
-                      <TooltipTrigger asChild>{titleLabel}</TooltipTrigger>
+                      <TooltipTrigger render={titleLabel} />
                       <TooltipContent side="right" className="max-w-56">
                         {option.description}
                       </TooltipContent>
@@ -384,14 +384,16 @@ function LayerSelector({
                   )}
                   {checked && onOpacityChange && (
                     <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label={`${option.title} settings`}
-                          className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                        >
-                          <Settings className="size-4" />
-                        </button>
+                      <PopoverTrigger
+                        render={
+                          <button
+                            type="button"
+                            aria-label={`${option.title} settings`}
+                            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                          />
+                        }
+                      >
+                        <Settings className="size-4" />
                       </PopoverTrigger>
                       <PopoverContent className="w-56" side="left" align="center">
                         <div className="flex items-center justify-between mb-1">
@@ -517,7 +519,7 @@ function LayerSelector({
                                 data-testid={`layer-range-${option.id}`}
                                 aria-label={`${option.title} value range`}
                                 onValueChange={(v) =>
-                                  onRangeChange(option.id, [v[0], v[1]] as [number, number])
+                                  Array.isArray(v) && onRangeChange(option.id, [v[0], v[1]])
                                 }
                               />
                             </div>

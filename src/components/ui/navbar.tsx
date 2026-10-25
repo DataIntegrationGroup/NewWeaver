@@ -1,17 +1,18 @@
 import * as React from "react"
-import { Slot } from "radix-ui"
+import { mergeProps } from "@base-ui/react/merge-props"
+import { useRender } from "@base-ui/react/use-render"
 
 import { cn } from "@/lib/utils"
 
 /**
  * NavBar — top navigation chrome for Data Services apps. Router-agnostic: link
- * elements are passed in via `asChild`, so the consuming app supplies its own
+ * elements are passed in via `render`, so the consuming app supplies its own
  * router's Link (or a plain `<a>`).
  *
  *   <NavBar>
- *     <NavBarBrand asChild><Link to="/">Weaver</Link></NavBarBrand>
+ *     <NavBarBrand render={<Link to="/" />}>Weaver</NavBarBrand>
  *     <NavBarNav>
- *       <NavBarLink asChild><Link to="/map">Map</Link></NavBarLink>
+ *       <NavBarLink render={<Link to="/map" />}>Map</NavBarLink>
  *     </NavBarNav>
  *     <NavBarActions><ModeToggle /></NavBarActions>
  *   </NavBar>
@@ -42,20 +43,23 @@ function NavBar({
 
 function NavBarBrand({
   className,
-  asChild = false,
+  render,
   ...props
-}: React.ComponentProps<"div"> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot.Root : "div"
-  return (
-    <Comp
-      data-slot="navbar-brand"
-      className={cn(
-        "flex items-baseline gap-2 text-2xl font-bold leading-none text-primary",
-        className
-      )}
-      {...props}
-    />
-  )
+}: useRender.ComponentProps<"div">) {
+  return useRender({
+    defaultTagName: "div",
+    props: mergeProps<"div">(
+      {
+        className: cn(
+          "flex items-baseline gap-2 text-2xl font-bold leading-none text-primary",
+          className
+        ),
+      },
+      props
+    ),
+    render,
+    state: { slot: "navbar-brand" },
+  })
 }
 
 function NavBarNav({ className, ...props }: React.ComponentProps<"nav">) {
@@ -69,28 +73,30 @@ function NavBarNav({ className, ...props }: React.ComponentProps<"nav">) {
 }
 
 /**
- * A nav link. Use `asChild` to render the app's router Link. Mark the active
+ * A nav link. Use `render` to render the app's router Link. Mark the active
  * link by setting `data-active` (e.g. via the router's activeProps) or the
  * `active` prop for non-router use.
  */
 function NavBarLink({
   className,
-  asChild = false,
+  render,
   active,
   ...props
-}: React.ComponentProps<"a"> & { asChild?: boolean; active?: boolean }) {
-  const Comp = asChild ? Slot.Root : "a"
-  return (
-    <Comp
-      data-slot="navbar-link"
-      data-active={active || undefined}
-      className={cn(
-        "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[active]:bg-muted data-[active]:text-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
+}: useRender.ComponentProps<"a"> & { active?: boolean }) {
+  return useRender({
+    defaultTagName: "a",
+    props: mergeProps<"a">(
+      {
+        className: cn(
+          "rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[active]:bg-muted data-[active]:text-foreground",
+          className
+        ),
+      },
+      props
+    ),
+    render,
+    state: { slot: "navbar-link", active: active || undefined },
+  })
 }
 
 function NavBarActions({ className, ...props }: React.ComponentProps<"div">) {

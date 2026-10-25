@@ -159,20 +159,24 @@ function DatasetCard({
         </dl>
       </CardContent>
       <CardFooter className="flex-wrap gap-2">
-        <Button asChild size="sm" data-testid={`catalog-card-map-${d.id}`}>
-          <Link to="/map" search={datasetMapSearch(d.id)}>
-            <MapPin /> View on map
-          </Link>
+        <Button
+          size="sm"
+          data-testid={`catalog-card-map-${d.id}`}
+          nativeButton={false}
+          render={<Link to="/map" search={datasetMapSearch(d.id)} />}
+        >
+          <MapPin /> View on map
         </Button>
         <Button
-          asChild
           variant="outline"
           size="sm"
           data-testid={`catalog-card-download-${d.id}`}
+          nativeButton={false}
+          render={
+            <Link to="/map" search={datasetMapSearch(d.id)} hash="download" />
+          }
         >
-          <Link to="/map" search={datasetMapSearch(d.id)} hash="download">
-            <Download /> Download
-          </Link>
+          <Download /> Download
         </Button>
         <Button
           variant="outline"
