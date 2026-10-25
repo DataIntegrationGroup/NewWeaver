@@ -115,12 +115,16 @@ Then("the map shows an empty-filter message", async function (this: BrowserWorld
 
 When("the user focuses the filter info button", async function (this: BrowserWorld) {
   await this.openSearchSection("filter")
+  // Base UI tooltips open on keyboard focus (:focus-visible) only; opening the
+  // section was a mouse click, so press a key first to switch input modality.
+  await this.page.keyboard.press("Shift")
   await this.page.locator('[data-testid="filter-info"]:visible').focus()
 })
 
 Then("a tooltip explains what filtering does", async function (this: BrowserWorld) {
+  // Base UI tooltip popups carry no role="tooltip", so match the shadcn slot.
   await this.page
-    .getByRole("tooltip", { name: /limits data to the current map extent/ })
+    .locator('[data-slot="tooltip-content"]', { hasText: /limits data to the current map extent/ })
     .first()
     .waitFor()
 })
