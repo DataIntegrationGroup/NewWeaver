@@ -141,7 +141,7 @@ Then("no time range inputs are shown", async function (this: BrowserWorld) {
 Given("no monitoring locations are in the current selection", async function (this: BrowserWorld) {
   await revealLayerCatalog(this)
   const sw = this.page.getByTestId("layer-toggle-st2-cabq")
-  if ((await sw.getAttribute("data-state")) === "checked") await sw.click()
+  if ((await sw.getAttribute("aria-checked")) === "true") await sw.click()
 })
 
 Then("the download action is disabled", async function (this: BrowserWorld) {
@@ -157,7 +157,7 @@ Given("the selection contains many continuous datastreams", async function (this
   // Bernalillo agency returns 30 locations (> the large-export threshold).
   await revealLayerCatalog(this)
   const sw = this.page.getByTestId("layer-toggle-st2-bernco")
-  if ((await sw.getAttribute("data-state")) !== "checked") await sw.click()
+  if ((await sw.getAttribute("aria-checked")) !== "true") await sw.click()
 })
 
 Then("the modal warns that the export may be large", async function (this: BrowserWorld) {

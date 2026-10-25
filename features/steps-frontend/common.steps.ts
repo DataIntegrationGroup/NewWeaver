@@ -23,7 +23,7 @@ export async function revealLayerCatalog(world: BrowserWorld) {
 
 async function switchState(world: BrowserWorld, id: string): Promise<boolean> {
   const sw = world.page.getByTestId(`layer-toggle-${id}`)
-  return (await sw.getAttribute("data-state")) === "checked"
+  return (await sw.getAttribute("aria-checked")) === "true"
 }
 
 async function setLayer(world: BrowserWorld, id: string, want: boolean) {

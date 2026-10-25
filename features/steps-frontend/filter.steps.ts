@@ -23,7 +23,7 @@ async function tableCount(world: BrowserWorld): Promise<number> {
 async function setSwitch(world: BrowserWorld, on: boolean) {
   await world.openSearchSection("filter")
   const sw = world.page.locator('[data-testid="filter-bbox"]:visible')
-  if (((await sw.getAttribute("data-state")) === "checked") !== on) await sw.click()
+  if (((await sw.getAttribute("aria-checked")) === "true") !== on) await sw.click()
 }
 
 When('the user enables "filter to map view"', async function (this: BrowserWorld) {
