@@ -3,7 +3,7 @@
  * shows "—" until it loads.
  */
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useDieStats } from "@/hooks/useDieStats"
+import { useDieCollections } from "@/hooks/useDieCollections"
 
 // Distinct DIE `source` values as of 2026-10-29. pygeoapi can't count distinct
 // values cheaply, so they're hardcoded.
@@ -52,7 +52,7 @@ function StatTile({
 }
 
 export function DataDashboard() {
-  const { data } = useDieStats()
+  const { data: collections } = useDieCollections()
 
   return (
     <section data-testid="home-dashboard" className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -63,7 +63,7 @@ export function DataDashboard() {
       />
       <StatTile
         testid="dashboard-stat-datasets"
-        value={fmtNum(data?.datasets)}
+        value={fmtNum(collections?.length)}
         label="Datasets"
       />
       <StatTile

@@ -235,10 +235,46 @@ export const WATER_LEVELS_ITEMS = {
   }),
 }
 
-/** DIE pygeoapi collection list — the home dashboard counts it as datasets. */
+/** DIE pygeoapi /collections — a slice of the real response. The home dashboard
+ *  counts these as datasets; the Datasets page lists them. */
+const DIE = "https://die-pygeoapi-95715287188.us-central1.run.app"
+const dieCollection = (id: string, title: string, description: string) => ({
+  id,
+  title,
+  description,
+  keywords: ["water", "groundwater", "New Mexico"],
+  links: [
+    { rel: "self", type: "text/html", href: `${DIE}/collections/${id}?f=html` },
+    { rel: "items", type: "application/geo+json", href: `${DIE}/collections/${id}/items?f=json` },
+    { rel: "items", type: "text/csv; charset=utf-8", href: `${DIE}/collections/${id}/items?f=csv` },
+  ],
+})
+
 export const DIE_COLLECTIONS = {
-  collections: ["nm_waterlevels_summary", "nm_major_chemistry", "nm_arsenic_summary"].map(
-    (id) => ({ id, title: id, links: [] })
-  ),
+  collections: [
+    dieCollection("nm_waterlevels_summary", "NM Unified Water Levels Summary", "Summary stats for water levels, all NM sources"),
+    dieCollection("nm_arsenic_summary", "NM Arsenic Summary", "Arsenic concentration summary stats, all NM sources"),
+    dieCollection("nm_arsenic_trend", "NM Arsenic Trends", "Per-well arsenic concentration trend (slope and category), all NM sources"),
+    dieCollection("nm_fluoride_trend", "NM Fluoride Trends", "Per-well fluoride concentration trend (slope and category), all NM sources"),
+    dieCollection("nm_waterlevels_timeseries", "NM Water Levels Time Series", "Per-observation water level measurements, all NM sources"),
+    dieCollection("nm_pod_age_points", "NM Recent Wells (PODs) — Last 10 Years", "Point layer of OSE PODs completed in the last 10 years"),
+  ],
   links: [],
+}
+
+export const DIE_QUERYABLES = {
+  type: "object",
+  properties: {
+    geometry: { format: "geometry-any" },
+    id: { type: "string" },
+    name: { type: "string" },
+    trend_category: { type: "string" },
+  },
+}
+
+/** Row counts (numberMatched) for DIE collections, by id — sizes the download dialog. */
+export const DIE_COUNTS: Record<string, number> = {
+  nm_arsenic_summary: 25000,
+  nm_waterlevels_summary: 37251,
+  nm_waterlevels_timeseries: 882280,
 }
