@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { cn } from "cn"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { ArrowRight, MapPin, Layers, Compass, Code2, Search } from "lucide-react"
 
@@ -23,10 +24,10 @@ import { DataSourceCarousel } from "./DataSourceCarousel"
 import { DataDashboard } from "./DataDashboard"
 import { DataFlowBeam } from "./DataFlowBeam"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
+import { TRY_DATASETS } from "@/catalog/datasets"
 
 /** Example searches offered under each hero search tab. */
 const TRY_PLACES = ["Socorro", "87801"]
-const TRY_DATASETS = ["Arsenic", "Nitrate", "Depth to water"]
 
 // Line-style tabs over the hero photo: white labels with a white underline on
 // the selected tab. `dark:` repeats are needed to beat the trigger's own
@@ -51,7 +52,7 @@ function HeroSearch() {
   const searchDatasets = (e: React.FormEvent) => {
     e.preventDefault()
     const q = datasetQuery.trim()
-    navigate({ to: "/catalog", search: q ? { q } : {} })
+    navigate({ to: "/datasets", search: q ? { q } : {} })
   }
 
   return (
@@ -121,12 +122,12 @@ function HeroSearch() {
               key={label}
               variant="outline"
               className={HERO_CHIP}
-              render={<Link to="/catalog" search={{ q: label.toLowerCase() }} />}
+              render={<Link to="/datasets" search={{ q: label.toLowerCase() }} />}
             >
               {label}
             </Badge>
           ))}
-          <Link to="/catalog" className="font-medium underline">
+          <Link to="/datasets" className="font-medium underline">
             Browse all datasets
           </Link>
         </div>
@@ -196,7 +197,7 @@ const DOORWAYS = [
     title: "Browse by what’s measured",
     body: "Jump straight to groundwater levels or groundwater quality — across every network at once.",
     cta: "Browse datasets",
-    to: "/catalog" as const,
+    to: "/datasets" as const,
   },
   {
     id: "gis",
@@ -254,7 +255,7 @@ function Doorways() {
                     to={d.to}
                     hash={d.hash}
                     data-testid={`doorway-${d.id}`}
-                    className={buttonVariants({ variant: "outline" })}
+                    className={cn(buttonVariants({ variant: "outline" }))}
                   >
                     {d.cta} <ArrowRight data-icon="inline-end" />
                   </Link>
@@ -301,7 +302,7 @@ function Partners() {
           title="Our data partners"
           blurb="Monitoring networks that feed Weaver."
         />
-        <Link to="/catalog" className={buttonVariants({ variant: "link" })}>
+        <Link to="/datasets" className={buttonVariants({ variant: "link" })}>
           All sources in Datasets <ArrowRight data-icon="inline-end" />
         </Link>
       </div>
