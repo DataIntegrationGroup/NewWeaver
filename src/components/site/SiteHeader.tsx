@@ -1,54 +1,53 @@
-import { Link } from "@tanstack/react-router"
-import {
-  NavBar,
-  NavBarBrand,
-  NavBarNav,
-  NavBarLink,
-  NavBarActions,
-} from "@/components/ui/navbar"
+import { Link, useLocation } from "@tanstack/react-router"
+import { TopNav } from "@/components/top-nav"
 import { ModeToggle } from "@/components/mode-toggle"
 
 export const SLACK_URL = "https://new-mexico-water-data.slack.com"
 
 const NAV = [
-  { to: "/", label: "Home", exact: true },
-  { to: "/map", label: "Map", exact: false },
-  { to: "/planning", label: "Planning", exact: false },
-  { to: "/catalog", label: "Catalog", exact: false },
-  { to: "/about", label: "About", exact: false },
-  { to: "/help", label: "Help", exact: false },
-] as const
+  { href: "/", label: "Home" },
+  { href: "/map", label: "Map" },
+  { href: "/planning", label: "Planning" },
+  { href: "/catalog", label: "Catalog" },
+  { href: "/about", label: "About" },
+  { href: "/help", label: "Help" },
+]
 
-/** Shared top navigation for the content pages (home, about, help). */
+const TEST_IDS: Record<string, string> = Object.fromEntries(
+  NAV.map((item) => [item.href, `nav-${item.label.toLowerCase()}`])
+)
+
+const BRAND = (
+  <span className="flex items-baseline gap-2">
+    Weaver
+    <span className="text-sm font-normal text-muted-foreground">
+      New Mexico Water Data
+    </span>
+  </span>
+)
+
+/** Shared top navigation for the content pages, the map and planning. */
 export function SiteHeader() {
+  const { pathname } = useLocation()
   return (
-    <NavBar>
-      <NavBarBrand render={<Link to="/" />}>
-        Weaver
-        <span className="text-sm font-normal text-muted-foreground">
-          New Mexico Water Data
-        </span>
-      </NavBarBrand>
-      <NavBarNav>
-        {NAV.map((item) => (
-          <NavBarLink
-            key={item.to}
-            render={
-              <Link
-                to={item.to}
-                activeProps={{ "data-active": "true" }}
-                activeOptions={{ exact: item.exact }}
-                data-testid={`nav-${item.label.toLowerCase()}`}
-              />
-            }
-          >
-            {item.label}
-          </NavBarLink>
-        ))}
-        <NavBarActions>
-          <ModeToggle />
-        </NavBarActions>
-      </NavBarNav>
-    </NavBar>
+    <TopNav
+      brand={BRAND}
+      links={NAV}
+      pathname={pathname}
+      // TopNav marks the current link itself (prefix match, so /catalog/x
+      // still marks Catalog); `exact` stops the router from also marking "/"
+      // current on every page. Spread rather than pass `children`: the desktop
+      // links leave it unset so NavigationMenuLink can supply the label, and
+      // an explicit undefined would win the prop merge and blank it.
+      renderLink={({ href, ...props }) => (
+        <Link
+          to={href}
+          activeOptions={{ exact: true }}
+          data-testid={props.children === BRAND ? undefined : TEST_IDS[href]}
+          {...props}
+        />
+      )}
+      actions={<ModeToggle />}
+    />
   )
 }
