@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table"
@@ -34,6 +38,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+
+// v9 registers features explicitly. The sortFns are the ones a column's
+// `auto` sort picks between (v8 bundled them); without them string columns
+// fall back to a basic comparison.
+const features = tableFeatures({
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text, datetime: sortFn_datetime },
+})
 
 interface AttributeTableProps {
   layer: LayerConfig
@@ -125,7 +138,7 @@ function TableView({
     return features
   }, [fc, filters, attributeQuery, facet, facetValues, shapes])
 
-  const columns = useMemo<ColumnDef<Feature>[]>(() => {
+  const columns = useMemo<ColumnDef<typeof features, Feature>[]>(() => {
     const keys = new Set<string>()
     for (const f of rows.slice(0, 50)) {
       Object.keys(f.properties ?? {}).forEach((k) => keys.add(k))
@@ -144,14 +157,13 @@ function TableView({
     }))
   }, [rows, fields, format])
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: rows,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
     getRowId: (f) => featureId(f),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   })
 
   // Row virtualization: only the rows in (and near) the viewport are in the DOM,
@@ -268,7 +280,7 @@ function TableView({
                   )}
                   onClick={() => onSelect(row.id)}
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getAllCells().map((cell) => (
                     <TableCell
                       key={cell.id}
                       className={cn(
