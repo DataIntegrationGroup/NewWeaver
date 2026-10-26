@@ -17,15 +17,12 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PageShell } from "@/components/ui/page"
+import { PAGE_CONTAINER as CONTAINER, PageShell } from "@/components/ui/page"
 import { SiteHeader } from "./SiteHeader"
 import { DataSourceCarousel } from "./DataSourceCarousel"
 import { DataDashboard } from "./DataDashboard"
 import { DataFlowBeam } from "./DataFlowBeam"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
-
-/** Section width and gutter — matches the TopNav so content lines up with it. */
-const CONTAINER = "mx-auto w-full max-w-7xl px-[clamp(1.25rem,4.4vw,3.5rem)]"
 
 /** Example searches offered under each hero search tab. */
 const TRY_PLACES = ["Socorro", "87801"]
