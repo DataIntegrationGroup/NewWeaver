@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type RefObject } from "react"
-import { motion } from "motion/react"
+import { motion, type Transition } from "motion/react"
 
 import { cn } from "@/lib/utils"
 
@@ -23,6 +23,7 @@ export interface AnimatedBeamProps {
   startYOffset?: number
   endXOffset?: number
   endYOffset?: number
+  ease?: Transition["ease"]
 }
 
 export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
@@ -45,6 +46,7 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
   startYOffset = 0,
   endXOffset = 0,
   endYOffset = 0,
+  ease = [0.16, 1, 0.3, 1], // https://easings.net/#easeOutExpo
 }) => {
   const id = useId()
   const [pathD, setPathD] = useState("")
@@ -167,7 +169,7 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
           transition={{
             delay,
             duration,
-            ease: [0.16, 1, 0.3, 1], // https://easings.net/#easeOutExpo
+            ease,
             repeat,
             repeatDelay,
           }}
