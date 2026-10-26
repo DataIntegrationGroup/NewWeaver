@@ -27,8 +27,6 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 /** Section width and gutter — matches the TopNav so content lines up with it. */
 const CONTAINER = "mx-auto w-full max-w-7xl px-[clamp(1.25rem,4.4vw,3.5rem)]"
 
-const HERO_TAGS = ["Water Levels", "Water Quality", "Wells"]
-
 /** Example searches offered under each hero search tab. */
 const TRY_PLACES = ["Socorro", "87801"]
 const TRY_DATASETS = ["Arsenic", "Nitrate", "Depth to water"]
@@ -164,24 +162,14 @@ function Hero() {
             >
               Part of the New Mexico Water Data Initiative
             </a>
-            <h1 className="text-5xl font-extrabold tracking-tight text-white">
-              Weaver
+            <h1 className="text-4xl font-extrabold tracking-tight text-balance text-white sm:text-5xl">
+              Weaving together{" "}
+              <span className="block text-brand-sand">New Mexico water data</span>
             </h1>
-            <p className="text-xl text-brand-sand">
-              Weaving Together New Mexico Water Data
-            </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {HERO_TAGS.map((tag) => (
-              <Badge key={tag} variant="outline" className="border-white/40 text-white">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-          <p className="text-white/90">
-            Weaver brings public water data from across New Mexico together in
-            one application. Explore monitoring locations, measurements, and
-            integrated datasets in your area.
+          <p className="text-lg text-white/90">
+            Water levels, water quality, and well records from state, local, and
+            federal monitoring networks, searchable in one place.
           </p>
           <HeroSearch />
         </div>
@@ -247,7 +235,7 @@ function SectionHeading({ title, blurb }: { title: string; blurb: string }) {
 function Doorways() {
   return (
     <section
-      className={`grid gap-12 pt-20 lg:grid-cols-2 ${CONTAINER}`}
+      className={`grid gap-12 pt-14 lg:grid-cols-2 ${CONTAINER}`}
       data-testid="home-doorways"
     >
       {DOORWAY_GROUPS.map((group) => (
