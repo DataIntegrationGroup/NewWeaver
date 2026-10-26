@@ -3,8 +3,8 @@
  * map layers and attribute tables. Reads DIE's pygeoapi plus the other OGC
  * API Features deployments in config.ts.
  *
- * Implements the slice v1 needs: list collections, fetch a collection's
- * GeoJSON items with bbox + limit/offset paging.
+ * Implements the slice v1 needs: list collections and their queryables, fetch
+ * a collection's GeoJSON items with bbox + limit/offset paging.
  */
 import { FEATURES_BASE_URL } from "@/config"
 
@@ -19,6 +19,7 @@ export interface Collection {
   id: string
   title?: string
   description?: string
+  keywords?: string[]
   extent?: {
     spatial?: { bbox: number[][]; crs?: string }
     temporal?: { interval: (string | null)[][] }
@@ -29,6 +30,12 @@ export interface Collection {
 export interface CollectionsResponse {
   collections: Collection[]
   links: Link[]
+}
+
+/** A collection's queryable properties, as a JSON Schema object. */
+export interface Queryables {
+  title?: string
+  properties?: Record<string, { title?: string; type?: string; format?: string }>
 }
 
 export type Feature = GeoJSON.Feature
@@ -65,18 +72,23 @@ export class OgcFeaturesClient {
     this.baseUrl = baseUrl
   }
 
-  private async get<T>(url: string): Promise<T> {
+  private async request(url: string, format: string, signal?: AbortSignal): Promise<Response> {
     const full = url.startsWith("http") ? url : `${this.baseUrl}${url}`
     const sep = full.includes("?") ? "&" : "?"
-    const res = await fetch(`${full}${sep}f=json`, {
-      headers: { Accept: "application/json" },
+    const res = await fetch(`${full}${sep}f=${format}`, {
+      headers: { Accept: format === "csv" ? "text/csv" : "application/json" },
+      signal,
     })
     if (!res.ok) {
       throw new Error(
         `Features request failed: ${res.status} ${res.statusText}`
       )
     }
-    return res.json() as Promise<T>
+    return res
+  }
+
+  private async get<T>(url: string, signal?: AbortSignal): Promise<T> {
+    return (await this.request(url, "json", signal)).json() as Promise<T>
   }
 
   /** List available collections. */
@@ -89,14 +101,35 @@ export class OgcFeaturesClient {
     return this.get<Collection>(`/collections/${collectionId}`)
   }
 
+  /** Fetch the properties a collection's items can be queried by. */
+  getQueryables(collectionId: string): Promise<Queryables> {
+    return this.get<Queryables>(`/collections/${collectionId}/queryables`)
+  }
+
   /** Fetch a single page of GeoJSON items for a collection. */
   getItems(
     collectionId: string,
-    query?: ItemsQuery
+    query?: ItemsQuery,
+    signal?: AbortSignal
   ): Promise<FeatureCollection> {
     return this.get<FeatureCollection>(
-      `/collections/${collectionId}/items${buildQuery(query)}`
+      `/collections/${collectionId}/items${buildQuery(query)}`,
+      signal
     )
+  }
+
+  /** Fetch a single page of items as CSV (pygeoapi's `f=csv`), header included. */
+  async getItemsCsv(
+    collectionId: string,
+    query?: ItemsQuery,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const res = await this.request(
+      `/collections/${collectionId}/items${buildQuery(query)}`,
+      "csv",
+      signal
+    )
+    return res.text()
   }
 
   /**
