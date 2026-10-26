@@ -82,19 +82,22 @@ Then("the client throws an error describing the failed Features request", functi
   assert.match(this.error!.message, /Features request failed/)
 })
 
-function fc(ids: string[]) {
+function fc(ids: string[], nextHref?: string) {
   return {
     type: "FeatureCollection",
     numberMatched: 3,
     numberReturned: ids.length,
     features: ids.map((id) => ({ type: "Feature", id, geometry: null, properties: { id } })),
+    links: nextHref ? [{ rel: "next", type: "application/geo+json", href: nextHref }] : [],
   }
 }
 
 Given(
-  "the endpoint returns a full page of 2 then a short final page of 1",
+  "the endpoint returns a full page of 2 linking to a short final page of 1",
   function (this: ClientWorld) {
-    this.responseQueue = [fc(["a", "b"]), fc(["c"])]
+    // pygeoapi advertises the next page as a rel="next" link carrying offset.
+    const next = `${PYGEOAPI}/collections/springs/items?f=json&limit=2&offset=2`
+    this.responseQueue = [fc(["a", "b"], next), fc(["c"])]
   }
 )
 
@@ -110,8 +113,8 @@ Then("all {int} items across the pages are returned", function (this: ClientWorl
   assert.equal(res.features.length, n)
 })
 
-Then("the requests advance the offset from {int} to {int}", function (this: ClientWorld, a: number, b: number) {
+Then("the client follows the next link to offset {int}", function (this: ClientWorld, offset: number) {
   const offsets = this.requestedUrls.map((u) => new URL(u).searchParams.get("offset"))
-  assert.ok(offsets.includes(String(a)), `expected an offset=${a} request`)
-  assert.ok(offsets.includes(String(b)), `expected an offset=${b} request`)
+  // The first page sends only `limit`; the second comes from the next link.
+  assert.deepEqual(offsets, [null, String(offset)])
 })
