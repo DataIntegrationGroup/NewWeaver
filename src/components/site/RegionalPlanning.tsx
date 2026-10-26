@@ -58,7 +58,7 @@ import {
 } from "@/catalog/regions"
 import { useRegionOptions, useRegionFeatures } from "@/hooks/useRegions"
 import { regionPolygons } from "@/lib/regions"
-import { useTheme } from "@/components/theme-provider"
+import { useTheme } from "next-themes"
 import type { RegionRef } from "@/lib/urlState"
 import { PlanningMap, type PlanningRegion } from "@/components/app/PlanningMap"
 import { usePlanningWaterData } from "@/hooks/usePlanning"
@@ -1030,12 +1030,7 @@ function Dashboard({
 
 export function RegionalPlanning() {
   useDocumentTitle("Weaver — Regional Planning")
-  const { theme } = useTheme()
-  const dark =
-    theme === "dark" ||
-    (theme === "system" &&
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches)
+  const dark = useTheme().resolvedTheme === "dark"
 
   const [selected, setSelected] = useState<Map<string, SelectedRegion>>(new Map())
 

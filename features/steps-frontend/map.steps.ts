@@ -126,7 +126,8 @@ When("the user opens the basemap picker", async function (this: BrowserWorld) {
 })
 
 When("the user switches to dark mode", async function (this: BrowserWorld) {
-  await this.page.getByRole("button", { name: "Switch to dark mode" }).click()
+  await this.page.getByRole("button", { name: "Toggle theme" }).click()
+  await this.page.getByRole("menuitem", { name: "Dark" }).click()
 })
 
 When("the user selects the {string} basemap", async function (this: BrowserWorld, name: string) {

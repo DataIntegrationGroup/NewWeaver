@@ -5,10 +5,10 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import { RouterProvider } from "@tanstack/react-router"
 import posthog from "posthog-js"
 import { PostHogProvider } from "posthog-js/react"
+import { ThemeProvider } from "next-themes"
 
 import "./index.css"
 import { POSTHOG_KEY, POSTHOG_HOST } from "./config"
-import { ThemeProvider } from "./components/theme-provider"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { Toaster } from "./components/ui/sonner"
@@ -39,7 +39,7 @@ if (POSTHOG_KEY) {
 const app = (
   <StrictMode>
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="system" storageKey="weaver-theme">
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="weaver-theme">
         <PersistQueryClientProvider
           client={queryClient}
           persistOptions={{
