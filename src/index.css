@@ -74,7 +74,7 @@
     --secondary: #b1422f;        /* NMWDI terracotta */
     --secondary-foreground: #ffffff;
 
-    --muted: #f1f5f6;            /* cool teal-tinted wrapper */
+    --muted: #e9eff1;            /* cool teal-tinted wrapper — local override of theme-weaver #f1f5f6 (too close to --background); pending upstream */
     --muted-foreground: #4b6470; /* slate-teal */
     --accent: #e7f0f2;           /* light teal tint */
     --accent-foreground: #04323f;
@@ -125,7 +125,7 @@
     --secondary: #cf6a57;        /* NMWDI terracotta (brighter on dark) */
     --secondary-foreground: #2a0f0a;
 
-    --muted: #27272a;            /* zinc-800 */
+    --muted: #2a3438;            /* teal-slate — local override of theme-weaver #27272a (same lightness as --card); pending upstream */
     --muted-foreground: #b6c6cb; /* light slate-teal */
     --accent: #2a3b40;           /* dark teal tint */
     --accent-foreground: #e7f0f2;
