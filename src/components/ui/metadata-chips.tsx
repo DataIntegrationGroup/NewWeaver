@@ -60,18 +60,18 @@ export function StatusChip({ value }: { value: string }) {
  *  depth-to-water mean the opposite thing for the aquifer), so the arrow states
  *  the raw direction only and the chip stays tone-neutral — it makes no
  *  good/bad claim. Severity lives in the StatusChip. */
-function trendIcon(value: string): typeof TrendingUp {
+function trendIcon(value: string) {
   const s = value.toLowerCase()
-  if (/(declin|decreas|fall|drop|down|lower|deepen|negative)/.test(s)) return TrendingDown
-  if (/(ris|increas|recover|up|higher|shallow|positive|gain)/.test(s)) return TrendingUp
-  return Minus
+  const className = "size-3 shrink-0"
+  if (/(declin|decreas|fall|drop|down|lower|deepen|negative)/.test(s)) return <TrendingDown className={className} />
+  if (/(ris|increas|recover|up|higher|shallow|positive|gain)/.test(s)) return <TrendingUp className={className} />
+  return <Minus className={className} />
 }
 
 export function TrendChip({ value }: { value: string }) {
-  const Icon = trendIcon(value)
   return (
     <span data-testid="trend-chip" className={cn(chipBase, TONE.slate)}>
-      <Icon className="size-3 shrink-0" />
+      {trendIcon(value)}
       {value}
     </span>
   )
