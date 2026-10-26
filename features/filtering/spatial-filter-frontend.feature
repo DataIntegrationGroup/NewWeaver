@@ -6,6 +6,7 @@ Feature: Spatial and text filtering
 
   Background:
     Given the user has opened the app
+    And the "Hydrograph" layer is toggled off
     And the "City of Albuquerque (CABQ)" layer is toggled on
 
   Scenario: The filter control explains itself

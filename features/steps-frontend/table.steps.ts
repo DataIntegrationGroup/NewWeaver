@@ -29,8 +29,9 @@ Then("the table shows one row per feature in the layer", async function (this: B
 Then("the columns match the layer's attribute fields", async function (this: BrowserWorld) {
   const headers = await this.page.locator('[data-testid="attribute-table"] th').allTextContents()
   const joined = headers.join(" ")
-  for (const field of ["name", "count", "depth_ft", "id"]) {
-    assert.ok(joined.includes(field), `missing column ${field}`)
+  // Headers are humanized by fieldLabel (underscores → spaces).
+  for (const field of ["name", "count", "depth ft", "id"]) {
+    assert.ok(joined.includes(field), `missing column ${field} in ${headers.join(", ")}`)
   }
 })
 
@@ -93,7 +94,7 @@ When("the user clicks a table row", async function (this: BrowserWorld) {
 Then("the corresponding feature is highlighted on the map", async function (this: BrowserWorld) {
   const id = (this as unknown as { clickedRow: string | null }).clickedRow
   await this.page.waitForFunction((fid) => /[?&]sel=/.test(window.location.search) && window.location.href.includes(String(fid)), id)
-  assert.ok(this.page.url().includes("ocotillo-springs"))
+  assert.ok(new URL(this.page.url()).searchParams.get("sel")?.startsWith("ocotillo-springs"))
 })
 
 Then("the inspect panel shows that feature's attributes", async function (this: BrowserWorld) {

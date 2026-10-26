@@ -7,6 +7,7 @@ Feature: Draw to select points
 
   Background:
     Given the user has opened the app
+    And the "Hydrograph" layer is toggled off
     And the "City of Albuquerque (CABQ)" layer is toggled on
 
   @smoke
