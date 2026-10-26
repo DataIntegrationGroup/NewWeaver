@@ -7,15 +7,9 @@ import {
   type MapRef,
 } from "react-map-gl/maplibre"
 
-import { setWorkerUrl } from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
-import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 
-import { cn } from "@/lib/utils"
-
-// MapLibre v6 resolves its worker relative to its own module, which breaks
-// under Vite's dep pre-bundling; hand it a Vite-built worker URL instead.
-setWorkerUrl(maplibreWorkerUrl)
+import { cn } from "cn"
 
 /**
  * Token-free open basemap (CARTO Positron). Requires no API key, which fits
@@ -32,6 +26,7 @@ export const NEW_MEXICO_VIEW = {
 } as const
 
 export type MapProps = MapLibreMapProps & {
+  ref?: React.Ref<MapRef>
   /** Container className. The MapLibre canvas fills this box. */
   className?: string
   /** Show the zoom/compass control (default: true). */
@@ -47,19 +42,17 @@ export type MapProps = MapLibreMapProps & {
  * basemap, New Mexico default extent, and nav/scale controls. Pass layers,
  * markers, popups, and other react-map-gl children directly.
  */
-const Map = React.forwardRef<MapRef, MapProps>(function Map(
-  {
-    className,
-    children,
-    showNavigation = true,
-    showScale = true,
-    controlPosition = "top-right",
-    mapStyle = DEFAULT_MAP_STYLE,
-    initialViewState,
-    ...props
-  },
-  ref
-) {
+function Map({
+  ref,
+  className,
+  children,
+  showNavigation = true,
+  showScale = true,
+  controlPosition = "top-right",
+  mapStyle = DEFAULT_MAP_STYLE,
+  initialViewState,
+  ...props
+}: MapProps) {
   return (
     <div
       data-slot="map"
@@ -78,7 +71,7 @@ const Map = React.forwardRef<MapRef, MapProps>(function Map(
       </MapLibreMap>
     </div>
   )
-})
+}
 
 export { Map }
 

@@ -1,5 +1,7 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import { setWorkerUrl } from "maplibre-gl"
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 import { useIsFetching } from "@tanstack/react-query"
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client"
 import { RouterProvider } from "@tanstack/react-router"
@@ -22,6 +24,11 @@ import { router } from "./router"
 function GlobalLoadingBar() {
   return <TopLoadingBar active={useIsFetching() > 0} />
 }
+
+// MapLibre v6 resolves its worker relative to its own module, which breaks
+// under Vite's dep pre-bundling; hand it a Vite-built worker URL instead, once,
+// before the first map renders.
+setWorkerUrl(maplibreWorkerUrl)
 
 // Init only when a key is configured, so dev builds and CI emit nothing by
 // default. capture_pageview "history_change" fires $pageview on TanStack
