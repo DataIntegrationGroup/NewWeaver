@@ -33,7 +33,7 @@ import { selectFields, fieldLabel, roundedFieldValue, fixed2, type FieldDisplay 
 import { DatastreamChart } from "./DatastreamChart"
 import { Hydrograph } from "./Hydrograph"
 import { ObservationTable } from "./ObservationTable"
-import { FieldValue } from "@/components/ui/field-value"
+import { AttributeValue } from "@/components/app/AttributeValue"
 import type { Datastream } from "@/clients/sensorThings"
 
 interface InspectPanelProps {
@@ -224,7 +224,7 @@ function AttributeList({
         <div key={k} className="group/row grid grid-cols-[40%_60%] gap-3 border-b py-1">
           <dt className="min-w-0 break-words font-medium text-muted-foreground">{fieldLabel(k, properties)}</dt>
           <dd className="flex min-w-0 items-start gap-1.5 break-words">
-            <span className="min-w-0 break-words"><FieldValue field={k} value={format(k, properties[k])} /></span>
+            <span className="min-w-0 break-words"><AttributeValue field={k} value={format(k, properties[k])} /></span>
             <CopyButton value={format(k, properties[k])} />
           </dd>
         </div>
@@ -235,7 +235,7 @@ function AttributeList({
 
 /** Fields that render as a chip (status pill / trend arrow) rather than a number
  *  — promoted to a lead row above the metric grid so a section leads with its
- *  headline classification. Kept in sync with the dispatch in FieldValue. */
+ *  headline classification. Kept in sync with the dispatch in AttributeValue. */
 const CHIP_FIELDS = new Set(["status", "trend_category", "direction"])
 
 /** Plain-language help for fields whose name/value is opaque. When a metric
@@ -372,7 +372,7 @@ function MetricGrid({
             const val = format(k, properties[k])
             return (
               <span key={k} className="inline-flex items-center gap-1">
-                <FieldValue field={k} value={val} />
+                <AttributeValue field={k} value={val} />
                 <FieldInfo field={k} value={val} />
               </span>
             )
@@ -391,7 +391,7 @@ function MetricGrid({
                 </dt>
                 <dd className="mt-0.5 flex items-start gap-1.5 break-words text-sm font-semibold tabular-nums">
                   <span className="min-w-0 break-words">
-                    <FieldValue field={k} value={val} />
+                    <AttributeValue field={k} value={val} />
                   </span>
                   <CopyButton value={val} />
                 </dd>

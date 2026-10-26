@@ -28,7 +28,7 @@ import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from 
 import { pointInAnyShape } from "@/lib/geo"
 import { selectFields, fieldLabel, WELL_DEPTH_UNITS_KEY, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FieldValue } from "@/components/ui/field-value"
+import { AttributeValue } from "@/components/app/AttributeValue"
 import {
   Table,
   TableBody,
@@ -153,7 +153,7 @@ function TableView({
       id: key,
       accessorFn: (f: Feature) => f.properties?.[key],
       header: fieldLabel(key, labelProps),
-      cell: (ctx) => <FieldValue field={key} value={format(key, ctx.getValue())} />,
+      cell: (ctx) => <AttributeValue field={key} value={format(key, ctx.getValue())} />,
     }))
   }, [rows, fields, format])
 

@@ -98,7 +98,7 @@ import {
   isClustered,
 } from "./MapLayers"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FieldValue } from "@/components/ui/field-value"
+import { AttributeValue } from "@/components/app/AttributeValue"
 import { ActiveLayerChips } from "./ActiveLayerChips"
 import { MapLegend } from "./MapLegend"
 
@@ -588,7 +588,7 @@ export function MapView({
                             {fieldLabel(k, hoverInfo.properties)}
                           </dt>
                           <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top tabular-nums">
-                            <FieldValue
+                            <AttributeValue
                               field={k}
                               value={(hoverInfo.format ?? defaultFormat)(k, hoverInfo.properties[k])}
                             />
