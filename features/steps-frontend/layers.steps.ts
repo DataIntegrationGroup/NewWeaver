@@ -1,11 +1,21 @@
 import { When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 
-import { LAYER_CATALOG } from "@/catalog/layers"
+import { ADVANCED_SECTIONS, LAYER_CATALOG } from "@/catalog/layers"
 import type { BrowserWorld } from "./support/world"
 import { layerIdByTitle, revealLayerCatalog } from "./common.steps"
 
 type MapSeam = { queryRendered: (layerId: string) => unknown[] }
+
+/** A layer group's accordion trigger. Groups in ADVANCED_SECTIONS are nested
+ *  under the collapsed "Advanced" super-group, so open that first. */
+async function groupTrigger(world: BrowserWorld, name: string) {
+  if (ADVANCED_SECTIONS.includes(name)) {
+    const advanced = world.page.getByTestId("layer-group-advanced")
+    if ((await advanced.getAttribute("aria-expanded")) !== "true") await advanced.click()
+  }
+  return world.page.getByRole("button", { name, exact: true })
+}
 
 function renderLayerIdFor(title: string): string {
   const layer = LAYER_CATALOG.find((l) => l.title === title)!
@@ -54,7 +64,7 @@ Then("no monitoring-location points render on the map", async function (this: Br
 })
 
 Then("the catalog shows a {string} layer group", async function (this: BrowserWorld, name: string) {
-  await this.page.getByRole("button", { name, exact: true }).waitFor()
+  await (await groupTrigger(this, name)).waitFor()
 })
 
 Then("the {string} layer has an opacity slider", async function (this: BrowserWorld, title: string) {
@@ -93,7 +103,7 @@ Then("the map still shows a chip for the {string} layer", async function (this: 
 When("the user hovers over the {string} layer group", async function (this: BrowserWorld, name: string) {
   // Move away first so re-hovering a second group reliably re-opens the tooltip.
   await this.page.mouse.move(0, 0)
-  await this.page.getByRole("button", { name, exact: true }).hover()
+  await (await groupTrigger(this, name)).hover()
 })
 
 Then("a tooltip explains the {string} group", async function (this: BrowserWorld, name: string) {
@@ -103,12 +113,12 @@ Then("a tooltip explains the {string} group", async function (this: BrowserWorld
 })
 
 When("the user collapses the {string} layer group", async function (this: BrowserWorld, name: string) {
-  const trigger = this.page.getByRole("button", { name, exact: true })
+  const trigger = await groupTrigger(this, name)
   if ((await trigger.getAttribute("aria-expanded")) === "true") await trigger.click()
 })
 
 When("the user expands the {string} layer group", async function (this: BrowserWorld, name: string) {
-  const trigger = this.page.getByRole("button", { name, exact: true })
+  const trigger = await groupTrigger(this, name)
   if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click()
 })
 
