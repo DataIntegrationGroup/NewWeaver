@@ -1,6 +1,12 @@
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { DATA_SOURCES, ckanOrgUrl, type DataSource } from "@/catalog/dataSources"
 
-function Card({ s, duplicate }: { s: DataSource; duplicate?: boolean }) {
+function SourceCard({ s, duplicate }: { s: DataSource; duplicate?: boolean }) {
   return (
     <a
       href={ckanOrgUrl(s.org)}
@@ -9,24 +15,26 @@ function Card({ s, duplicate }: { s: DataSource; duplicate?: boolean }) {
       aria-hidden={duplicate || undefined}
       tabIndex={duplicate ? -1 : undefined}
       data-testid={duplicate ? undefined : `data-source-${s.org}`}
-      className="group/card mr-4 flex w-60 shrink-0 flex-col rounded-xl border bg-card p-4 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group/source mr-4 flex w-72 shrink-0 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
     >
-      {/* Logos vary in palette — sit them on white so transparent and light
-          marks stay legible in both light and dark themes. */}
-      <div className="flex h-20 items-center justify-center rounded-lg bg-white p-3 ring-1 ring-border">
-        <img
-          src={s.icon}
-          alt={`${s.name} logo`}
-          loading="lazy"
-          className="max-h-full max-w-full object-contain"
-        />
-      </div>
-      <p className="mt-3 text-sm font-semibold leading-tight text-foreground group-hover/card:text-primary">
-        {s.name}
-      </p>
-      <p className="mt-1.5 text-xs leading-snug text-muted-foreground">
-        {s.blurb}
-      </p>
+      <Card className="w-full transition-shadow group-hover/source:shadow-md">
+        {/* Logos vary in palette — sit them on white so transparent and light
+            marks stay legible in both light and dark themes. */}
+        <div className="mx-(--card-spacing) flex h-24 items-center justify-center rounded-lg bg-white p-2">
+          <img
+            src={s.icon}
+            alt={`${s.name} logo`}
+            loading="lazy"
+            className="max-h-20 max-w-full object-contain"
+          />
+        </div>
+        <CardHeader>
+          <CardTitle className="group-hover/source:text-primary">
+            {s.name}
+          </CardTitle>
+          <CardDescription>{s.blurb}</CardDescription>
+        </CardHeader>
+      </Card>
     </a>
   )
 }
@@ -42,12 +50,12 @@ export function DataSourceCarousel() {
       className="group relative overflow-hidden"
       data-testid="data-source-carousel"
     >
-      <div className="flex w-max animate-marquee group-hover:[animation-play-state:paused]">
+      <div className="flex w-max py-1 animate-marquee group-hover:[animation-play-state:paused]">
         {DATA_SOURCES.map((s) => (
-          <Card key={s.org} s={s} />
+          <SourceCard key={s.org} s={s} />
         ))}
         {DATA_SOURCES.map((s) => (
-          <Card key={`dup-${s.org}`} s={s} duplicate />
+          <SourceCard key={`dup-${s.org}`} s={s} duplicate />
         ))}
       </div>
 

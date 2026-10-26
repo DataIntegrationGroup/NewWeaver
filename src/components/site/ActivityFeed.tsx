@@ -5,6 +5,13 @@
  * empty state instead of inventing activity.
  */
 import { Clock } from "lucide-react"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import type { StatEvent } from "@/lib/stats"
 
 /** Format an ISO timestamp as a short local date; fall back to the raw string. */
@@ -22,46 +29,58 @@ function fmt(iso: string): string {
 export function ActivityFeed({
   events,
   configured,
+  updated,
 }: {
   events: StatEvent[] | undefined
   /** Whether a stats source is wired at all. */
   configured: boolean
+  /** When the stats file was generated, already formatted for display. */
+  updated?: string | null
 }) {
   const list = events ?? []
 
   return (
-    <div data-testid="home-activity-feed" className="rounded-xl border bg-card p-5">
-      <h3 className="flex items-center gap-2 text-lg font-semibold">
-        <Clock className="size-5 text-primary" />
-        Recent source updates
-      </h3>
+    <Card data-testid="home-activity-feed">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="size-4 text-primary" />
+          Recent source updates
+        </CardTitle>
+        {updated && (
+          <CardAction
+            data-testid="dashboard-updated"
+            className="text-sm text-muted-foreground"
+          >
+            Updated {updated}
+          </CardAction>
+        )}
+      </CardHeader>
 
-      {list.length === 0 ? (
-        <p
-          data-testid="activity-empty"
-          className="mt-3 text-sm text-muted-foreground"
-        >
-          {configured
-            ? "No recent updates reported."
-            : "Update activity will appear here once the data feed is connected."}
-        </p>
-      ) : (
-        <ul className="mt-3 divide-y">
-          {list.map((e, i) => (
-            <li
-              key={`${e.source}-${e.timestamp}-${i}`}
-              data-testid="activity-event"
-              className="flex items-center justify-between gap-4 py-2 text-sm"
-            >
-              <span className="font-medium">{e.source}</span>
-              <span className="text-muted-foreground">
-                {e.kind ? `${e.kind} · ` : ""}
-                {fmt(e.timestamp)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+      <CardContent>
+        {list.length === 0 ? (
+          <p data-testid="activity-empty" className="text-muted-foreground">
+            {configured
+              ? "No recent updates reported."
+              : "Update activity will appear here once the data feed is connected."}
+          </p>
+        ) : (
+          <ul className="divide-y">
+            {list.map((e, i) => (
+              <li
+                key={`${e.source}-${e.timestamp}-${i}`}
+                data-testid="activity-event"
+                className="flex items-center justify-between gap-4 py-2"
+              >
+                <span className="font-medium">{e.source}</span>
+                <span className="text-muted-foreground">
+                  {e.kind ? `${e.kind} · ` : ""}
+                  {fmt(e.timestamp)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   )
 }
