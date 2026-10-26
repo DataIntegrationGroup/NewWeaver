@@ -57,6 +57,15 @@
     --color-success: var(--success);
 }
 
+/* Fixed brand colours for the home page's always-dark hero and data-flow band.
+   Not theme tokens — they stay the same in light and dark mode, and live apart
+   from the theme-weaver variables so a registry re-sync doesn't touch them. */
+@theme {
+    --color-brand-deep: #04323f;   /* NMWDI deep teal */
+    --color-brand-mist: #a6ccd6;   /* NMWDI light teal */
+    --color-brand-sand: #e8bd86;   /* sand */
+}
+
 :root {
     /* DataServices Design System theme-weaver palette — light.
        Values come from `shadcn add @dataservices/theme-weaver`; re-run it
