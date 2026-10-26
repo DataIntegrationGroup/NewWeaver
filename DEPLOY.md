@@ -1,7 +1,6 @@
 # Deploying NewWeaver
 
-NewWeaver is a static SPA served by nginx on **Cloud Run** at
-`newweaver.newmexicowaterdata.org`. Pushing to `main` triggers
+NewWeaver is a static SPA served by nginx on **Cloud Run**. Pushing to `main` triggers
 `.github/workflows/deploy.yml`, which builds the container, pushes it to
 Artifact Registry, and deploys it. CI authenticates to GCP with **Workload
 Identity Federation** — there is no service-account key to store, so the app
@@ -92,18 +91,10 @@ not secrets):
 
 ## Custom domain
 
-Map `newweaver.newmexicowaterdata.org` to the service (Cloud Run manages the
-TLS cert):
-
-```sh
-gcloud beta run domain-mappings create \
-  --service="$SERVICE" --region="$REGION" \
-  --domain=newweaver.newmexicowaterdata.org
-```
-
-Then add the `CNAME` (or A/AAAA) records it prints to the
-`newmexicowaterdata.org` DNS zone. Cert provisioning takes a few minutes after
-DNS resolves.
+At launch, map `weaver.newmexicowaterdata.org` to the service with a Cloud Run
+domain mapping (Cloud Run manages the TLS cert), then add the `CNAME` (or
+A/AAAA) records it gives you to the `newmexicowaterdata.org` DNS zone. Cert
+provisioning takes a few minutes after DNS resolves.
 
 > Domain mapping availability varies by region. If unavailable in
 > `us-central1`, front the service with a Global External HTTPS Load Balancer +
