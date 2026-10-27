@@ -7,9 +7,15 @@ import {
   type MapRef,
 } from "react-map-gl/maplibre"
 
+import { setWorkerUrl } from "maplibre-gl"
 import "maplibre-gl/dist/maplibre-gl.css"
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"
 
 import { cn } from "@/lib/utils"
+
+// MapLibre v6 resolves its worker relative to its own module, which breaks
+// under Vite's dep pre-bundling; hand it a Vite-built worker URL instead.
+setWorkerUrl(maplibreWorkerUrl)
 
 /**
  * Token-free open basemap (CARTO Positron). Requires no API key, which fits

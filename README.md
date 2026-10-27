@@ -1,58 +1,25 @@
 # Weaver (NewWeaver)
 
-A modern, public, read-only web app that displays New Mexico water data through
-standards-based service layers — no source-specific code.
+A public, read-only web map of New Mexico water data. It reads live from
+standards-based services (OGC API Features, OGC SensorThings, ArcGIS REST, and
+OGC WFS) with no source-specific code and no backend of its own: no accounts,
+no private data, no editing.
 
-- **OGC API Features** (pygeoapi; USGS Water Data for the Nation; and GeoServer,
-  which serves the per-location integrated summary products) — vector /
-  integrated collections
-- **OGC SensorThings API** (FROST) — monitoring locations + time series,
-  spanning a primary server and the `st2` agency-networks server
-- **OGC WFS** (GeoServer) — still supported. The integrated summary products
-  now load through GeoServer's OGC API Features endpoint by default, but the WFS
-  client (`src/clients/wfsClient.ts`) remains available and a layer can target
-  it via `source: "wfs"`.
-- **ArcGIS REST** (Esri Feature Services) — OSE Points of Diversion and
-  Aquifer Test Wells
-
-This is a display surface only: no authentication, no accounts, no private
-data, no editing/ingest. See `weaver-replacement-plan` for full scope.
-
-> Replaces the legacy Weaver at weaver.newmexicowaterdata.org.
+It will replace the legacy Weaver at weaver.newmexicowaterdata.org at launch. See
+[`docs/why-newweaver.md`](docs/why-newweaver.md) for background and scope.
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
-| Build | Vite + TypeScript |
-| UI | DataServicesDesignSystem (vendored shadcn components in `src/components`) |
+| Build | Vite + TypeScript, pnpm |
+| UI | React, Tailwind, DataServicesDesignSystem (vendored shadcn components) |
 | Server state | TanStack Query |
 | Routing | TanStack Router (view state encoded in the URL) |
 | Tables | TanStack Table |
-| Map | MapLibre GL via react-map-gl (token-free basemap) |
-| Charts | ECharts (datastream observation plots) |
-| Data clients | thin typed OGC API Features, SensorThings, WFS, and ArcGIS REST clients |
-
-## Architecture
-
-Four data adapters, one map, a config-driven layer catalog, detail/inspect views.
-
-- `src/clients/ogcFeatures.ts` — `OgcFeaturesClient` (pygeoapi, USGS OGC API,
-  and GeoServer OGC API Features — the integrated summary products)
-- `src/clients/sensorThings.ts` — `SensorThingsClient` (FROST STA)
-- `src/clients/wfsClient.ts` — `WfsClient` (GeoServer WFS — still supported;
-  no longer the default transport for the integrated products)
-- `src/clients/arcGisRest.ts` — ArcGIS REST client (OSE Feature Services)
-- `src/catalog/layers.ts` — the layer registry; adding a dataset = a new entry
-- `src/components/app/` — app shell, map view, layer list, panels
-- `src/config.ts` — upstream endpoints (override via `VITE_*` env vars). STA
-  is one protocol but may span multiple FROST servers (primary FROST + the
-  `st2` server hosting CABQ); a catalog layer targets one via `staBaseUrl`.
-
-No backend of its own: static hosting + the upstream APIs (all must have CORS
-enabled for the public origin; GeoServer — both its OGC API Features and WFS
-endpoints, under the same `/geoserver` path — is proxied same-origin because it
-sends no CORS headers — see `vite.config.ts` / nginx).
+| Map | MapLibre GL via react-map-gl, terra-draw for draw selection |
+| Charts | ECharts |
+| Analytics | PostHog (off unless `VITE_POSTHOG_KEY` is set) |
 
 ### Design system
 
@@ -62,33 +29,25 @@ UI components are **vendored** from
 `Map` primitive in `src/components/ui/map.tsx`. Pull updates with the shadcn
 registry / by re-copying.
 
-## Specs first
-
-Behaviour is defined as Gherkin in [`features/`](features/) before
-implementation. See [`features/README.md`](features/README.md). Run with
-`npm run test:bdd`.
-
 ## Develop
+
+Prerequisites: Node 22 and pnpm 11 or newer.
 
 ```bash
 pnpm install
-pnpm dev         # Vite dev server
-pnpm build       # typecheck + production build
-pnpm lint
+cp .env.example .env   # optional; every variable has a default
+pnpm dev               # http://localhost:5173
 ```
 
-## Status
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Vite dev server |
+| `pnpm build` | Typecheck + production build into `dist/` |
+| `pnpm preview` | Serve the production build locally |
+| `pnpm lint` | ESLint |
+| `pnpm test:bdd` | Headless specs (data clients and logic, mocked `fetch`) |
+| `pnpm test:bdd:frontend` | Browser specs (real UI in Chromium, mocked APIs) |
 
-Phase 2–3: app shell + basemap + typed data clients + config-driven layer
-catalog (incl. all st2 agencies); catalog layers render on the map via TanStack
-Query. Implemented: feature/point selection → inspect panel, monitoring point →
-datastreams → ECharts time-series, TanStack attribute table (sort/paginate, row
-↔ map selection), text + map-extent filtering, and full URL-encoded view state
-(layers, extent, selection — shareable + Back-navigable).
-
-Specs: `@client` adapter contracts pass headless (`pnpm test:bdd`). The
-`@frontend` specs drive the real UI in Chromium via Playwright with mocked APIs
-(`pnpm test:bdd:frontend`) — see [features/README.md](features/README.md).
-
-> Upstream data plumbing (Aqueduct → FROST; DIE → pygeoapi) is **referenced
-> only** — it lives in other repos and is out of scope here.
+The browser specs need Chromium installed once:
+`pnpm exec playwright install chromium`. See
+[`features/README.md`](features/README.md) for how the specs are organized.

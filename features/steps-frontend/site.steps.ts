@@ -80,8 +80,8 @@ Then(
 )
 
 When(
-  "the user opens the {string} doorway",
-  async function (this: BrowserWorld, _label: string) {
+  'the user opens the "find a place" doorway',
+  async function (this: BrowserWorld) {
     await this.page.getByTestId("doorway-find").click()
   }
 )

@@ -30,11 +30,11 @@ Feature: OSE GIS layers in the catalog
     Then a tooltip explains the "OSE GIS" group
 
   Scenario: The OSE attribute table shows the configured fields, not raw ones
-    Given the "City of Albuquerque (CABQ)" layer is toggled off
+    Given the "Hydrograph" layer is toggled off
     And the "OSE Aquifer Test Wells" layer is toggled on
     When the user opens the attribute table
     Then the attribute table columns include "PLSS"
-    And the attribute table columns include "OSE_POD_ID"
+    And the attribute table columns include "OSE POD ID"
     And the attribute table columns exclude "TWS"
     And the attribute table columns exclude "id"
 

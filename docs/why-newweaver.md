@@ -1,6 +1,6 @@
 # Why NewWeaver
 
-> **Naming:** *NewWeaver* is an **internal codebase name only**. To the public it is **Weaver**, and it will be served at [`weaver.newmexicowaterdata.org`](https://weaver.newmexicowaterdata.org) — replacing the legacy app there. It is **currently hosted at [`newweaver.newmexicowaterdata.org`](https://newweaver.newmexicowaterdata.org)** during the transition. This doc uses "NewWeaver" to distinguish the new app from the legacy one.
+> **Naming:** *NewWeaver* is an **internal codebase name only**. To the public it is **Weaver**, and it will be served at [`weaver.newmexicowaterdata.org`](https://weaver.newmexicowaterdata.org) — replacing the legacy app there. This doc uses "NewWeaver" to distinguish the new app from the legacy one.
 
 ## TL;DR
 

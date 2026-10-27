@@ -2,7 +2,7 @@ import { Given, Then } from "@cucumber/cucumber"
 
 import type { BrowserWorld } from "./support/world"
 
-Given("the {string} data source returns an error", async function (this: BrowserWorld, _title: string) {
+Given('the "Springs" data source returns an error', async function (this: BrowserWorld) {
   // Page routes take precedence over the context-level fixture mock, so this
   // forces the Springs collection's items request to fail.
   await this.page.route("**/collections/springs/items**", (route) =>

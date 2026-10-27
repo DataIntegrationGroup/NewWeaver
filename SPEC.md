@@ -2,7 +2,7 @@
 
 ## §G goal
 
-Add discovery layer to Weaver (newweaver.newmexicowaterdata.org). Site organized by
+Add discovery layer to Weaver. Site organized by
 producer model (products/layers/networks, STA vs OGC). Reframe so non-expert can ask
 "what data near my place / about X?". Goal = discovery layer, not more data. When
 tradeoff ambiguous → optimize low-friction discovery for non-expert.

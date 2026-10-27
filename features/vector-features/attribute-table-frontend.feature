@@ -6,6 +6,7 @@ Feature: Feature attribute table
 
   Background:
     Given the user has opened the app
+    And the "Hydrograph" layer is toggled off
     And the "Springs" layer is toggled on
 
   @smoke
