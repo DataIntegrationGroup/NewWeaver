@@ -4,12 +4,8 @@ Behaviour specs for NewWeaver, written in Gherkin. These define the v1 surface
 **before** implementation — they are the contract the app is built against.
 
 NewWeaver is a **public, read-only, frontend-only** app. It has no backend of
-its own; it reads public, standards-based services directly:
-
-- **OGC API Features** — DIE and Ocotillo pygeoapi, USGS Water Data
-- **SensorThings API (STA)** — FROST (monitoring locations + time series)
-- **ArcGIS REST** — OSE Feature Services
-- **OGC WFS** — GeoServer (client still supported, no layer uses it today)
+its own; it reads public, standards-based services directly, for example DIE,
+Ocotillo, USGS, and OSE.
 
 ## Layer tags
 
