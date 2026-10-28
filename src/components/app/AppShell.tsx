@@ -6,7 +6,7 @@ import { usePostHog } from "posthog-js/react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { useTheme } from "@/components/theme-provider"
+import { useTheme } from "next-themes"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import type { MapRef } from "@/components/ui/map"
 import { SiteHeader } from "@/components/site/SiteHeader"
@@ -93,11 +93,7 @@ export function AppShell() {
 
   useDocumentTitle("Weaver — Map")
   const mapRef = useRef<MapRef | null>(null)
-  const { theme } = useTheme()
-  const isDark =
-    theme === "dark" ||
-    (theme === "system" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches)
+  const isDark = useTheme().resolvedTheme === "dark"
 
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>()
   const [tableOpen, setTableOpen] = useState(false)

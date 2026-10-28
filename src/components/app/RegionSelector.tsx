@@ -16,7 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { REGION_CATALOG, REGION_KINDS, type RegionKind } from "@/catalog/regions"
+import {
+  REGION_CATALOG,
+  REGION_KIND_ITEMS,
+  REGION_KINDS,
+  type RegionKind,
+} from "@/catalog/regions"
 import { useRegionOptions } from "@/hooks/useRegions"
 import type { RegionCoverage } from "@/lib/regions"
 
@@ -86,7 +91,11 @@ export function RegionSelector({
   return (
     <section aria-label="Select regions of interest" data-testid="region-selector">
       <div className="flex gap-2">
-        <Select value={kind ?? ""} onValueChange={(v) => changeKind(v as RegionKind)}>
+        <Select
+          items={REGION_KIND_ITEMS}
+          value={kind ?? null}
+          onValueChange={(v) => v && changeKind(v)}
+        >
           <SelectTrigger
             className="w-36 shrink-0"
             data-testid="region-kind-select"

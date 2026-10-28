@@ -33,7 +33,8 @@ import { selectFields, fieldLabel, roundedFieldValue, fixed2, type FieldDisplay 
 import { DatastreamChart } from "./DatastreamChart"
 import { Hydrograph } from "./Hydrograph"
 import { ObservationTable } from "./ObservationTable"
-import { FieldValue } from "@/components/ui/field-value"
+import { AttributeValue } from "@/components/app/AttributeValue"
+import type { Datastream } from "@/clients/sensorThings"
 
 interface InspectPanelProps {
   layer: LayerConfig
@@ -58,6 +59,11 @@ function firstPosition(f: Feature | undefined): Position | undefined {
 }
 
 /** Copy-to-clipboard button; shows a check briefly after copying. */
+function datastreamLabel(d: Datastream): string {
+  const symbol = d.unitOfMeasurement?.symbol
+  return symbol ? `${d.name} (${symbol})` : d.name
+}
+
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false)
   if (!value) return null
@@ -144,18 +150,20 @@ function PanelShell({
         </h2>
         <div className="flex items-center gap-1">
           {onZoomTo && (
-            <TooltipProvider delayDuration={200}>
+            <TooltipProvider delay={200}>
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Zoom to feature"
-                    data-testid="inspect-zoom"
-                    onClick={onZoomTo}
-                  >
-                    <Crosshair />
-                  </Button>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Zoom to feature"
+                      data-testid="inspect-zoom"
+                      onClick={onZoomTo}
+                    />
+                  }
+                >
+                  <Crosshair />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Zoom to feature</TooltipContent>
               </Tooltip>
@@ -216,7 +224,7 @@ function AttributeList({
         <div key={k} className="group/row grid grid-cols-[40%_60%] gap-3 border-b py-1">
           <dt className="min-w-0 break-words font-medium text-muted-foreground">{fieldLabel(k, properties)}</dt>
           <dd className="flex min-w-0 items-start gap-1.5 break-words">
-            <span className="min-w-0 break-words"><FieldValue field={k} value={format(k, properties[k])} /></span>
+            <span className="min-w-0 break-words"><AttributeValue field={k} value={format(k, properties[k])} /></span>
             <CopyButton value={format(k, properties[k])} />
           </dd>
         </div>
@@ -227,7 +235,7 @@ function AttributeList({
 
 /** Fields that render as a chip (status pill / trend arrow) rather than a number
  *  — promoted to a lead row above the metric grid so a section leads with its
- *  headline classification. Kept in sync with the dispatch in FieldValue. */
+ *  headline classification. Kept in sync with the dispatch in AttributeValue. */
 const CHIP_FIELDS = new Set(["status", "trend_category", "direction"])
 
 /** Plain-language help for fields whose name/value is opaque. When a metric
@@ -299,7 +307,7 @@ function FieldInfo({ field, value }: { field: string; value: string }) {
   const help = fieldHelp(field, value)
   if (!help) return null
   return (
-    <TooltipProvider delayDuration={120}>
+    <TooltipProvider delay={120}>
       <Tooltip>
         <TooltipTrigger
           onClick={(e) => e.stopPropagation()}
@@ -364,7 +372,7 @@ function MetricGrid({
             const val = format(k, properties[k])
             return (
               <span key={k} className="inline-flex items-center gap-1">
-                <FieldValue field={k} value={val} />
+                <AttributeValue field={k} value={val} />
                 <FieldInfo field={k} value={val} />
               </span>
             )
@@ -383,7 +391,7 @@ function MetricGrid({
                 </dt>
                 <dd className="mt-0.5 flex items-start gap-1.5 break-words text-sm font-semibold tabular-nums">
                   <span className="min-w-0 break-words">
-                    <FieldValue field={k} value={val} />
+                    <AttributeValue field={k} value={val} />
                   </span>
                   <CopyButton value={val} />
                 </dd>
@@ -719,8 +727,13 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
             </p>
           ) : (
             <Select
-              value={dsId ?? ""}
+              items={datastreams.map((d) => ({
+                value: String(d["@iot.id"]),
+                label: datastreamLabel(d),
+              }))}
+              value={dsId ?? null}
               onValueChange={(id) => {
+                if (id === null) return
                 const ds = datastreams.find((d) => String(d["@iot.id"]) === id)
                 posthog.capture("datastream_selected", {
                   datastream_id: id,
@@ -737,8 +750,7 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
               <SelectContent>
                 {datastreams.map((d) => (
                   <SelectItem key={String(d["@iot.id"])} value={String(d["@iot.id"])}>
-                    {d.name}
-                    {d.unitOfMeasurement?.symbol ? ` (${d.unitOfMeasurement.symbol})` : ""}
+                    {datastreamLabel(d)}
                   </SelectItem>
                 ))}
               </SelectContent>

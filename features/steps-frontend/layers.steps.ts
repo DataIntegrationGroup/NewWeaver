@@ -39,13 +39,13 @@ Then("each layer shows its title and description", async function (this: Browser
 When("the user toggles the {string} layer on", async function (this: BrowserWorld, title: string) {
   await revealLayerCatalog(this)
   const sw = this.page.getByTestId(`layer-toggle-${layerIdByTitle(title)}`)
-  if ((await sw.getAttribute("data-state")) !== "checked") await sw.click()
+  if ((await sw.getAttribute("aria-checked")) !== "true") await sw.click()
 })
 
 When("the user toggles the {string} layer off", async function (this: BrowserWorld, title: string) {
   await revealLayerCatalog(this)
   const sw = this.page.getByTestId(`layer-toggle-${layerIdByTitle(title)}`)
-  if ((await sw.getAttribute("data-state")) === "checked") await sw.click()
+  if ((await sw.getAttribute("aria-checked")) === "true") await sw.click()
 })
 
 Then("the {string} features render on the map", async function (this: BrowserWorld, title: string) {

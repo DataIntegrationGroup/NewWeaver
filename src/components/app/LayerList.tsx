@@ -220,7 +220,7 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
       <AccordionItem key={section} value={section}>
         {help ? (
           <Tooltip>
-            <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+            <TooltipTrigger render={trigger} />
             <TooltipContent
               side="right"
               className="max-w-72"
@@ -299,8 +299,8 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
       {topSections.length === 0 && !showAdvanced ? (
         <p className="text-sm text-muted-foreground">No layers match “{search}”.</p>
       ) : (
-      <TooltipProvider delayDuration={200}>
-      <Accordion type="multiple" value={topOpen} onValueChange={setOpen}>
+      <TooltipProvider delay={200}>
+      <Accordion multiple value={topOpen} onValueChange={setOpen}>
         {topSections.map(renderItem)}
         {showAdvanced && (
           <AccordionItem key={ADVANCED_SECTION} value={ADVANCED_SECTION}>
@@ -312,7 +312,7 @@ export function LayerList({ visible, onToggle, opacityById, onOpacityChange, att
             </AccordionTrigger>
             <AccordionContent>
               <Accordion
-                type="multiple"
+                multiple
                 value={advOpenValue}
                 onValueChange={setAdvOpen}
                 className="ml-1 border-l pl-2"

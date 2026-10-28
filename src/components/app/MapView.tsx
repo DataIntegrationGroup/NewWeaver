@@ -98,7 +98,7 @@ import {
   isClustered,
 } from "./MapLayers"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FieldValue } from "@/components/ui/field-value"
+import { AttributeValue } from "@/components/app/AttributeValue"
 import { ActiveLayerChips } from "./ActiveLayerChips"
 import { MapLegend } from "./MapLegend"
 
@@ -588,7 +588,7 @@ export function MapView({
                             {fieldLabel(k, hoverInfo.properties)}
                           </dt>
                           <dd className="min-w-0 break-words border-b border-border/40 py-1 align-top tabular-nums">
-                            <FieldValue
+                            <AttributeValue
                               field={k}
                               value={(hoverInfo.format ?? defaultFormat)(k, hoverInfo.properties[k])}
                             />
@@ -646,16 +646,18 @@ export function MapView({
 
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
         <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              aria-label="Choose basemap"
-              title="Choose basemap"
-              data-testid="basemap-trigger"
-            >
-              <Layers />
-            </Button>
+          <PopoverTrigger
+            render={
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label="Choose basemap"
+                title="Choose basemap"
+                data-testid="basemap-trigger"
+              />
+            }
+          >
+            <Layers />
           </PopoverTrigger>
           <PopoverContent align="start" className="w-64">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

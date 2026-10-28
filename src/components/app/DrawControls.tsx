@@ -140,50 +140,56 @@ export function DrawControls({ map, onShapesChange, onActiveChange }: DrawContro
   return (
     <div className="flex flex-col gap-1 rounded-md border bg-card p-1 shadow-sm">
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={mode === "rectangle" ? "default" : "ghost"}
-            size="icon-sm"
-            aria-label="Draw rectangle selection"
-            aria-pressed={mode === "rectangle"}
-            data-testid="draw-rectangle"
-            onClick={() => toggle("rectangle")}
-          >
-            <Square />
-          </Button>
+        <TooltipTrigger
+          render={
+            <Button
+              variant={mode === "rectangle" ? "default" : "ghost"}
+              size="icon-sm"
+              aria-label="Draw rectangle selection"
+              aria-pressed={mode === "rectangle"}
+              data-testid="draw-rectangle"
+              onClick={() => toggle("rectangle")}
+            />
+          }
+        >
+          <Square />
         </TooltipTrigger>
         <TooltipContent side="right">
           Draw a rectangle to select features for export
         </TooltipContent>
       </Tooltip>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant={mode === "polygon" ? "default" : "ghost"}
-            size="icon-sm"
-            aria-label="Draw polygon selection"
-            aria-pressed={mode === "polygon"}
-            data-testid="draw-polygon"
-            onClick={() => toggle("polygon")}
-          >
-            <Hexagon />
-          </Button>
+        <TooltipTrigger
+          render={
+            <Button
+              variant={mode === "polygon" ? "default" : "ghost"}
+              size="icon-sm"
+              aria-label="Draw polygon selection"
+              aria-pressed={mode === "polygon"}
+              data-testid="draw-polygon"
+              onClick={() => toggle("polygon")}
+            />
+          }
+        >
+          <Hexagon />
         </TooltipTrigger>
         <TooltipContent side="right">
           Draw a polygon to select features for export
         </TooltipContent>
       </Tooltip>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Clear drawn selection"
-            data-testid="draw-clear"
-            onClick={clear}
-          >
-            <Trash2 />
-          </Button>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Clear drawn selection"
+              data-testid="draw-clear"
+              onClick={clear}
+            />
+          }
+        >
+          <Trash2 />
         </TooltipTrigger>
         <TooltipContent side="right">Clear the drawn selection</TooltipContent>
       </Tooltip>

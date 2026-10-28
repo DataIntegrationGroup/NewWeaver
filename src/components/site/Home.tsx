@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { ArrowRight, MapPin, Layers, Compass, Code2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { SLACK_URL } from "./SiteHeader"
 import { SitePage as Page } from "./SitePage"
@@ -47,14 +47,15 @@ function Hero() {
           .
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button asChild size="lg">
-            <Link to="/map">
-              Explore the map <ArrowRight />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg">
-            <Link to="/about">About Weaver</Link>
-          </Button>
+          <Link to="/map" className={buttonVariants({ size: "lg" })}>
+            Explore the map <ArrowRight />
+          </Link>
+          <Link
+            to="/about"
+            className={buttonVariants({ variant: "outline", size: "lg" })}
+          >
+            About Weaver
+          </Link>
         </div>
       </div>
 

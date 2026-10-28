@@ -11,7 +11,7 @@ type MapSeam = {
 
 async function switchOn(world: BrowserWorld, id: string): Promise<boolean> {
   return (
-    (await world.page.getByTestId(`layer-toggle-${id}`).getAttribute("data-state")) === "checked"
+    (await world.page.getByTestId(`layer-toggle-${id}`).getAttribute("aria-checked")) === "true"
   )
 }
 
@@ -80,6 +80,6 @@ Then("the previous view is restored from the URL", async function (this: Browser
     () =>
       document
         .querySelector('[data-testid="layer-toggle-ocotillo-latest-tds-wells"]')
-        ?.getAttribute("data-state") !== "checked"
+        ?.getAttribute("aria-checked") !== "true"
   )
 })

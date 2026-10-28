@@ -52,3 +52,9 @@ export const REGION_CATALOG: Record<RegionKind, RegionCatalogEntry> = {
 }
 
 export const REGION_KINDS: RegionKind[] = ["county", "pws", "basin"]
+
+/** Region kinds as `{ value, label }` pairs, for a Select's `items`. */
+export const REGION_KIND_ITEMS = REGION_KINDS.map((k) => ({
+  value: k,
+  label: REGION_CATALOG[k].label,
+}))

@@ -81,7 +81,7 @@ export function SearchWidgets({
 
   return (
     <div data-testid="search-widgets">
-      <Accordion type="multiple" value={open} onValueChange={setOpen}>
+      <Accordion multiple value={open} onValueChange={setOpen}>
         <AccordionItem value="location">
           <AccordionTrigger data-testid="search-widget-location-trigger">
             <span className="flex items-center gap-2">

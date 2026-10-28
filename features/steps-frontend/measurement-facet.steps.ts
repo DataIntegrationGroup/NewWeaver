@@ -23,6 +23,6 @@ Then(
     await revealLayerCatalog(this)
     const sw = this.page.getByTestId(`layer-toggle-${layer.id}`)
     await sw.waitFor()
-    assert.equal(await sw.getAttribute("data-state"), "checked")
+    assert.equal(await sw.getAttribute("aria-checked"), "true")
   }
 )
