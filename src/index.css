@@ -8,7 +8,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    /* OcotilloUI (NMBGMRDataManager) production typography */
+    /* DSDS theme-weaver typography: Outfit headings, Public Sans body */
     --font-heading: 'Outfit Variable', system-ui, sans-serif;
     --font-sans: 'Public Sans Variable', system-ui, sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -49,13 +49,19 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    --color-info-foreground: var(--info-foreground);
+    --color-info: var(--info);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-warning: var(--warning);
+    --color-success-foreground: var(--success-foreground);
+    --color-success: var(--success);
 }
 
 :root {
-    /* OcotilloUI (NMBGMRDataManager) production palette — light.
-       Tokens map MUI theme.ts to shadcn: tailwind blue/amber/red/orange/
-       emerald/cyan + stone/slate neutrals. */
-    --background: #e7e5e4;        /* stone-200 (page) */
+    /* DataServices Design System theme-weaver palette — light.
+       Values come from `shadcn add @dataservices/theme-weaver`; re-run it
+       to sync rather than editing them by hand. */
+    --background: #fafafa;        /* neutral-50 (page) */
     --foreground: #0f172a;        /* slate-900 */
     --card: #ffffff;              /* paper */
     --card-foreground: #0f172a;
@@ -64,21 +70,15 @@
 
     --primary: #006d8b;          /* NMWDI teal */
     --primary-foreground: #ffffff;
-    --primary-light: #a6ccd6;    /* NMWDI light teal */
-    --primary-dark: #004153;     /* NMWDI deep teal */
 
     --secondary: #b1422f;        /* NMWDI terracotta */
     --secondary-foreground: #ffffff;
-    --secondary-strong: #8f3526;
-    --secondary-dark: #6f291d;
 
     --muted: #f1f5f6;            /* cool teal-tinted wrapper */
     --muted-foreground: #4b6470; /* slate-teal */
     --accent: #e7f0f2;           /* light teal tint */
     --accent-foreground: #04323f;
     --destructive: #b1422f;      /* terracotta (brand red) */
-    --warning-light: #fdba74;    /* orange-300 */
-    --warning-dark: #c2410c;     /* orange-700 */
 
     --border: #cdd9dc;           /* cool teal-gray */
     --input: #cdd9dc;
@@ -92,7 +92,7 @@
 
     --radius: 0.5rem;
 
-    --sidebar: #ffffff;
+    --sidebar: #fafafa;          /* neutral-50 */
     --sidebar-foreground: #04323f;
     --sidebar-primary: #006d8b;
     --sidebar-primary-foreground: #ffffff;
@@ -100,34 +100,36 @@
     --sidebar-accent-foreground: #04323f;
     --sidebar-border: #cdd9dc;
     --sidebar-ring: #006d8b;
+
+    /* Status */
+    --success: #2f7a4a;
+    --success-foreground: #ffffff;
+    --warning: #c2410c;
+    --warning-foreground: #ffffff;
+    --info: #2f6690;
+    --info-foreground: #ffffff;
 }
 
 .dark {
-    /* OcotilloUI production palette — dark (zinc neutrals). */
+    /* DataServices Design System theme-weaver palette — dark. */
     --background: #18181b;        /* zinc-900 (default) */
     --foreground: #f1f5f9;        /* slate-100 */
-    --card: #3f3f46;              /* zinc-700 (paper) */
+    --card: #1f2a2e;              /* dark teal-slate (paper) */
     --card-foreground: #f1f5f9;
-    --popover: #3f3f46;
+    --popover: #1f2a2e;
     --popover-foreground: #f1f5f9;
 
     --primary: #3aa3c0;          /* NMWDI teal (brighter on dark) */
     --primary-foreground: #04222b;
-    --primary-light: #a6ccd6;    /* NMWDI light teal */
-    --primary-dark: #004153;     /* NMWDI deep teal */
 
     --secondary: #cf6a57;        /* NMWDI terracotta (brighter on dark) */
     --secondary-foreground: #2a0f0a;
-    --secondary-strong: #b1422f;
-    --secondary-dark: #8f3526;
 
     --muted: #27272a;            /* zinc-800 */
-    --muted-foreground: #9aafb6; /* cool slate-teal */
+    --muted-foreground: #b6c6cb; /* light slate-teal */
     --accent: #2a3b40;           /* dark teal tint */
     --accent-foreground: #e7f0f2;
     --destructive: #e06a56;      /* terracotta (brighter on dark) */
-    --warning-light: #fdba74;    /* orange-300 */
-    --warning-dark: #c2410c;     /* orange-700 */
 
     --border: #3a4348;           /* cool teal-gray divider */
     --input: #3a4348;
@@ -147,6 +149,14 @@
     --sidebar-accent-foreground: #e7f0f2;
     --sidebar-border: #3a4348;
     --sidebar-ring: #3aa3c0;
+
+    /* Status */
+    --success: #5fb47e;
+    --success-foreground: #0c2416;
+    --warning: #fb923c;
+    --warning-foreground: #431407;
+    --info: #7aa9d1;
+    --info-foreground: #0d2236;
 }
 
 @layer base {
