@@ -185,6 +185,7 @@ function Hero() {
  */
 const DOORWAYS = [
   {
+    id: "find",
     icon: MapPin,
     title: "Find data near a place",
     body: "Search a place and see what’s monitored nearby.",
@@ -193,14 +194,15 @@ const DOORWAYS = [
     hash: "find",
   },
   {
+    id: "measure",
     icon: Layers,
     title: "Browse by what’s measured",
     body: "Jump straight to groundwater levels or groundwater quality — across every network at once.",
     cta: "Browse datasets",
-    to: "/map" as const,
-    hash: "measure",
+    to: "/catalog" as const,
   },
   {
+    id: "gis",
     icon: Compass,
     title: "Use it in your GIS",
     body: "Connect ArcGIS Pro or QGIS directly to the OGC API Features service.",
@@ -209,6 +211,7 @@ const DOORWAYS = [
     hash: "gis",
   },
   {
+    id: "api",
     icon: Code2,
     title: "Build with the API",
     body: "Read the same open endpoints Weaver uses, straight from your own tools.",
@@ -243,7 +246,7 @@ function Doorways() {
           <SectionHeading title={group.title} blurb={group.blurb} />
           <div className="grid gap-4 sm:grid-cols-2">
             {group.doorways.map((d) => (
-              <Card key={d.hash}>
+              <Card key={d.id}>
                 <CardHeader>
                   <d.icon className="mb-2 size-5 text-primary" />
                   <CardTitle>{d.title}</CardTitle>
@@ -253,7 +256,7 @@ function Doorways() {
                   <Link
                     to={d.to}
                     hash={d.hash}
-                    data-testid={`doorway-${d.hash}`}
+                    data-testid={`doorway-${d.id}`}
                     className={buttonVariants({ variant: "outline" })}
                   >
                     {d.cta} <ArrowRight data-icon="inline-end" />
