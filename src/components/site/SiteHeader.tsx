@@ -8,7 +8,6 @@ const NAV = [
   { href: "/", label: "Home" },
   { href: "/datasets", label: "Datasets" },
   { href: "/map", label: "Map" },
-  { href: "/planning", label: "Planning" },
   { href: "/about", label: "About" },
   { href: "/help", label: "Help" },
 ]
@@ -26,7 +25,7 @@ const BRAND = (
   </span>
 )
 
-/** Shared top navigation for the content pages, the map and planning. */
+/** Shared top navigation for the content pages and the map. */
 export function SiteHeader() {
   const { pathname } = useLocation()
   return (
