@@ -187,7 +187,7 @@ const DOORWAYS = [
   {
     icon: MapPin,
     title: "Find data near a place",
-    body: "Search an address and see what’s monitored nearby — or whether anything is.",
+    body: "Search a place and see what’s monitored nearby.",
     cta: "Search the map",
     to: "/map" as const,
     hash: "find",
@@ -195,7 +195,7 @@ const DOORWAYS = [
   {
     icon: Layers,
     title: "Browse by what’s measured",
-    body: "Jump straight to water levels, water quality, or surface water — across every network at once.",
+    body: "Jump straight to groundwater levels or groundwater quality — across every network at once.",
     cta: "Browse datasets",
     to: "/map" as const,
     hash: "measure",
@@ -273,7 +273,7 @@ function Doorways() {
  * can judge "is my thing in here?" before clicking. Scope copy, not mechanics.
  */
 const ORIENTATION =
-  "Groundwater levels, water quality, springs, and surface water — from state, local, and federal monitoring networks across New Mexico."
+  "Groundwater levels and groundwater quality — from state, local, and federal monitoring networks across New Mexico."
 
 function DataFlow() {
   return (
