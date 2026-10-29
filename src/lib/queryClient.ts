@@ -13,9 +13,8 @@ export const queryClient = new QueryClient({
   // one-click retry, instead of silently leaving a layer blank.
   queryCache: new QueryCache({
     onError: (error, query) => {
-      // The home dashboard's nightly stats are optional context — a missing or
-      // unconfigured file falls back silently, no toast (SPEC §V.V13/§V.V14).
-      if (query.queryKey[0] === "stats") return
+      // Dashboard counts are optional; their tiles just show "—".
+      if (query.queryKey[0] === "die-stats") return
       toast.error(`Couldn't load ${queryLabel(query.queryKey)}`, {
         description: error instanceof Error ? error.message : undefined,
         action: { label: "Retry", onClick: () => query.fetch() },

@@ -14,10 +14,6 @@ import * as fx from "./fixtures"
 
 setDefaultTimeout(60_000)
 
-// Mockable URL for the nightly stats JSON (SPEC §T.T11b). Injected into the
-// dev server via `define` and intercepted in mockApi below.
-const STATS_TEST_URL = "https://stats.example.test/weaver-stats.json"
-
 let server: ViteDevServer
 let browser: Browser
 let baseURL: string
@@ -27,11 +23,6 @@ BeforeAll(async function () {
     configFile: "vite.config.ts",
     server: { port: 5180, strictPort: true },
     logLevel: "warn",
-    // Point the home dashboard at a mockable stats file (SPEC §T.T11b); the
-    // route handler below fulfils it from the WEAVER_STATS fixture.
-    define: {
-      "import.meta.env.VITE_STATS_URL": JSON.stringify(STATS_TEST_URL),
-    },
   })
   await server.listen()
   baseURL = `http://localhost:5180`
@@ -74,11 +65,6 @@ async function mockApi(route: Route): Promise<boolean> {
     return json({ value: [] }).then(() => true)
   }
 
-  // Nightly stats JSON for the home dashboard (SPEC §T.T11b / §V.V13, §V.V14).
-  if (/stats\.example\.test\/weaver-stats/.test(url)) {
-    return json(fx.WEAVER_STATS).then(() => true)
-  }
-
   if (/features\.newmexicowaterdata/.test(url)) {
     if (/\/collections\/water_levels_summary\/items/.test(url)) return json(fx.WATER_LEVELS_ITEMS).then(() => true)
     if (/\/collections\/[^/]+\/items/.test(url)) return json({ type: "FeatureCollection", features: [] }).then(() => true)
@@ -110,8 +96,10 @@ async function mockApi(route: Route): Promise<boolean> {
 
   // DIE pygeoapi — the integrated water-level / chemistry products. Serve the
   // shared vector fixture for item pages so toggled layers show data offline.
+  // Fixed collection list for the home dashboard's dataset count.
   if (/die-pygeoapi-[^/]*\.run\.app/.test(url)) {
     if (/\/collections\/[^/]+\/items/.test(url)) return json(fx.WATER_LEVELS_ITEMS).then(() => true)
+    if (/\/collections\?/.test(url)) return json(fx.DIE_COLLECTIONS).then(() => true)
     return json({}).then(() => true)
   }
 

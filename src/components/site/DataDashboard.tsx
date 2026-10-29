@@ -1,37 +1,48 @@
 /**
- * Home-page data dashboard (SPEC §T.T11 / §I.home-dash). A strip of at-a-glance
- * stat tiles — upstream services, datasets, monitoring sites, and the span of
- * record — over the activity feed (§T.T12). Counts come from the nightly DIE
- * stats JSON (§V.V13); when that file is absent the services/datasets tiles
- * fall back to the locally-derived catalog counts and the site count shows "—"
- * rather than a fabricated number.
+ * Home-page stat tiles (SPEC §T.T11). The dataset count is live from DIE and
+ * shows "—" until it loads.
  */
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useStats } from "@/hooks/useStats"
-import { statsConfigured } from "@/lib/stats"
-import { DATASET_COUNT, DATASET_SERVICE_COUNT } from "@/catalog/datasets"
-import { ActivityFeed } from "./ActivityFeed"
+import { useDieStats } from "@/hooks/useDieStats"
 
-// Placeholder: a made-up, hardcoded span of record from the design mockup. No
-// data source backs it yet — replace it with a real range from the stats JSON.
-const RECORD_START = 1920
-const RECORD_END = 2026
+// Distinct DIE `source` values as of 2026-10-29. pygeoapi can't count distinct
+// values cheaply, so they're hardcoded.
+const DIE_SOURCES = [
+  "BOR-RISE",
+  "ISCSevenRivers",
+  "NMBGMR",
+  "ST/DWB",
+  "ST2/BernCo",
+  "ST2/CABQ",
+  "ST2/EBID",
+  "ST2/NMOSE-Roswell",
+  "ST2/PVACD",
+  "USGS-NWIS",
+  "WQP",
+]
 
-function fmtNum(n: number): string {
-  return n.toLocaleString()
+// Earliest DIE record as of 2026-10-29 (a few sites' 1900 dates look like
+// placeholders).
+const RECORD_START = 1903
+const RECORD_END = new Date().getFullYear()
+
+function fmtNum(n: number | undefined): string {
+  return n === undefined ? "—" : n.toLocaleString()
 }
 
 function StatTile({
   testid,
   value,
   label,
+  className,
 }: {
   testid?: string
   value: string
   label: string
+  className?: string
 }) {
   return (
-    <Card data-testid={testid}>
+    <Card data-testid={testid} className={className}>
       <CardHeader>
         <CardDescription>{label}</CardDescription>
         <CardTitle className="text-2xl tabular-nums sm:text-3xl">{value}</CardTitle>
@@ -41,49 +52,24 @@ function StatTile({
 }
 
 export function DataDashboard() {
-  const { data } = useStats()
-
-  // JSON wins; otherwise fall back to what we can know locally without faking.
-  const services = data?.counts.services ?? DATASET_SERVICE_COUNT
-  const datasets = data?.counts.datasets ?? DATASET_COUNT
-  const sites = data ? fmtNum(data.counts.sites) : "—"
-
-  const updated = data
-    ? new Date(data.generatedAt).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : null
+  const { data } = useDieStats()
 
   return (
-    <section data-testid="home-dashboard" className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile
-          testid="dashboard-stat-services"
-          value={fmtNum(services)}
-          label="Data sources"
-        />
-        <StatTile
-          testid="dashboard-stat-datasets"
-          value={fmtNum(datasets)}
-          label="Datasets"
-        />
-        <StatTile
-          testid="dashboard-stat-sites"
-          value={sites}
-          label="Monitoring sites"
-        />
-        <StatTile
-          value={`${RECORD_START}–${RECORD_END}`}
-          label={`${RECORD_END - RECORD_START} years of record`}
-        />
-      </div>
-
-      <ActivityFeed
-        events={data?.events}
-        configured={statsConfigured}
-        updated={updated}
+    <section data-testid="home-dashboard" className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <StatTile
+        testid="dashboard-stat-services"
+        value={fmtNum(DIE_SOURCES.length)}
+        label="Data sources"
+      />
+      <StatTile
+        testid="dashboard-stat-datasets"
+        value={fmtNum(data?.datasets)}
+        label="Datasets"
+      />
+      <StatTile
+        className="col-span-2 sm:col-span-1"
+        value={`${RECORD_START}–${RECORD_END}`}
+        label={`${RECORD_END - RECORD_START} years of record`}
       />
     </section>
   )

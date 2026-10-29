@@ -1,19 +1,13 @@
 @frontend
 Feature: Home dashboard and data catalog
-  The home page summarises how much data Weaver brings together — counts and
-  recent source updates — and a Data Catalog page lets a visitor browse, search,
-  and share every dataset, or open one straight on the map.
+  The home page summarises how much data Weaver brings together, and a Data
+  Catalog page lets a visitor browse, search, and share every dataset, or open
+  one straight on the map.
 
-  # SPEC §T.T11 / §V.V13 — counts come from the nightly stats JSON, not magic numbers.
+  # SPEC §T.T11 — dataset and site counts come live from DIE, not magic numbers.
   Scenario: Home dashboard shows data counts
     Given the user opens the home page
     Then the dashboard shows the data counts
-    And the dashboard shows when it was last updated
-
-  # SPEC §T.T12 / §V.V14 — the activity feed renders published update events.
-  Scenario: Home dashboard lists recent source updates
-    Given the user opens the home page
-    Then the activity feed lists recent source updates
 
   # SPEC §T.T13 / §V.V18 — a card for every dataset, from one source of truth.
   Scenario: Catalog lists every dataset
