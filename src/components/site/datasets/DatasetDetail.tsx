@@ -10,6 +10,7 @@ import { datasetMapSearch } from "@/catalog/datasets"
 import { useDieFields } from "@/hooks/useDieCollections"
 import type { Dataset } from "./collections"
 import { DatasetDownloadDialog } from "./DatasetDownloadDialog"
+import { DatasetPreview } from "./DatasetPreview"
 import { cn } from "@/lib/utils"
 
 function shareUrl(id: string): string {
@@ -67,6 +68,8 @@ export function DatasetDetail({ d, className }: { d: Dataset; className?: string
 
   return (
     <div data-testid="datasets-detail" className={cn("flex flex-col gap-6 text-sm", className)}>
+      <DatasetPreview d={d} />
+
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight">{d.title}</h2>
         {d.description && <p className="text-muted-foreground">{d.description}</p>}

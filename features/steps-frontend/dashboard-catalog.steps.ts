@@ -234,3 +234,7 @@ Then(
     for (const s of list.split(", ")) assert.ok(text.includes(s), `missing ${s}: ${text}`)
   }
 )
+
+Then("the dataset preview is a {string} chart", async function (this: BrowserWorld, kind: string) {
+  await this.page.locator(`[data-testid="datasets-detail-preview"][data-kind="${kind}"]`).waitFor()
+})
