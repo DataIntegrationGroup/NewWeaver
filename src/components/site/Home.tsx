@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/input-group"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PageShell } from "@/components/ui/page"
-import { SiteHeader, SLACK_URL } from "./SiteHeader"
+import { SiteHeader } from "./SiteHeader"
 import { DataSourceCarousel } from "./DataSourceCarousel"
 import { DataDashboard } from "./DataDashboard"
 import { DataFlowBeam } from "./DataFlowBeam"
@@ -319,21 +319,20 @@ function Community() {
       <Card className="items-start gap-6 p-8 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl font-semibold tracking-tight">
-            Join our community
+            Check out our other work
           </h2>
           <p className="text-muted-foreground">
-            We are a group of water-data specialists working to improve the flow
-            of data from producer to consumer. Help shape the future of
-            water-data accessibility in New Mexico.
+            Weaver is part of the New Mexico Water Data Initiative. See the
+            initiative's other projects, tools, and data.
           </p>
         </div>
         <a
-          href={SLACK_URL}
+          href="https://newmexicowaterdata.org/"
           target="_blank"
           rel="noreferrer"
           className={buttonVariants()}
         >
-          Join on Slack
+          Visit New Mexico Water Data <ArrowRight data-icon="inline-end" />
         </a>
       </Card>
     </section>
