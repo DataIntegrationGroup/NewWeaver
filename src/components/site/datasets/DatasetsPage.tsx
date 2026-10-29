@@ -152,6 +152,7 @@ export function DatasetsPage() {
       >
         {hasFacets && (
           <DatasetFilters
+            collapsible={!isWide}
             sourceList={sourceList}
             selected={sources}
             counts={sourceCounts}
