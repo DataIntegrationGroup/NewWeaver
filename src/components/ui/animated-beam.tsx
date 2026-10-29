@@ -84,10 +84,7 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
         },${controlY} ${endX},${endY}`
         setPathD(d)
 
-        // Sweep the gradient band along the from → to chord (to → from when
-        // reversed) rather than across the container's x-axis, so the beam
-        // travels in its own direction in any layout. The band is a quarter of
-        // the chord and starts and ends just off the path.
+        // Sweep the gradient along this beam's own direction, not the x-axis.
         const [fromX, fromY, toX, toY] = reverse
           ? [endX, endY, startX, startY]
           : [startX, startY, endX, endY]

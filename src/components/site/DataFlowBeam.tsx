@@ -62,9 +62,8 @@ export function DataFlowBeam() {
   const sourceRefs = useMemo(() => SOURCES.map(() => createRef<HTMLDivElement>()), [])
   const outputRefs = useMemo(() => OUTPUTS.map(() => createRef<HTMLDivElement>()), [])
 
-  // Each beam lights for STEP seconds: sources into Weaver, then Weaver out to
-  // the tools, then repeat. Hide the travelling gradient (the second path) for
-  // reduced motion, leaving the static track.
+  // Sources light first, then outputs, STEP seconds each. Reduced motion hides
+  // the moving gradient (the second path).
   const beam = {
     containerRef,
     gradientStartColor: BEAM_FROM,
