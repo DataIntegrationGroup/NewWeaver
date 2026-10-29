@@ -15,13 +15,13 @@ import { validateSearch } from "@/lib/urlState"
 
 /**
  * Datasets search params: free-text query, the selected (shareable) dataset id,
- * a topic facet, and a sort key. Every key is optional so the page's default
+ * comma-joined source selections, and a sort key. Every key is optional so the page's default
  * view has a clean URL.
  */
 export interface DatasetsSearch {
   q?: string
   dataset?: string
-  topic?: string
+  sources?: string
   sort?: "name"
 }
 
@@ -31,7 +31,7 @@ function validateDatasetsSearch(raw: Record<string, unknown>): DatasetsSearch {
   return {
     q: str(raw.q),
     dataset: str(raw.dataset),
-    topic: str(raw.topic),
+    sources: str(raw.sources),
     sort: raw.sort === "name" ? "name" : undefined,
   }
 }

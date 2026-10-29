@@ -70,7 +70,28 @@ export function DatasetDetail({ d, className }: { d: Dataset; className?: string
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight">{d.title}</h2>
         {d.description && <p className="text-muted-foreground">{d.description}</p>}
+        {d.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1" data-testid="datasets-detail-tags">
+            {d.tags.map((t) => (
+              <Badge key={t} variant="outline" className="font-normal text-muted-foreground">
+                {t}
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
+
+      {d.sources.length > 0 && (
+        <Section title="Sources">
+          <div className="flex flex-wrap gap-1" data-testid="datasets-detail-sources">
+            {d.sources.map((s) => (
+              <Badge key={s} variant="outline">
+                {s}
+              </Badge>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Fields id={d.id} />
 

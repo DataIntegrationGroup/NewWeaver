@@ -1,8 +1,8 @@
 /**
  * Datasets — search and browse the integrated products the DIE pygeoapi
- * serves, as its /collections endpoint describes them. A topic facet on the
- * left (when the collections' keywords offer one), the matching list in the middle, and the selected dataset's
- * details on the right (in a Sheet on narrow screens). Query, topic, sort and
+ * serves, as its /collections endpoint describes them. A source facet on the
+ * left, the matching list in the middle, and the selected dataset's
+ * details on the right (in a Sheet on narrow screens). Query, sources, sort and
  * selection all live in the URL, so any view is a shareable link.
  */
 import { useEffect, useMemo, useState } from "react"
@@ -23,7 +23,7 @@ import { TRY_DATASETS } from "@/catalog/datasets"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { useMediaQuery } from "@/hooks/useMediaQuery"
 import { useDieCollections } from "@/hooks/useDieCollections"
-import { toDataset, topicKeywords } from "./collections"
+import { allSources, toDataset, withTags } from "./collections"
 import type { DatasetsSearch } from "@/router"
 import { cn } from "@/lib/utils"
 import { SitePage } from "../SitePage"
@@ -51,15 +51,22 @@ export function DatasetsPage() {
   }, [query, navigate])
 
   const collections = useDieCollections()
-  const all = useMemo(() => (collections.data ?? []).map(toDataset), [collections.data])
-  const topics = useMemo(() => topicKeywords(all), [all])
-  // Ignore a linked topic the collections no longer offer.
-  const topic = search.topic && topics.includes(search.topic) ? search.topic : undefined
+  const all = useMemo(() => withTags((collections.data ?? []).map(toDataset)), [collections.data])
+  const sourceList = useMemo(() => allSources(all), [all])
+  // Linked sources the collections still name, in facet order.
+  const sources = useMemo(() => {
+    const linked = (search.sources ?? "").split(",")
+    return sourceList.filter((s) => linked.includes(s))
+  }, [search.sources, sourceList])
+  const setSources = (next: string[]) => update({ sources: next.join(",") || undefined })
+  const toggleSource = (s: string) =>
+    setSources(sources.includes(s) ? sources.filter((x) => x !== s) : [...sources, s])
 
-  const { results, matchedCount, topicCounts } = useMemo(
-    () => filterDatasets({ all, topics, query, topic, sort }),
-    [all, topics, query, topic, sort]
+  const { results, sourceCounts } = useMemo(
+    () => filterDatasets({ all, sourceList, query, sources, sort }),
+    [all, sourceList, query, sources, sort]
   )
+  const hasFacets = sourceList.length > 0
 
   // The linked dataset if it's still in the results, else the first match.
   const selected = results.find((d) => d.id === search.dataset) ?? results[0]
@@ -81,16 +88,18 @@ export function DatasetsPage() {
     ...(query.trim()
       ? [{ kind: "Search", label: `“${query.trim()}”`, onClear: () => setQuery("") }]
       : []),
-    ...(topic
-      ? [{ kind: "Topic", label: topic, onClear: () => update({ topic: undefined }) }]
-      : []),
+    ...sources.map((s) => ({
+      kind: "Source",
+      label: s,
+      onClear: () => setSources(sources.filter((x) => x !== s)),
+    })),
   ]
 
   const header = (
     <PageHeader>
       <PageTitle>Find the integrated dataset you need.</PageTitle>
       <PageDescription>
-        Search every Weaver integrated water dataset by name, parameter, or topic. Results
+        Search every Weaver integrated water dataset by name, parameter, or source. Results
         update as you type.
       </PageDescription>
       <div className="flex max-w-2xl flex-col gap-3 pt-2">
@@ -136,18 +145,18 @@ export function DatasetsPage() {
         data-testid="datasets-page"
         className={cn(
           "grid items-start gap-6",
-          topics.length > 0
+          hasFacets
             ? "lg:grid-cols-[13rem_minmax(0,1fr)_22rem]"
             : "lg:grid-cols-[minmax(0,1fr)_24rem]"
         )}
       >
-        {topics.length > 0 && (
+        {hasFacets && (
           <DatasetFilters
-            topics={topics}
-            topic={topic}
-            total={matchedCount}
-            counts={topicCounts}
-            onTopic={(topic) => update({ topic })}
+            sourceList={sourceList}
+            selected={sources}
+            counts={sourceCounts}
+            onToggle={toggleSource}
+            onClear={() => setSources([])}
           />
         )}
 
@@ -155,7 +164,6 @@ export function DatasetsPage() {
           status={collections.status}
           onRetry={() => collections.refetch()}
           results={results}
-          topics={topics}
           selectedId={selected?.id}
           onSelect={select}
           sort={sort}
@@ -163,7 +171,7 @@ export function DatasetsPage() {
           filters={filters}
           onClearAll={() => {
             setQuery("")
-            update({ topic: undefined })
+            update({ sources: undefined })
           }}
         />
 

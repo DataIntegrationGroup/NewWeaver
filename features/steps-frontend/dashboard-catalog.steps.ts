@@ -199,3 +199,38 @@ When("the user confirms the large download", async function (this: BrowserWorld)
 Then("the dataset download can start", async function (this: BrowserWorld) {
   assert.ok(await this.page.getByTestId("dataset-download-start").isEnabled())
 })
+
+When(
+  "the user filters datasets by the {string} source",
+  async function (this: BrowserWorld, source: string) {
+    await this.page.getByTestId(`datasets-source-${source}`).getByRole("checkbox").click()
+  }
+)
+
+Then("only datasets from {string} are listed", async function (this: BrowserWorld, source: string) {
+  const expected = DIE_DATASETS.filter((d) => d.description.includes(source)).map((d) => d.id)
+  await this.page.waitForFunction(
+    (n) => document.querySelectorAll('[data-testid^="datasets-row-"]').length === n,
+    expected.length
+  )
+  const ids = await this.page
+    .locator('[data-testid^="datasets-row-"]')
+    .evaluateAll((rows) => rows.map((r) => r.getAttribute("data-testid")!.replace("datasets-row-", "")))
+  assert.deepEqual(ids.sort(), expected.sort())
+})
+
+Then(
+  "the datasets are filtered by the {string} source",
+  async function (this: BrowserWorld, source: string) {
+    await this.page.waitForURL((url) => url.searchParams.get("sources") === source)
+    await this.page.getByText(`Source:${source}`).waitFor()
+  }
+)
+
+Then(
+  "the dataset details list the sources {string}",
+  async function (this: BrowserWorld, list: string) {
+    const text = (await this.page.getByTestId("datasets-detail-sources").textContent()) ?? ""
+    for (const s of list.split(", ")) assert.ok(text.includes(s), `missing ${s}: ${text}`)
+  }
+)

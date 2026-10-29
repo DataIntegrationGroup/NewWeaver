@@ -1,5 +1,5 @@
 /**
- * Search, topic and sort for the Datasets page — pure functions over the DIE
+ * Search, source filter and sort for the Datasets page — pure functions over the DIE
  * collections, so the page component only wires them to the URL.
  */
 import type { Dataset } from "./collections"
@@ -12,7 +12,10 @@ export const SORT_OPTIONS: { value: DatasetSort; label: string }[] = [
 ]
 
 function searchText(d: Dataset): string {
-  return [d.title, d.description, ...d.keywords].filter(Boolean).join(" ").toLowerCase()
+  return [d.title, d.description, ...d.sources, ...d.keywords]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
 }
 
 /**
@@ -36,26 +39,32 @@ function matchQuery(all: Dataset[], query: string): Dataset[] {
     .map((x) => x.d)
 }
 
+/**
+ * Query, then sources (a dataset matches if it has any selected source).
+ * Source counts follow the query.
+ */
 export function filterDatasets({
   all,
-  topics,
+  sourceList,
   query,
-  topic,
+  sources,
   sort,
 }: {
   all: Dataset[]
-  /** Keywords offered as topics (see topicKeywords). */
-  topics: string[]
+  /** Sources offered in the facet (see allSources). */
+  sourceList: string[]
   query: string
-  topic?: string
+  sources: string[]
   sort: DatasetSort
 }) {
   const matched = matchQuery(all, query)
-  const topicCounts = new Map(
-    topics.map((t) => [t, matched.filter((d) => d.keywords.includes(t)).length])
+  const sourceCounts = new Map(
+    sourceList.map((s) => [s, matched.filter((d) => d.sources.includes(s)).length])
   )
-  const inTopic = topic ? matched.filter((d) => d.keywords.includes(topic)) : matched
+  const inSources = sources.length
+    ? matched.filter((d) => sources.some((s) => d.sources.includes(s)))
+    : matched
   const results =
-    sort === "name" ? [...inTopic].sort((a, b) => a.title.localeCompare(b.title)) : inTopic
-  return { results, matchedCount: matched.length, topicCounts }
+    sort === "name" ? [...inSources].sort((a, b) => a.title.localeCompare(b.title)) : inSources
+  return { results, sourceCounts }
 }
