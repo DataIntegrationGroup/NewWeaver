@@ -40,6 +40,18 @@ Feature: Home dashboard and datasets
     Then the datasets page lists fewer datasets than the full set
     And the "nm_arsenic_trend" dataset is listed
 
+  # Sources come from the end of each collection's description.
+  Scenario: Filtering datasets by source
+    Given the user opens the datasets page
+    When the user filters datasets by the "CABQ" source
+    Then only datasets from "CABQ" are listed
+    And the datasets are filtered by the "CABQ" source
+
+  Scenario: A selected dataset lists its sources
+    Given the user opens the datasets page
+    When the user selects the "nm_arsenic_summary" dataset
+    Then the dataset details list the sources "NMBGMR, WQP, USBR"
+
   # SPEC §T.T15 / §V.V17 — an explicit empty state, never a blank page.
   Scenario: Searching for nothing shows an empty message
     Given the user opens the datasets page

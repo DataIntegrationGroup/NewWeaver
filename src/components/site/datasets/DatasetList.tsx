@@ -12,7 +12,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { Item, ItemContent, ItemDescription, ItemHeader, ItemTitle } from "@/components/ui/item"
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemHeader,
+  ItemTitle,
+} from "@/components/ui/item"
 import {
   Select,
   SelectContent,
@@ -35,7 +42,6 @@ export function DatasetList({
   status,
   onRetry,
   results,
-  topics,
   selectedId,
   onSelect,
   sort,
@@ -46,8 +52,6 @@ export function DatasetList({
   status: "pending" | "error" | "success"
   onRetry: () => void
   results: Dataset[]
-  /** Keywords shown as topic badges on each row. */
-  topics: string[]
   selectedId?: string
   onSelect: (id: string) => void
   sort: DatasetSort
@@ -91,12 +95,12 @@ export function DatasetList({
         <div className="flex flex-wrap items-center gap-2 border-b bg-muted/50 px-4 py-2">
           <span className="text-xs text-muted-foreground">Filtered by</span>
           {filters.map((f) => (
-            <Badge key={f.kind} variant="outline" className="bg-background pr-0.5">
+            <Badge key={`${f.kind}:${f.label}`} variant="outline" className="bg-background pr-0.5">
               <span className="font-normal text-muted-foreground">{f.kind}:</span>
               {f.label}
               <button
                 type="button"
-                aria-label={`Remove ${f.kind.toLowerCase()} filter`}
+                aria-label={`Remove ${f.kind.toLowerCase()} filter ${f.label}`}
                 onClick={f.onClear}
                 className="rounded-full p-0.5 hover:bg-muted"
               >
@@ -154,7 +158,6 @@ export function DatasetList({
         <div className="divide-y">
           {results.map((d) => {
             const selected = d.id === selectedId
-            const rowTopics = d.keywords.filter((k) => topics.includes(k))
             return (
               <Item
                 key={d.id}
@@ -166,20 +169,20 @@ export function DatasetList({
               >
                 <ItemHeader className="items-start">
                   <ItemTitle>{d.title}</ItemTitle>
-                  {rowTopics.length > 0 && (
-                    <div className="flex gap-1">
-                      {rowTopics.map((t) => (
-                        <Badge key={t} variant="outline" className="capitalize">
-                          {t}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
                 </ItemHeader>
                 {d.description && (
                   <ItemContent>
                     <ItemDescription className="line-clamp-1">{d.description}</ItemDescription>
                   </ItemContent>
+                )}
+                {d.sources.length > 0 && (
+                  <ItemFooter className="flex-wrap justify-start gap-1">
+                    {d.sources.map((s) => (
+                      <Badge key={s} variant="outline" className="font-normal text-muted-foreground">
+                        {s}
+                      </Badge>
+                    ))}
+                  </ItemFooter>
                 )}
               </Item>
             )

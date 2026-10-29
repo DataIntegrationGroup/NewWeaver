@@ -252,11 +252,11 @@ const dieCollection = (id: string, title: string, description: string) => ({
 
 export const DIE_COLLECTIONS = {
   collections: [
-    dieCollection("nm_waterlevels_summary", "NM Unified Water Levels Summary", "Summary stats for water levels, all NM sources"),
-    dieCollection("nm_arsenic_summary", "NM Arsenic Summary", "Arsenic concentration summary stats, all NM sources"),
-    dieCollection("nm_arsenic_trend", "NM Arsenic Trends", "Per-well arsenic concentration trend (slope and category), all NM sources"),
-    dieCollection("nm_fluoride_trend", "NM Fluoride Trends", "Per-well fluoride concentration trend (slope and category), all NM sources"),
-    dieCollection("nm_waterlevels_timeseries", "NM Water Levels Time Series", "Per-observation water level measurements, all NM sources"),
+    dieCollection("nm_waterlevels_summary", "NM Unified Water Levels Summary", "Summary stats for water levels. Sources: USGS NWIS, NMBGMR, CABQ."),
+    dieCollection("nm_arsenic_summary", "NM Arsenic Summary", "Arsenic concentration summary stats. Sources: NMBGMR, WQP, USBR."),
+    dieCollection("nm_arsenic_trend", "NM Arsenic Trends", "Per-well arsenic concentration trend (slope and category). Sources: NMBGMR, WQP."),
+    dieCollection("nm_fluoride_trend", "NM Fluoride Trends", "Per-well fluoride concentration trend (slope and category). Sources: NMBGMR, USBR."),
+    dieCollection("nm_waterlevels_timeseries", "NM Water Levels Time Series", "Per-observation water level measurements. Sources: USGS NWIS, CABQ."),
     dieCollection("nm_pod_age_points", "NM Recent Wells (PODs) — Last 10 Years", "Point layer of OSE PODs completed in the last 10 years"),
   ],
   links: [],
