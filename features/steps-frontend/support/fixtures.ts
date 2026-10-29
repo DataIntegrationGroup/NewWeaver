@@ -242,7 +242,13 @@ const dieCollection = (id: string, title: string, description: string) => ({
   id,
   title,
   description,
-  keywords: ["water", "groundwater", "New Mexico"],
+  keywords: [
+    "water",
+    "groundwater",
+    "New Mexico",
+    ...(id.endsWith("_summary") ? ["summary statistics"] : []),
+    ...(id.endsWith("_timeseries") ? ["time series"] : []),
+  ],
   links: [
     { rel: "self", type: "text/html", href: `${DIE}/collections/${id}?f=html` },
     { rel: "items", type: "application/geo+json", href: `${DIE}/collections/${id}/items?f=json` },

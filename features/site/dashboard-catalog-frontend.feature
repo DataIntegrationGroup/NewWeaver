@@ -52,6 +52,14 @@ Feature: Home dashboard and datasets
     When the user selects the "nm_arsenic_summary" dataset
     Then the dataset details list the sources "NMBGMR, WQP, USBR"
 
+  # The detail card's preview chart hints at the dataset's shape, from its keywords.
+  Scenario: A dataset preview matches its kind
+    Given the user opens the datasets page
+    When the user selects the "nm_waterlevels_timeseries" dataset
+    Then the dataset preview is a "series" chart
+    When the user selects the "nm_arsenic_summary" dataset
+    Then the dataset preview is a "summary" chart
+
   # SPEC §T.T15 / §V.V17 — an explicit empty state, never a blank page.
   Scenario: Searching for nothing shows an empty message
     Given the user opens the datasets page
