@@ -10,7 +10,6 @@ import { Home } from "@/components/site/Home"
 import { About } from "@/components/site/About"
 import { Help } from "@/components/site/Help"
 import { DatasetsPage } from "@/components/site/datasets/DatasetsPage"
-import { RegionalPlanning } from "@/components/site/RegionalPlanning"
 import { validateSearch } from "@/lib/urlState"
 
 /**
@@ -85,13 +84,6 @@ const catalogRoute = createRoute({
   },
 })
 
-/** Regional water planning decision-support dashboard. */
-const planningRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/planning",
-  component: RegionalPlanning,
-})
-
 const routeTree = rootRoute.addChildren([
   homeRoute,
   mapRoute,
@@ -99,7 +91,6 @@ const routeTree = rootRoute.addChildren([
   helpRoute,
   datasetsRoute,
   catalogRoute,
-  planningRoute,
 ])
 
 export const router = createRouter({ routeTree })
