@@ -23,6 +23,7 @@ const OUTPUTS: { icon: LucideIcon; label: string }[] = [
 // NMWDI light teal → sand, fixed because the band is dark in both themes.
 const BEAM_FROM = "#a6ccd6"
 const BEAM_TO = "#e8bd86"
+const STEP = 2
 
 function Node({
   ref,
@@ -61,8 +62,9 @@ export function DataFlowBeam() {
   const sourceRefs = useMemo(() => SOURCES.map(() => createRef<HTMLDivElement>()), [])
   const outputRefs = useMemo(() => OUTPUTS.map(() => createRef<HTMLDivElement>()), [])
 
-  // Hide the travelling gradient (the second path) for reduced motion, leaving
-  // the static track.
+  // Each beam lights for STEP seconds: sources into Weaver, then Weaver out to
+  // the tools, then repeat. Hide the travelling gradient (the second path) for
+  // reduced motion, leaving the static track.
   const beam = {
     containerRef,
     gradientStartColor: BEAM_FROM,
@@ -70,7 +72,8 @@ export function DataFlowBeam() {
     pathColor: "white",
     pathOpacity: 0.16,
     ease: "linear" as const,
-    duration: 4,
+    duration: STEP,
+    repeatDelay: STEP,
     className: "motion-reduce:[&>path:last-of-type]:hidden",
   }
 
@@ -107,7 +110,7 @@ export function DataFlowBeam() {
         <AnimatedBeam key={`s${i}`} {...beam} fromRef={ref} toRef={hubRef} />
       ))}
       {outputRefs.map((ref, i) => (
-        <AnimatedBeam key={`o${i}`} {...beam} fromRef={hubRef} toRef={ref} />
+        <AnimatedBeam key={`o${i}`} {...beam} delay={STEP} fromRef={hubRef} toRef={ref} />
       ))}
     </div>
   )

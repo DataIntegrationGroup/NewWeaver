@@ -51,21 +51,12 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
   const id = useId()
   const [pathD, setPathD] = useState("")
   const [svgDimensions, setSvgDimensions] = useState({ width: 0, height: 0 })
-
-  // Calculate the gradient coordinates based on the reverse prop
-  const gradientCoordinates = reverse
-    ? {
-        x1: ["90%", "-10%"],
-        x2: ["100%", "0%"],
-        y1: ["0%", "0%"],
-        y2: ["0%", "0%"],
-      }
-    : {
-        x1: ["10%", "110%"],
-        x2: ["0%", "100%"],
-        y1: ["0%", "0%"],
-        y2: ["0%", "0%"],
-      }
+  const [gradientCoordinates, setGradientCoordinates] = useState({
+    x1: [0, 0],
+    x2: [0, 0],
+    y1: [0, 0],
+    y2: [0, 0],
+  })
 
   useEffect(() => {
     const updatePath = () => {
@@ -92,6 +83,26 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
           (startX + endX) / 2
         },${controlY} ${endX},${endY}`
         setPathD(d)
+
+        // Sweep the gradient band along the from → to chord (to → from when
+        // reversed) rather than across the container's x-axis, so the beam
+        // travels in its own direction in any layout. The band is a quarter of
+        // the chord and starts and ends just off the path.
+        const [fromX, fromY, toX, toY] = reverse
+          ? [endX, endY, startX, startY]
+          : [startX, startY, endX, endY]
+        const dx = toX - fromX
+        const dy = toY - fromY
+        const length = Math.hypot(dx, dy) || 1
+        const band = length * 0.25
+        const ux = (dx / length) * band
+        const uy = (dy / length) * band
+        setGradientCoordinates({
+          x1: [fromX, toX + ux],
+          x2: [fromX - ux, toX],
+          y1: [fromY, toY + uy],
+          y2: [fromY - uy, toY],
+        })
       }
     }
 
@@ -121,6 +132,7 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
     startYOffset,
     endXOffset,
     endYOffset,
+    reverse,
   ])
 
   return (
@@ -155,10 +167,10 @@ export const AnimatedBeam: React.FC<AnimatedBeamProps> = ({
           id={id}
           gradientUnits={"userSpaceOnUse"}
           initial={{
-            x1: "0%",
-            x2: "0%",
-            y1: "0%",
-            y2: "0%",
+            x1: gradientCoordinates.x1[0],
+            x2: gradientCoordinates.x2[0],
+            y1: gradientCoordinates.y1[0],
+            y2: gradientCoordinates.y2[0],
           }}
           animate={{
             x1: gradientCoordinates.x1,
