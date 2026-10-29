@@ -77,7 +77,7 @@ export function DatasetFilters({
   }
 
   return (
-    <fieldset className="flex flex-col gap-2">
+    <fieldset className="-mx-2 flex flex-col gap-2">
       <div className="flex items-center justify-between px-2">
         <legend className="text-sm font-medium">Source</legend>
         {selected.length > 0 && <ClearButton onClear={onClear} />}
