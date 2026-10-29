@@ -67,6 +67,14 @@ export function DatasetsPage() {
     [all, sourceList, query, sources, sort]
   )
   const hasFacets = sourceList.length > 0
+  // One column template for the header's search row and the body, so the
+  // search box ends exactly where the results list does.
+  const columns = cn(
+    "grid gap-x-6",
+    hasFacets
+      ? "lg:grid-cols-[13rem_minmax(0,1fr)_22rem]"
+      : "lg:grid-cols-[minmax(0,1fr)_24rem]"
+  )
 
   // The linked dataset if it's still in the results, else the first match.
   const selected = results.find((d) => d.id === search.dataset) ?? results[0]
@@ -102,38 +110,40 @@ export function DatasetsPage() {
         Search every Weaver integrated water dataset by name, parameter, or source. Results
         update as you type.
       </PageDescription>
-      <div className="flex max-w-2xl flex-col gap-3 pt-2">
-        <InputGroup>
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-          <InputGroupInput
-            aria-label="Search datasets"
-            placeholder="e.g. arsenic, depth to water"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onSearchKey}
-            data-testid="datasets-search"
-          />
-          {query && (
-            <InputGroupAddon align="inline-end">
-              <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQuery("")}>
-                <X />
-              </InputGroupButton>
+      <div className={cn(columns, "pt-2")}>
+        <div className={cn("flex flex-col gap-3", hasFacets && "lg:col-span-2")}>
+          <InputGroup>
+            <InputGroupAddon>
+              <Search />
             </InputGroupAddon>
-          )}
-        </InputGroup>
-        <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
-          <span>Try</span>
-          {TRY_DATASETS.map((label) => (
-            <Badge
-              key={label}
-              variant="outline"
-              render={<button type="button" onClick={() => setQuery(label.toLowerCase())} />}
-            >
-              {label}
-            </Badge>
-          ))}
+            <InputGroupInput
+              aria-label="Search datasets"
+              placeholder="e.g. arsenic, depth to water"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={onSearchKey}
+              data-testid="datasets-search"
+            />
+            {query && (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQuery("")}>
+                  <X />
+                </InputGroupButton>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
+          <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+            <span>Try</span>
+            {TRY_DATASETS.map((label) => (
+              <Badge
+                key={label}
+                variant="outline"
+                render={<button type="button" onClick={() => setQuery(label.toLowerCase())} />}
+              >
+                {label}
+              </Badge>
+            ))}
+          </div>
         </div>
       </div>
     </PageHeader>
@@ -143,12 +153,7 @@ export function DatasetsPage() {
     <SitePage header={header}>
       <div
         data-testid="datasets-page"
-        className={cn(
-          "grid items-start gap-6",
-          hasFacets
-            ? "lg:grid-cols-[13rem_minmax(0,1fr)_22rem]"
-            : "lg:grid-cols-[minmax(0,1fr)_24rem]"
-        )}
+        className={cn(columns, "items-start gap-y-6")}
       >
         {hasFacets && (
           <DatasetFilters
