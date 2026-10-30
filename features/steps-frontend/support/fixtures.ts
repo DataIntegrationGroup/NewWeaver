@@ -235,16 +235,10 @@ export const WATER_LEVELS_ITEMS = {
   }),
 }
 
-/**
- * Nightly stats JSON (SPEC §T.T11b). Served at the mocked STATS_URL so the home
- * dashboard renders deterministic counts (§V.V13) and a non-empty activity feed
- * (§V.V14) under test.
- */
-export const WEAVER_STATS = {
-  generatedAt: "2026-06-22T08:00:00Z",
-  counts: { services: 5, datasets: 41, sites: 12345 },
-  events: [
-    { source: "USGS Water Data for the Nation", timestamp: "2026-06-22T06:30:00Z", kind: "refresh" },
-    { source: "Ocotillo integrated data products", timestamp: "2026-06-21T07:15:00Z", kind: "refresh" },
-  ],
+/** DIE pygeoapi collection list — the home dashboard counts it as datasets. */
+export const DIE_COLLECTIONS = {
+  collections: ["nm_waterlevels_summary", "nm_major_chemistry", "nm_arsenic_summary"].map(
+    (id) => ({ id, title: id, links: [] })
+  ),
+  links: [],
 }

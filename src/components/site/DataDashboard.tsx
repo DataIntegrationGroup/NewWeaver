@@ -1,96 +1,76 @@
 /**
- * Home-page data dashboard (SPEC §T.T11 / §I.home-dash). Three at-a-glance stat
- * tiles — upstream services, datasets, and monitoring sites — plus the activity
- * feed (§T.T12). Counts come from the nightly DIE stats JSON (§V.V13); when that
- * file is absent the services/datasets tiles fall back to the locally-derived
- * catalog counts and the site count shows "—" rather than a fabricated number.
+ * Home-page stat tiles (SPEC §T.T11). The dataset count is live from DIE and
+ * shows "—" until it loads.
  */
-import { Database, Layers, MapPin } from "lucide-react"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useDieStats } from "@/hooks/useDieStats"
 
-import { Card } from "@/components/ui/card"
-import { useStats } from "@/hooks/useStats"
-import { statsConfigured } from "@/lib/stats"
-import { DATASET_COUNT, DATASET_SERVICE_COUNT } from "@/catalog/datasets"
-import { ActivityFeed } from "./ActivityFeed"
+// Distinct DIE `source` values as of 2026-10-29. pygeoapi can't count distinct
+// values cheaply, so they're hardcoded.
+const DIE_SOURCES = [
+  "BOR-RISE",
+  "ISCSevenRivers",
+  "NMBGMR",
+  "ST/DWB",
+  "ST2/BernCo",
+  "ST2/CABQ",
+  "ST2/EBID",
+  "ST2/NMOSE-Roswell",
+  "ST2/PVACD",
+  "USGS-NWIS",
+  "WQP",
+]
 
-function fmtNum(n: number): string {
-  return n.toLocaleString()
+// Earliest DIE record as of 2026-10-29 (a few sites' 1900 dates look like
+// placeholders).
+const RECORD_START = 1903
+const RECORD_END = new Date().getFullYear()
+
+function fmtNum(n: number | undefined): string {
+  return n === undefined ? "—" : n.toLocaleString()
 }
 
 function StatTile({
   testid,
-  icon: Icon,
   value,
   label,
+  className,
 }: {
-  testid: string
-  icon: typeof Database
+  testid?: string
   value: string
   label: string
+  className?: string
 }) {
   return (
-    <Card data-testid={testid} className="items-center gap-1 p-6 text-center">
-      <Icon className="size-7 text-primary" />
-      <div className="text-3xl font-bold tabular-nums">{value}</div>
-      <div className="text-sm text-muted-foreground">{label}</div>
+    <Card data-testid={testid} className={className}>
+      <CardHeader>
+        <CardDescription>{label}</CardDescription>
+        <CardTitle className="text-2xl tabular-nums sm:text-3xl">{value}</CardTitle>
+      </CardHeader>
     </Card>
   )
 }
 
 export function DataDashboard() {
-  const { data } = useStats()
-
-  // JSON wins; otherwise fall back to what we can know locally without faking.
-  const services = data?.counts.services ?? DATASET_SERVICE_COUNT
-  const datasets = data?.counts.datasets ?? DATASET_COUNT
-  const sites = data ? fmtNum(data.counts.sites) : "—"
-
-  const updated = data
-    ? new Date(data.generatedAt).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      })
-    : null
+  const { data } = useDieStats()
 
   return (
-    <section data-testid="home-dashboard">
-      <div className="mb-5 text-center">
-        <h2 className="!text-3xl text-secondary">Water data at a glance</h2>
-        {updated && (
-          <p
-            data-testid="dashboard-updated"
-            className="mt-1 text-sm text-muted-foreground"
-          >
-            Updated {updated}
-          </p>
-        )}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile
-          testid="dashboard-stat-services"
-          icon={Database}
-          value={fmtNum(services)}
-          label="Data sources"
-        />
-        <StatTile
-          testid="dashboard-stat-datasets"
-          icon={Layers}
-          value={fmtNum(datasets)}
-          label="Datasets & products"
-        />
-        <StatTile
-          testid="dashboard-stat-sites"
-          icon={MapPin}
-          value={sites}
-          label="Monitoring sites"
-        />
-      </div>
-
-      <div className="mt-4">
-        <ActivityFeed events={data?.events} configured={statsConfigured} />
-      </div>
+    <section data-testid="home-dashboard" className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <StatTile
+        testid="dashboard-stat-services"
+        value={fmtNum(DIE_SOURCES.length)}
+        label="Data sources"
+      />
+      <StatTile
+        testid="dashboard-stat-datasets"
+        value={fmtNum(data?.datasets)}
+        label="Datasets"
+      />
+      <StatTile
+        className="col-span-2 sm:col-span-1"
+        value={`${RECORD_START}–${RECORD_END}`}
+        label={`${RECORD_END - RECORD_START} years of record`}
+      />
     </section>
   )
 }
