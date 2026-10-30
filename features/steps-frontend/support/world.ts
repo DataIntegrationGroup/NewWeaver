@@ -98,8 +98,30 @@ async function mockApi(route: Route): Promise<boolean> {
   // shared vector fixture for item pages so toggled layers show data offline.
   // Fixed collection list for the home dashboard's dataset count.
   if (/die-pygeoapi-[^/]*\.run\.app/.test(url)) {
-    if (/\/collections\/[^/]+\/items/.test(url)) return json(fx.WATER_LEVELS_ITEMS).then(() => true)
-    if (/\/collections\?/.test(url)) return json(fx.DIE_COLLECTIONS).then(() => true)
+    const items = /\/collections\/([^/]+)\/items/.exec(url)
+    if (items) {
+      const params = new URL(url).searchParams
+      // Whole-collection CSV download: a header and one row per page, tagged
+      // with its offset so stitching can be checked.
+      if (params.get("f") === "csv") {
+        return route
+          .fulfill({
+            status: 200,
+            contentType: "text/csv",
+            headers: { "access-control-allow-origin": "*" },
+            body: `id,name\r\nrow-${params.get("offset") ?? 0},Well\r\n`,
+          })
+          .then(() => true)
+      }
+      // Download sizing (limit=1): report the collection's fixture row count.
+      const count = fx.DIE_COUNTS[items[1]]
+      if (params.get("limit") === "1" && count !== undefined) {
+        return json({ ...fx.WATER_LEVELS_ITEMS, numberMatched: count }).then(() => true)
+      }
+      return json(fx.WATER_LEVELS_ITEMS).then(() => true)
+    }
+    if (/\/collections\/[^/]+\/queryables/.test(url)) return json(fx.DIE_QUERYABLES).then(() => true)
+    if (/\/collections(\?|$)/.test(url)) return json(fx.DIE_COLLECTIONS).then(() => true)
     return json({}).then(() => true)
   }
 

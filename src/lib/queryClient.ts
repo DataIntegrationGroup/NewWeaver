@@ -13,8 +13,9 @@ export const queryClient = new QueryClient({
   // one-click retry, instead of silently leaving a layer blank.
   queryCache: new QueryCache({
     onError: (error, query) => {
-      // Dashboard counts are optional; their tiles just show "—".
-      if (query.queryKey[0] === "die-stats") return
+      // The DIE collection list shows its own failure: the dashboard tiles
+      // read "—" and the Datasets page offers a retry.
+      if (query.queryKey[0] === "die-collections") return
       toast.error(`Couldn't load ${queryLabel(query.queryKey)}`, {
         description: error instanceof Error ? error.message : undefined,
         action: { label: "Retry", onClick: () => query.fetch() },

@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
-import { MonitorCog } from "lucide-react"
 import type { Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
@@ -28,9 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Progress } from "@/components/ui/progress"
-import { Checkbox } from "@/components/ui/checkbox"
+import { ExportGisBanner, ExportProgress, LargeExportConfirm } from "@/components/export/ExportParts"
 
 type ExportKind = "timeseries" | "latest" | "features"
 
@@ -167,7 +163,6 @@ export function ExportDialog({
   }
 
   const running = phase === "running"
-  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
 
   return (
     <Dialog open={open} onOpenChange={(o) => !running && onOpenChange(o)}>
@@ -180,27 +175,7 @@ export function ExportDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Steer recurring / large workflows to the live OGC API instead of
-            repeated file downloads. */}
-        <div
-          data-testid="export-gis-banner"
-          className="flex items-start gap-2.5 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm"
-        >
-          <MonitorCog className="mt-0.5 size-4 shrink-0 text-primary" />
-          <p className="text-muted-foreground">
-            Working with this data regularly? Connect QGIS or ArcGIS Pro straight
-            to the live OGC API instead of downloading files.{" "}
-            <Link
-              to="/help"
-              hash="gis"
-              data-testid="export-gis-link"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              Set up the Desktop GIS integration
-            </Link>
-            .
-          </p>
-        </div>
+        <ExportGisBanner />
 
         {/* Export kind */}
         <div role="radiogroup" aria-label="Export type" className="grid grid-cols-3 gap-2">
@@ -273,21 +248,15 @@ export function ExportDialog({
 
         {/* Large-export warning */}
         {isLarge && (
-          <label
-            data-testid="export-large-warning"
-            className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-xs"
+          <LargeExportConfirm
+            title="Large export"
+            checked={confirmedLarge}
+            disabled={running}
+            onCheckedChange={setConfirmedLarge}
           >
-            <Checkbox
-              checked={confirmedLarge}
-              disabled={running}
-              onCheckedChange={(v) => setConfirmedLarge(v === true)}
-              className="mt-0.5"
-            />
-            <span>
-              This may download a very large file ({selection.locations.length} locations,
-              full history). Check to confirm before downloading.
-            </span>
-          </label>
+            This may download a very large file ({selection.locations.length} locations,
+            full history).
+          </LargeExportConfirm>
         )}
 
         {!exportable && (
@@ -296,20 +265,11 @@ export function ExportDialog({
           </p>
         )}
 
-        {running && (
-          <div className="space-y-1.5">
-            <Progress value={pct} />
-            <p className="text-xs text-muted-foreground">
-              Fetching… {progress.done}/{progress.total} locations
-            </p>
-          </div>
-        )}
+        {running && <ExportProgress done={progress.done} total={progress.total} unit="locations" />}
 
         {phase === "error" && error && (
           <p className="text-sm text-destructive" role="alert">{error}</p>
         )}
-
-        <Separator className="-mx-4 w-[calc(100%+2rem)]" />
 
         <DialogFooter>
           {running ? (
