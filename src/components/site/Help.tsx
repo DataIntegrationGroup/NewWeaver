@@ -125,7 +125,6 @@ function ConnectCard({
 
 const SECTIONS = [
   { id: "using", label: "Using the map" },
-  { id: "planning", label: "Regional planning" },
   { id: "exporting", label: "Exporting data" },
   { id: "sources", label: "Data sources" },
   { id: "gis", label: "Desktop GIS" },
@@ -337,49 +336,6 @@ export function Help() {
               </ul>
             </section>
 
-            <section id="planning" className="scroll-mt-6 space-y-4">
-              <h2 className="!text-2xl text-primary">Regional planning</h2>
-              <p className="text-muted-foreground">
-                The <strong>Regional Planning</strong> page rolls the per-well
-                integrated data products up into decision-support summaries for an
-                area. Toggle one or more regions — counties, public water systems,
-                or hydrologic basins — in the sidebar; the map frames them and the
-                dashboard pulls the water data live and summarizes it. Turn on
-                several regions to compare them side by side.
-              </p>
-              <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
-                <li>
-                  <strong>Monitoring points.</strong> How many wells fall inside
-                  the selected regions, and how many are actively reporting vs
-                  stale.
-                </li>
-                <li>
-                  <strong>Water-level status.</strong> How current levels compare
-                  to each well’s own history, as a distribution from much-below to
-                  much-above normal, with headline counts of below- and
-                  above-normal wells.
-                </li>
-                <li>
-                  <strong>Groundwater trend.</strong> The long-term direction of
-                  levels across the region, plus the median rate of change.
-                </li>
-                <li>
-                  <strong>Depletion outlook.</strong> Wells projected to decline to
-                  their well depth if current trends hold, with soonest and median
-                  timing.
-                </li>
-                <li>
-                  <strong>Seasonal swing &amp; quality.</strong> Typical
-                  within-year amplitude and any drinking-water limit exceedances.
-                </li>
-                <li>
-                  <strong>Hydrographs.</strong> Every well with repeat readings is
-                  listed; click one — or a well point on the map — to plot its
-                  depth-to-water over time. Each KPI card can also highlight just
-                  its wells on the map.
-                </li>
-              </ul>
-            </section>
 
             <section id="exporting" className="scroll-mt-6 space-y-4">
               <h2 className="!text-2xl text-primary">Exporting data</h2>
@@ -587,8 +543,7 @@ export function Help() {
             <section id="glossary" className="scroll-mt-6 space-y-4">
               <h2 className="!text-2xl text-primary">Glossary</h2>
               <p className="text-muted-foreground">
-                Plain-language definitions of terms used across the map and the
-                planning dashboard.
+                Plain-language definitions of terms used across the map.
               </p>
               <dl className="space-y-3">
                 {GLOSSARY.map((g) => (
@@ -632,8 +587,7 @@ export function Help() {
                 <Faq q="How current is the data?">
                   Weaver reads the source APIs live, so you see what each service
                   currently publishes. Update frequency varies by network and
-                  site — the planning page’s “active vs stale” counts reflect which
-                  wells have recent readings.
+                  site.
                 </Faq>
                 <Faq q="Can I use this data in my own tools?">
                   Yes. Export CSV or GeoJSON from{" "}
