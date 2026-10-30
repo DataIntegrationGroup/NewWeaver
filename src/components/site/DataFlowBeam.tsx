@@ -93,7 +93,7 @@ export function DataFlowBeam() {
         ref={hubRef}
         className="z-10 flex size-25 shrink-0 flex-col items-center justify-center rounded-full bg-white ring-12 ring-white/10"
       >
-        <img src={nmwdiIcon} alt="" className="h-11 w-auto" />
+        <img src={nmwdiIcon} alt="NMWDI Icon" className="h-11 w-auto" />
         <span className="font-heading text-base font-semibold text-brand-deep">
           Weaver
         </span>
