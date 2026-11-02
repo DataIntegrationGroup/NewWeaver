@@ -52,7 +52,7 @@ import { REGION_CATALOG, type RegionKind } from "@/catalog/regions"
 import { useRegionFeatures } from "@/hooks/useRegions"
 import { polygonsBbox, cleanRegionName } from "@/lib/regions"
 import { MapView } from "./MapView"
-import { InspectPanel } from "./InspectPanel"
+import { SiteDetail } from "./SiteDetail"
 import { AttributeTable } from "./AttributeTable"
 import { ExportDialog } from "./ExportDialog"
 import { OnboardingTour, type TourStep } from "@/components/onboarding-tour"
@@ -644,10 +644,10 @@ export function AppShell() {
           )}
         </main>
 
-        {layer && selection?.layerId === layer.id && (
-          <InspectPanel
-            layer={layer}
-            features={data.features}
+        {dataset && selection?.layerId === dataset.id && (
+          <SiteDetail
+            key={selection.featureId}
+            dataset={dataset}
             featureId={selection.featureId}
             onClose={clearSelection}
             onZoomTo={flyTo}

@@ -24,6 +24,8 @@ interface ObservationTableProps {
   wellId: string
   /** Well name, used in the CSV filename. */
   name?: string
+  /** Start expanded (e.g. when the table has a tab of its own). */
+  defaultOpen?: boolean
 }
 
 const fmtDate = (iso: string) =>
@@ -38,7 +40,7 @@ const fmtApproval = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
  * renders from the same points without re-fetching. Collapsed by default to
  * keep the inspector chart-first.
  */
-export function ObservationTable({ wellId, name }: ObservationTableProps) {
+export function ObservationTable({ wellId, name, defaultOpen }: ObservationTableProps) {
   const { data } = useWellSeries(wellId)
   const points = data?.points ?? []
   const units = data?.units ?? "ft"
@@ -68,7 +70,7 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
   }
 
   return (
-    <Accordion data-testid="observation-table">
+    <Accordion data-testid="observation-table" defaultValue={defaultOpen ? ["observations"] : undefined}>
       <AccordionItem value="observations" className="border-none">
         <AccordionTrigger className="text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:no-underline">
           Observations ({points.length.toLocaleString()})

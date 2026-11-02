@@ -19,6 +19,9 @@ interface HydrographProps {
   chartHeight?: number
   /** Show the "expand to modal" button (default true). */
   expandable?: boolean
+  /** Hide the stats box above the chart, for hosts that already show those
+   *  numbers (the map's site panel). */
+  compact?: boolean
 }
 
 const fmtDate = (iso: string) =>
@@ -42,6 +45,7 @@ export function Hydrograph({
   dark = false,
   chartHeight = 300,
   expandable = true,
+  compact = false,
 }: HydrographProps) {
   const { data, isLoading, isError } = useWellSeries(wellId)
 
@@ -71,44 +75,48 @@ export function Hydrograph({
 
   return (
     <div data-testid="hydrograph">
-      <div className="mb-2 rounded-md border bg-muted/30 p-2">
-        {status && (
-          <div data-testid="hydrograph-status" className="mb-2 flex justify-center">
-            <StatusChip value={status} />
-          </div>
-        )}
-        <dl className="grid grid-cols-4 gap-2 text-center">
-        {[
-          { k: "Latest", v: `${fmtNum(latest)} ${units}` },
-          { k: "Shallowest", v: `${fmtNum(min)} ${units}` },
-          { k: "Deepest", v: `${fmtNum(max)} ${units}` },
-          { k: "Readings", v: values.length.toLocaleString() },
-        ].map((s) => (
-          <div key={s.k}>
-            <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              {s.k}
-            </dt>
-            <dd className="text-sm font-semibold tabular-nums">{s.v}</dd>
-          </div>
-        ))}
-        </dl>
-        {(lastPoint.source || lastPoint.approval || lastPoint.qualifier) && (
-          <div
-            data-testid="hydrograph-latest-meta"
-            className="mt-2 flex flex-wrap items-center justify-center gap-1.5 border-t pt-2"
-          >
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Latest reading
-            </span>
-            {lastPoint.source && <MetaChip label="Source" value={lastPoint.source} />}
-            {lastPoint.approval && <ApprovalChip value={lastPoint.approval} label={lastPoint.approvalLabel} />}
-            {lastPoint.qualifier && <MetaChip label="Qualifier" value={lastPoint.qualifier} />}
-          </div>
-        )}
-      </div>
-      <p className="mb-1 text-[11px] text-muted-foreground">
-        Period of record: {fmtDate(points[0].t)} – {fmtDate(points[points.length - 1].t)}
-      </p>
+      {!compact && (
+        <div className="mb-2 rounded-md border bg-muted/30 p-2">
+          {status && (
+            <div data-testid="hydrograph-status" className="mb-2 flex justify-center">
+              <StatusChip value={status} />
+            </div>
+          )}
+          <dl className="grid grid-cols-4 gap-2 text-center">
+          {[
+            { k: "Latest", v: `${fmtNum(latest)} ${units}` },
+            { k: "Shallowest", v: `${fmtNum(min)} ${units}` },
+            { k: "Deepest", v: `${fmtNum(max)} ${units}` },
+            { k: "Readings", v: values.length.toLocaleString() },
+          ].map((s) => (
+            <div key={s.k}>
+              <dt className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {s.k}
+              </dt>
+              <dd className="text-sm font-semibold tabular-nums">{s.v}</dd>
+            </div>
+          ))}
+          </dl>
+          {(lastPoint.source || lastPoint.approval || lastPoint.qualifier) && (
+            <div
+              data-testid="hydrograph-latest-meta"
+              className="mt-2 flex flex-wrap items-center justify-center gap-1.5 border-t pt-2"
+            >
+              <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Latest reading
+              </span>
+              {lastPoint.source && <MetaChip label="Source" value={lastPoint.source} />}
+              {lastPoint.approval && <ApprovalChip value={lastPoint.approval} label={lastPoint.approvalLabel} />}
+              {lastPoint.qualifier && <MetaChip label="Qualifier" value={lastPoint.qualifier} />}
+            </div>
+          )}
+        </div>
+      )}
+      {!compact && (
+        <p className="mb-1 text-[11px] text-muted-foreground">
+          Period of record: {fmtDate(points[0].t)} – {fmtDate(points[points.length - 1].t)}
+        </p>
+      )}
       <TimeSeriesChart
         points={points}
         yLabel="Depth to water"
