@@ -1,8 +1,11 @@
 import { setWorldConstructor, World, Before, After } from "@cucumber/cucumber"
 
 import { SensorThingsClient } from "@/clients/sensorThings"
-import { OgcFeaturesClient } from "@/clients/ogcFeatures"
+import { OgcFeaturesClient, type Collection } from "@/clients/ogcFeatures"
+import type { Dataset } from "@/catalog/mapDatasets"
 import { ArcGisRestClient } from "@/clients/arcGisRest"
+import type { Feature } from "geojson"
+import type { Bin, Facet, FacetSelections } from "@/lib/facets"
 
 /**
  * Custom World for @client specs. Installs a fake `fetch` so the two data
@@ -29,6 +32,18 @@ export class ClientWorld extends World {
 
   // Scratch slot for the field-display spec.
   fieldKeys: string[] = []
+
+  // Scratch slots for the map-dataset facet spec.
+  mapDataset = ""
+  sites: Feature[] = []
+  selections: FacetSelections = {}
+  values: number[] = []
+  bins: Bin[] = []
+  collections: Collection[] = []
+  mapDatasets: Dataset[] = []
+  parityCases: { facet: Facet; site: Feature; label: string }[] = []
+  dieRow: Record<string, unknown> = {}
+  joinRows: Feature[] = []
 
   get lastUrl(): string {
     return this.requestedUrls[this.requestedUrls.length - 1] ?? ""
