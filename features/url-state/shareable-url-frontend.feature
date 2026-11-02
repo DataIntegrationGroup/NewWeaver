@@ -33,3 +33,7 @@ Feature: Shareable URL state
     Given the user has picked the "Arsenic" dataset
     When the user navigates back
     Then the dataset picker shows "Water Levels"
+
+  Scenario: Share the current view
+    When the user shares the current view
+    Then a "Link copied" confirmation appears

@@ -61,9 +61,17 @@ Then("the map opens at the recorded extent", async function (this: BrowserWorld)
 })
 
 Then("the recorded feature is selected with its detail shown", async function (this: BrowserWorld) {
-  await this.page.getByTestId("inspect-panel").waitFor()
+  await this.page.getByTestId("site-detail").waitFor()
 })
 
 When("the user navigates back", async function (this: BrowserWorld) {
   await this.page.goBack()
+})
+
+When("the user shares the current view", async function (this: BrowserWorld) {
+  await this.page.getByTestId("share-view").click()
+})
+
+Then("a {string} confirmation appears", async function (this: BrowserWorld, text: string) {
+  await this.page.getByText(text).waitFor()
 })

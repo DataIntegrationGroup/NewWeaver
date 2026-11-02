@@ -329,3 +329,106 @@ export const DIE_WATER_LEVELS = (() => {
   ]
   return { type: "FeatureCollection", numberMatched: features.length, numberReturned: features.length, features }
 })()
+
+// ── Site detail panel ────────────────────────────────────────────────────
+// Served per scenario by site-detail.steps.ts (page routes), so the shared
+// collection list and the other specs stay as they are.
+
+/** DIE_COLLECTIONS plus what the panel's arsenic and major-chemistry cases need. */
+export const SITE_PANEL_COLLECTIONS = {
+  ...DIE_COLLECTIONS,
+  collections: [
+    ...DIE_COLLECTIONS.collections,
+    dieCollection("nm_arsenic_timeseries", "NM Arsenic Time Series", "Per-sample arsenic results. Sources: WQP."),
+    dieCollection("nm_major_chemistry", "NM Major Chemistry", "Latest major-ion results per site. Sources: NMBGMR."),
+    dieCollection("nm_water_type", "NM Water Type", "Dominant cation and anion per site. Sources: NMBGMR."),
+    dieCollection("nm_hardness", "NM Hardness", "Hardness as CaCO3 per site. Sources: NMBGMR."),
+  ],
+}
+
+const fc = (features: unknown[]) => ({
+  type: "FeatureCollection",
+  numberMatched: features.length,
+  numberReturned: features.length,
+  features,
+})
+
+const point = (id: string, coordinates: [number, number], properties: Record<string, unknown>) => ({
+  type: "Feature",
+  id,
+  geometry: { type: "Point", coordinates },
+  properties: { feature_id: id, ...properties },
+})
+
+/** One time-series row, keyed `source:id:date` like the real collections. */
+const sample = (siteKey: string, date: string, value: unknown, units: string, approval?: string) => {
+  const [source, id] = [siteKey.slice(0, siteKey.indexOf(":")), siteKey.slice(siteKey.indexOf(":") + 1)]
+  return point(`${siteKey}:${date}`, [0, 0], {
+    source,
+    id,
+    parameter_value: value,
+    parameter_units: units,
+    date_measured: date,
+    datetime: `${date}T00:00:00Z`,
+    approval_status: approval ?? null,
+    approval_status_normalized: approval ? "approved" : "unknown",
+    qualifier: null,
+  })
+}
+
+/** nm_waterlevels_timeseries rows for the Yale Well (DIE_WATER_LEVELS). */
+export const DIE_WL_TIMESERIES = fc([
+  sample("NMBGMR:WL-0001", "2001-03-01", 31.25, "ft", "Historical"),
+  sample("NMBGMR:WL-0001", "2012-06-15", 36.5, "ft", "Historical"),
+  sample("NMBGMR:WL-0001", "2024-09-30", 40, "ft", "Historical"),
+])
+
+/**
+ * nm_arsenic_summary: three sites. AS-1's latest value is above one of the
+ * three (higher than 33% of sites). AS-3 has only text results in its time
+ * series.
+ */
+export const DIE_ARSENIC = fc([
+  point("WQP:AS-1", [-106.65, 35.1], {
+    name: "Corrales Well", source: "WQP", latest_value: 0.012, latest_units: "mg/L",
+    latest_date: "2019-05-02", earliest_date: "2004-08-10", nrecords: 3,
+    min: 0.0081, max: 0.012, mean: 0.0101, well_depth: 410,
+  }),
+  point("WQP:AS-2", [-105.95, 35.68], {
+    name: "Santa Fe Well", source: "WQP", latest_value: 0.004, latest_units: "mg/L",
+    latest_date: "2018-01-20", earliest_date: "2018-01-20", nrecords: 1,
+    min: 0.004, max: 0.004, mean: 0.004, well_depth: 220,
+  }),
+  point("WQP:AS-3", [-104.52, 33.39], {
+    name: "Roswell Well", source: "WQP", latest_value: 0.02, latest_units: "mg/L",
+    latest_date: "2015-07-07", earliest_date: "2015-07-07", nrecords: 1,
+    min: 0.02, max: 0.02, mean: 0.02, well_depth: null,
+  }),
+])
+
+/** nm_arsenic_timeseries: numeric results arrive as strings, like the real API. */
+export const DIE_ARSENIC_TIMESERIES = fc([
+  sample("WQP:AS-1", "2004-08-10", "0.0081", "mg/L", "Final"),
+  sample("WQP:AS-1", "2011-03-14", "&lt; MRL 0.001 MG/L", "mg/L", "Final"),
+  sample("WQP:AS-1", "2019-05-02", "0.012", "mg/L", "Final"),
+  sample("WQP:AS-3", "2015-07-07", "&lt; MRL 0.001 MG/L", "mg/L"),
+])
+
+/** nm_major_chemistry: one site, every ion on one date. */
+export const DIE_MAJOR_CHEMISTRY = fc([
+  point("NMBGMR:MC-1", [-106.62, 35.08], {
+    name: "Yale Chemistry Well", source: "NMBGMR", well_depth: 300,
+    ...Object.fromEntries(
+      Object.entries({ calcium: 54.93, magnesium: 12.1, sodium: 30, potassium: 2.4, bicarbonate: 180, chloride: 25, sulfate: 62 })
+        .flatMap(([k, v]) => [[k, v], [`${k}_units`, "mg/L"], [`${k}_date`, "2020-04-02"]])
+    ),
+  }),
+])
+
+export const DIE_WATER_TYPE = fc([
+  point("NMBGMR:MC-1", [-106.62, 35.08], { dominant_cation: "Calcium", dominant_anion: "Bicarbonate" }),
+])
+
+export const DIE_HARDNESS = fc([
+  point("NMBGMR:MC-1", [-106.62, 35.08], { hardness_caco3: 187.1, hardness_class: "hard" }),
+])
