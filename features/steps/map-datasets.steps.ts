@@ -16,6 +16,7 @@ import {
   type Facet,
 } from "@/lib/facets"
 import { filterFeatures } from "@/lib/filterFeatures"
+import { formatNumber } from "@/lib/format"
 import type { ClientWorld } from "./support/world"
 
 function site(properties: Record<string, unknown>): Feature {
@@ -272,4 +273,14 @@ Then("site {string} has hardness {string}", function (this: ClientWorld, id: str
 
 Then("site {string} has hardness null", function (this: ClientWorld, id: string) {
   assert.equal(this.sites.find((f) => f.properties?.feature_id === id)?.properties?.hardness_class, null)
+})
+
+// ── Number formatting ───────────────────────────────────────────────────
+
+Then("{float} formats as {string}", function (v: number, text: string) {
+  assert.equal(formatNumber(v), text)
+})
+
+Then("{int} with unit {string} formats as {string}", function (v: number, unit: string, text: string) {
+  assert.equal(formatNumber(v, unit), text)
 })
