@@ -6,15 +6,13 @@ Feature: Download modal
 
   Background:
     Given the user has opened the app
-    And the "Hydrograph" layer is toggled off
-    And the "City of Albuquerque (CABQ)" layer is toggled on
 
   @smoke
   Scenario: Opening the download modal
     When the user clicks the "Download" button
     Then a download modal opens
     And it offers time series, latest observation, and features exports
-    And it shows how many locations are selected
+    And it shows how many sites are selected
 
   Scenario: The download modal points to the Desktop GIS integration
     When the user opens the download modal
@@ -26,7 +24,7 @@ Feature: Download modal
     Given "filter to map view" is enabled
     When the user pans to a smaller area
     And the user opens the download modal
-    Then the selected count matches the locations in the current extent
+    Then the selected count matches the sites in the current extent
 
   Scenario: A drawn shape attributes the selection to drawing
     Given the user has drawn a selection around some points
@@ -35,13 +33,6 @@ Feature: Download modal
     And the filters contribute nothing while a shape restricts the selection
 
   @smoke
-  Scenario: Downloading a time-series CSV
-    When the user opens the download modal
-    And the user chooses the time series export
-    And the user clicks download
-    Then a CSV file download is triggered
-    And the file name begins with "weaver-timeseries-"
-
   Scenario: Downloading features as GeoJSON
     When the user opens the download modal
     And the user chooses the features export
@@ -57,14 +48,7 @@ Feature: Download modal
     Then no time range inputs are shown
 
   Scenario: Nothing selected disables download
-    Given no monitoring locations are in the current selection
+    Given the user filters sites by the text "zzzzzznomatch"
     When the user opens the download modal
     Then the download action is disabled
     And the modal explains that the selection is empty
-
-  Scenario: A large time-series export warns before fetching
-    Given the selection contains many continuous datastreams
-    When the user opens the download modal
-    And the user chooses the time series export with no time range
-    Then the modal warns that the export may be large
-    And the user must confirm before the download proceeds

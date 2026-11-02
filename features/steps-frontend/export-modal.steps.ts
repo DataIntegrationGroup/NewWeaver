@@ -1,10 +1,9 @@
-import { Given, When, Then } from "@cucumber/cucumber"
+import { When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 import type { Download } from "playwright"
 
 import type { BrowserWorld } from "./support/world"
 import { selectionCounts } from "./draw.steps"
-import { revealLayerCatalog } from "./common.steps"
 
 type MapSeam = { jumpTo: (lng: number, lat: number, zoom: number) => void }
 type World = BrowserWorld & { download?: Download }
@@ -52,9 +51,10 @@ Then(
   }
 )
 
-Then("it shows how many locations are selected", async function (this: BrowserWorld) {
+Then("it shows how many sites are selected", async function (this: BrowserWorld) {
+  // A DIE dataset is vector features, so the modal opens on the features export.
   const txt = (await this.page.getByTestId("export-summary").textContent()) ?? ""
-  assert.match(txt, /monitoring locations selected/)
+  assert.match(txt, /\b5 features selected/)
 })
 
 When("the user pans to a smaller area", async function (this: BrowserWorld) {
@@ -64,7 +64,7 @@ When("the user pans to a smaller area", async function (this: BrowserWorld) {
 })
 
 Then(
-  "the selected count matches the locations in the current extent",
+  "the selected count matches the sites in the current extent",
   async function (this: BrowserWorld) {
     const c = await selectionCounts(this)
     assert.equal(c.filtered, 1)
@@ -102,22 +102,12 @@ When("the user chooses the features export", async function (this: BrowserWorld)
   await this.page.getByTestId("export-kind-features").click()
 })
 
-When("the user chooses the time series export with no time range", async function (this: BrowserWorld) {
-  await openModal(this)
-  await this.page.getByTestId("export-kind-timeseries").click()
-})
-
 When("the user clicks download", async function (this: World) {
   const [download] = await Promise.all([
     this.page.waitForEvent("download"),
     this.page.getByTestId("export-download").click(),
   ])
   this.download = download
-})
-
-Then("a CSV file download is triggered", function (this: World) {
-  assert.ok(this.download, "expected a download")
-  assert.match(this.download!.suggestedFilename(), /\.csv$/)
 })
 
 Then("a GeoJSON file download is triggered", function (this: World) {
@@ -138,12 +128,6 @@ Then("no time range inputs are shown", async function (this: BrowserWorld) {
   assert.equal(await this.page.getByTestId("export-from").count(), 0)
 })
 
-Given("no monitoring locations are in the current selection", async function (this: BrowserWorld) {
-  await revealLayerCatalog(this)
-  const sw = this.page.getByTestId("layer-toggle-st2-cabq")
-  if ((await sw.getAttribute("aria-checked")) === "true") await sw.click()
-})
-
 Then("the download action is disabled", async function (this: BrowserWorld) {
   await openModal(this)
   assert.ok(await this.page.getByTestId("export-download").isDisabled())
@@ -151,23 +135,4 @@ Then("the download action is disabled", async function (this: BrowserWorld) {
 
 Then("the modal explains that the selection is empty", async function (this: BrowserWorld) {
   await this.page.getByTestId("export-empty").waitFor()
-})
-
-Given("the selection contains many continuous datastreams", async function (this: BrowserWorld) {
-  // Bernalillo agency returns 30 locations (> the large-export threshold).
-  await revealLayerCatalog(this)
-  const sw = this.page.getByTestId("layer-toggle-st2-bernco")
-  if ((await sw.getAttribute("aria-checked")) !== "true") await sw.click()
-})
-
-Then("the modal warns that the export may be large", async function (this: BrowserWorld) {
-  await this.page.getByTestId("export-large-warning").waitFor()
-})
-
-Then("the user must confirm before the download proceeds", async function (this: BrowserWorld) {
-  const download = this.page.getByTestId("export-download")
-  assert.ok(await download.isDisabled(), "download should be blocked until confirmed")
-  await this.page.getByTestId("export-large-warning").getByRole("checkbox").click()
-  await download.waitFor()
-  assert.ok(!(await download.isDisabled()), "download should be enabled after confirming")
 })

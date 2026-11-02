@@ -284,3 +284,48 @@ export const DIE_COUNTS: Record<string, number> = {
   nm_waterlevels_summary: 37251,
   nm_waterlevels_timeseries: 882280,
 }
+
+/** An ISO date `n` years before today, so the "Last measured" bins stay stable. */
+function yearsAgo(n: number): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+const dieSite = (
+  featureId: string,
+  name: string,
+  coordinates: [number, number],
+  p: { source: string; latest: number | null; earliest: number | null; dtw: number | null; n: number }
+) => ({
+  type: "Feature",
+  id: featureId,
+  geometry: { type: "Point", coordinates },
+  properties: {
+    feature_id: featureId,
+    name,
+    source: p.source,
+    earliest_date: p.earliest === null ? "" : yearsAgo(p.earliest),
+    latest_date: p.latest === null ? "" : yearsAgo(p.latest),
+    latest_value: p.dtw,
+    latest_units: "ft",
+    nrecords: p.n,
+  },
+})
+
+/**
+ * DIE nm_waterlevels_summary — the map's default dataset. Five sites, one per
+ * "Last measured" bin plus one with no date, spread across the state:
+ * Albuquerque (by the Yale geocode fixture), two near Roswell and Clovis,
+ * Farmington and Las Cruces. Missing values arrive as "" like the real API.
+ */
+export const DIE_WATER_LEVELS = (() => {
+  const features = [
+    dieSite("NMBGMR:WL-0001", "Yale Well", [-106.62, 35.08], { source: "NMBGMR", latest: 1, earliest: 30, dtw: 40, n: 150 }),
+    dieSite("USGS-NWIS:WL-0002", "Bitter Lake Well", [-104.52, 33.39], { source: "USGS-NWIS", latest: 5, earliest: 15, dtw: 120, n: 40 }),
+    dieSite("USGS-NWIS:WL-0003", "Clovis Well", [-103.25, 34.4], { source: "USGS-NWIS", latest: 20, earliest: 25, dtw: 220, n: 5 }),
+    dieSite("NMBGMR:WL-0004", "Farmington Well", [-108.2, 36.73], { source: "NMBGMR", latest: 40, earliest: 40, dtw: 350, n: 1 }),
+    dieSite("ST2/EBID:WL-0005", "Mesilla Well", [-106.76, 32.31], { source: "ST2/EBID", latest: null, earliest: null, dtw: null, n: 0 }),
+  ]
+  return { type: "FeatureCollection", numberMatched: features.length, numberReturned: features.length, features }
+})()

@@ -1,4 +1,5 @@
-@frontend
+# Skipped until the site detail panel (W10-491) replaces InspectPanel.
+@frontend @skip
 Feature: Monitoring points to time-series chart
   Monitoring points come from STA Locations on FROST. Clicking a point reveals
   its datastreams; choosing a datastream plots its observations as a time-series

@@ -1,4 +1,5 @@
-@frontend
+# Skipped until the site detail panel (W10-491) replaces InspectPanel.
+@frontend @skip
 Feature: Vector feature inspection
   Vector / integrated layers come from DIE's OGC API Features. Clicking a
   feature opens an inspect panel showing its attributes, so users can read the

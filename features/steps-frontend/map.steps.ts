@@ -2,6 +2,7 @@ import { When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
+import { renderLayer } from "./common.steps"
 
 type MapSeam = {
   getCenter: () => { lng: number; lat: number }
@@ -98,22 +99,19 @@ Then("the scale bar updates to a smaller distance", async function (this: Browse
   )
 })
 
-Then("each monitoring point renders as its own marker", async function (this: BrowserWorld) {
-  // The layer's data loads async after it's toggled on; poll for the real
-  // render rather than sampling once (mirrors "features render on the map").
+Then("each site renders as its own marker", async function (this: BrowserWorld) {
+  // Poll for the real render rather than sampling once: the source fills in
+  // after the map's first paint.
   await this.page.waitForFunction(
-    () =>
-      (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-        "st2-cabq-points"
-      ).length > 0
+    (id) => (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(id).length > 0,
+    renderLayer()
   )
 })
 
 Then("no cluster counts are shown", async function (this: BrowserWorld) {
-  const props = await this.page.evaluate(() =>
-    (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-      "st2-cabq-points"
-    )
+  const props = await this.page.evaluate(
+    (id) => (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(id),
+    renderLayer()
   )
   assert.ok(
     props.every((p) => !p || !("point_count" in p)),

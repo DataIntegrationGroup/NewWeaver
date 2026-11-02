@@ -1,4 +1,5 @@
-@frontend
+# Skipped until the site detail panel (W10-491) replaces InspectPanel.
+@frontend @skip
 Feature: Map and inspect-panel actions
   Quality-of-life actions around feature selection: dismiss with the keyboard,
   recenter the map on a feature, copy attribute values, and share the current

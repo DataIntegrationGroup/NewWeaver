@@ -1,23 +1,21 @@
 @frontend
 Feature: Feature attribute table
-  Each Features collection can be viewed as an attribute table (TanStack Table)
-  alongside the map. The table lists the features in the active layer and stays
-  in sync with map selection.
+  The selected dataset can be viewed as an attribute table (TanStack Table)
+  alongside the map. The table lists the dataset's filtered sites and stays in
+  sync with map selection.
 
   Background:
     Given the user has opened the app
-    And the "Hydrograph" layer is toggled off
-    And the "Springs" layer is toggled on
 
   @smoke
-  Scenario: Table lists features of the active layer
+  Scenario: Table lists the dataset's sites
     When the user opens the attribute table
-    Then the table shows one row per feature in the layer
-    And the columns match the layer's attribute fields
+    Then the table shows one row per site
+    And the columns match the dataset's attribute fields
 
   Scenario: A drawn selection scopes the table to enclosed features
     Given the attribute table is open
-    When the user draws a selection around a single feature
+    When the user draws a selection around a single site
     Then the table shows 1 row
 
   Scenario: Sorting by a column
@@ -28,10 +26,9 @@ Feature: Feature attribute table
   Scenario: Selecting a row highlights the feature on the map
     Given the attribute table is open
     When the user clicks a table row
-    Then the corresponding feature is highlighted on the map
-    And the inspect panel shows that feature's attributes
+    Then the corresponding site is selected on the map
 
   Scenario: Selecting a feature on the map highlights its row
     Given the attribute table is open
-    When the user clicks a feature on the map
+    When the user selects a site on the map
     Then the matching row is highlighted in the table

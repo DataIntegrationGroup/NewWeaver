@@ -1,14 +1,12 @@
 @frontend
 Feature: Draw to select points
   Beyond the map-view filter, the user can draw rectangles or polygons to
-  restrict the selection spatially: only monitoring points inside the drawn
+  restrict the selection spatially: only sites inside the drawn
   shapes are kept, matching what the attribute table shows. The narrowed
   selection feeds straight into the download modal.
 
   Background:
     Given the user has opened the app
-    And the "Hydrograph" layer is toggled off
-    And the "City of Albuquerque (CABQ)" layer is toggled on
 
   @smoke
   Scenario: Drawing a rectangle selects the points inside it

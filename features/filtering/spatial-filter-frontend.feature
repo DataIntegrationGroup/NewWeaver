@@ -1,13 +1,11 @@
 @frontend
 Feature: Spatial and text filtering
   Users narrow what they see by area and by text. Spatial filtering ties the
-  visible data to the current map extent; text filtering searches feature
-  attributes. Both work against the two data sources without per-source code.
+  visible sites to the current map extent; text filtering searches their
+  attributes. Both narrow the selected dataset alongside its facet filters.
 
   Background:
     Given the user has opened the app
-    And the "Hydrograph" layer is toggled off
-    And the "City of Albuquerque (CABQ)" layer is toggled on
 
   Scenario: The filter control explains itself
     When the user focuses the filter info button
@@ -26,7 +24,6 @@ Feature: Spatial and text filtering
     Then data outside the current extent is shown again
 
   Scenario: Filter features by attribute text
-    Given the "Springs" layer is toggled on
     When the user types a search term into the feature filter
     Then only features whose attributes match the term remain visible
 
