@@ -3,36 +3,35 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
 } from "@tanstack/react-router"
 import { AppShell } from "@/components/app/AppShell"
 import { Home } from "@/components/site/Home"
 import { About } from "@/components/site/About"
 import { Help } from "@/components/site/Help"
-import { DataCatalog } from "@/components/site/DataCatalog"
-import { RegionalPlanning } from "@/components/site/RegionalPlanning"
+import { DatasetsPage } from "@/components/site/datasets/DatasetsPage"
 import { validateSearch } from "@/lib/urlState"
 
 /**
- * Catalog search params: free-text query, an optional shareable dataset id,
- * comma-joined facet selections (group / measure / source), and a sort key.
+ * Datasets search params: free-text query, the selected (shareable) dataset id,
+ * comma-joined source selections, and a sort key. Every key is optional so the page's default
+ * view has a clean URL.
  */
-function validateCatalogSearch(raw: Record<string, unknown>): {
+export interface DatasetsSearch {
   q?: string
   dataset?: string
-  groups?: string
-  measures?: string
   sources?: string
-  sort?: "name" | "source"
-} {
+  sort?: "name"
+}
+
+function validateDatasetsSearch(raw: Record<string, unknown>): DatasetsSearch {
   const str = (v: unknown) =>
     typeof v === "string" && v.length > 0 ? v : undefined
   return {
     q: str(raw.q),
     dataset: str(raw.dataset),
-    groups: str(raw.groups),
-    measures: str(raw.measures),
     sources: str(raw.sources),
-    sort: raw.sort === "source" ? "source" : undefined,
+    sort: raw.sort === "name" ? "name" : undefined,
   }
 }
 
@@ -69,18 +68,20 @@ const helpRoute = createRoute({
   component: Help,
 })
 
+const datasetsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/datasets",
+  component: DatasetsPage,
+  validateSearch: validateDatasetsSearch,
+})
+
+/** The page was called Catalog; keep old links (and their ?q=) working. */
 const catalogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/catalog",
-  component: DataCatalog,
-  validateSearch: validateCatalogSearch,
-})
-
-/** Regional water planning decision-support dashboard. */
-const planningRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/planning",
-  component: RegionalPlanning,
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: "/datasets", search: validateDatasetsSearch(search) })
+  },
 })
 
 const routeTree = rootRoute.addChildren([
@@ -88,8 +89,8 @@ const routeTree = rootRoute.addChildren([
   mapRoute,
   aboutRoute,
   helpRoute,
+  datasetsRoute,
   catalogRoute,
-  planningRoute,
 ])
 
 export const router = createRouter({ routeTree })

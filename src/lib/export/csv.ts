@@ -18,13 +18,17 @@ export function toCsv(headers: string[], rows: CsvValue[][]): string {
   return lines.join("\r\n")
 }
 
-/** Trigger a client-side file download of `content`. */
+/**
+ * Trigger a client-side file download of `content` — a string, or the parts of
+ * a large file so it never has to be joined into one string first.
+ */
 export function downloadFile(
   filename: string,
-  content: string,
+  content: string | BlobPart[],
   mime: string
 ): void {
-  const blob = new Blob([content], { type: `${mime};charset=utf-8` })
+  const parts = typeof content === "string" ? [content] : content
+  const blob = new Blob(parts, { type: `${mime};charset=utf-8` })
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
   a.href = url

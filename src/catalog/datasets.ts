@@ -131,6 +131,9 @@ export const DATASET_SOURCES: string[] = [
   ...new Set(DATASET_CATALOG.map((d) => d.service.name)),
 ]
 
+/** Example searches offered under the home hero and on the Datasets page. */
+export const TRY_DATASETS = ["Arsenic", "Nitrate", "Depth to water"]
+
 /** Lowercase haystack of all displayed metadata, for free-text search (§V.V17). */
 export function datasetSearchText(d: DatasetMeta): string {
   return [

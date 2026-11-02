@@ -6,9 +6,8 @@ export const SLACK_URL = "https://new-mexico-water-data.slack.com"
 
 const NAV = [
   { href: "/", label: "Home" },
+  { href: "/datasets", label: "Datasets" },
   { href: "/map", label: "Map" },
-  { href: "/planning", label: "Planning" },
-  { href: "/catalog", label: "Catalog" },
   { href: "/about", label: "About" },
   { href: "/help", label: "Help" },
 ]
@@ -26,7 +25,7 @@ const BRAND = (
   </span>
 )
 
-/** Shared top navigation for the content pages, the map and planning. */
+/** Shared top navigation for the content pages and the map. */
 export function SiteHeader() {
   const { pathname } = useLocation()
   return (
@@ -34,8 +33,8 @@ export function SiteHeader() {
       brand={BRAND}
       links={NAV}
       pathname={pathname}
-      // TopNav marks the current link itself (prefix match, so /catalog/x
-      // still marks Catalog); `exact` stops the router from also marking "/"
+      // TopNav marks the current link itself (prefix match, so /datasets/x
+      // still marks Datasets); `exact` stops the router from also marking "/"
       // current on every page. Spread rather than pass `children`: the desktop
       // links leave it unset so NavigationMenuLink can supply the label, and
       // an explicit undefined would win the prop merge and blank it.

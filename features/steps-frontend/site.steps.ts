@@ -15,7 +15,7 @@ Given("the user opens the help page", async function (this: BrowserWorld) {
 
 Then("the user sees the Weaver hero", async function (this: BrowserWorld) {
   const text = await this.page.getByTestId("home-hero").textContent()
-  assert.ok(text?.includes("Weaver"))
+  assert.ok(text?.includes("Weaving together New Mexico water data"))
 })
 
 Then("the hero shows the Weaver image", async function (this: BrowserWorld) {

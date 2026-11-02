@@ -13,9 +13,9 @@ export const queryClient = new QueryClient({
   // one-click retry, instead of silently leaving a layer blank.
   queryCache: new QueryCache({
     onError: (error, query) => {
-      // The home dashboard's nightly stats are optional context — a missing or
-      // unconfigured file falls back silently, no toast (SPEC §V.V13/§V.V14).
-      if (query.queryKey[0] === "stats") return
+      // The DIE collection list shows its own failure: the dashboard tiles
+      // read "—" and the Datasets page offers a retry.
+      if (query.queryKey[0] === "die-collections") return
       toast.error(`Couldn't load ${queryLabel(query.queryKey)}`, {
         description: error instanceof Error ? error.message : undefined,
         action: { label: "Retry", onClick: () => query.fetch() },

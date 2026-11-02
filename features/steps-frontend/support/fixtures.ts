@@ -235,16 +235,52 @@ export const WATER_LEVELS_ITEMS = {
   }),
 }
 
-/**
- * Nightly stats JSON (SPEC §T.T11b). Served at the mocked STATS_URL so the home
- * dashboard renders deterministic counts (§V.V13) and a non-empty activity feed
- * (§V.V14) under test.
- */
-export const WEAVER_STATS = {
-  generatedAt: "2026-06-22T08:00:00Z",
-  counts: { services: 5, datasets: 41, sites: 12345 },
-  events: [
-    { source: "USGS Water Data for the Nation", timestamp: "2026-06-22T06:30:00Z", kind: "refresh" },
-    { source: "Ocotillo integrated data products", timestamp: "2026-06-21T07:15:00Z", kind: "refresh" },
+/** DIE pygeoapi /collections — a slice of the real response. The home dashboard
+ *  counts these as datasets; the Datasets page lists them. */
+const DIE = "https://die-pygeoapi-95715287188.us-central1.run.app"
+const dieCollection = (id: string, title: string, description: string) => ({
+  id,
+  title,
+  description,
+  keywords: [
+    "water",
+    "groundwater",
+    "New Mexico",
+    ...(id.endsWith("_summary") ? ["summary statistics"] : []),
+    ...(id.endsWith("_timeseries") ? ["time series"] : []),
   ],
+  links: [
+    { rel: "self", type: "text/html", href: `${DIE}/collections/${id}?f=html` },
+    { rel: "items", type: "application/geo+json", href: `${DIE}/collections/${id}/items?f=json` },
+    { rel: "items", type: "text/csv; charset=utf-8", href: `${DIE}/collections/${id}/items?f=csv` },
+  ],
+})
+
+export const DIE_COLLECTIONS = {
+  collections: [
+    dieCollection("nm_waterlevels_summary", "NM Unified Water Levels Summary", "Summary stats for water levels. Sources: USGS NWIS, NMBGMR, CABQ."),
+    dieCollection("nm_arsenic_summary", "NM Arsenic Summary", "Arsenic concentration summary stats. Sources: NMBGMR, WQP, USBR."),
+    dieCollection("nm_arsenic_trend", "NM Arsenic Trends", "Per-well arsenic concentration trend (slope and category). Sources: NMBGMR, WQP."),
+    dieCollection("nm_fluoride_trend", "NM Fluoride Trends", "Per-well fluoride concentration trend (slope and category). Sources: NMBGMR, USBR."),
+    dieCollection("nm_waterlevels_timeseries", "NM Water Levels Time Series", "Per-observation water level measurements. Sources: USGS NWIS, CABQ."),
+    dieCollection("nm_pod_age_points", "NM Recent Wells (PODs) — Last 10 Years", "Point layer of OSE PODs completed in the last 10 years"),
+  ],
+  links: [],
+}
+
+export const DIE_QUERYABLES = {
+  type: "object",
+  properties: {
+    geometry: { format: "geometry-any" },
+    id: { type: "string" },
+    name: { type: "string" },
+    trend_category: { type: "string" },
+  },
+}
+
+/** Row counts (numberMatched) for DIE collections, by id — sizes the download dialog. */
+export const DIE_COUNTS: Record<string, number> = {
+  nm_arsenic_summary: 25000,
+  nm_waterlevels_summary: 37251,
+  nm_waterlevels_timeseries: 882280,
 }
