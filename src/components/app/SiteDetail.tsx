@@ -1,9 +1,4 @@
-/**
- * SiteDetail: the right-hand panel for a site clicked on the map. Leads with
- * the site's name and provenance and a few headline numbers; supporting
- * detail sits one click away. Each number is shown once, rounded, with its
- * unit, and internals (bbox, unit columns, test statistics) are left out.
- */
+/** The right-hand panel for a selected site: headline numbers, then tabs. */
 import { useMemo, useState, type ReactNode } from "react"
 import type { Feature } from "geojson"
 import { Check, Copy, Crosshair, X } from "lucide-react"
@@ -32,14 +27,13 @@ import { TimeSeriesChart } from "./TimeSeriesChart"
 
 type Props = Record<string, unknown>
 
-// Its own storage key, not the old inspector's, so everyone starts at the
-// wider default instead of a narrow width saved for the old panel.
+// New key, so widths saved for the old, narrower panel don't carry over.
 const PANEL_MIN = 320
 const PANEL_MAX = 800
 const PANEL_DEFAULT = 540
 const PANEL_WIDTH_KEY = "weaver-site-detail-width"
 
-/** Panel width, resizable by dragging the left edge; saved on release. */
+/** Panel width; drag the left edge to resize. */
 function usePanelWidth() {
   const [width, setWidth] = useState(() => {
     const saved = Number(localStorage.getItem(PANEL_WIDTH_KEY))
@@ -163,10 +157,7 @@ export function SiteDetail({ dataset, featureId, onClose, onZoomTo }: SiteDetail
   )
 }
 
-/**
- * The body for the dataset's kind. The switch is exhaustive, so a new kind is
- * a type error here until it has a layout.
- */
+/** The body for the dataset's kind; a new kind is a type error until handled. */
 function SiteBody({
   dataset,
   id,
@@ -206,7 +197,7 @@ function assertNever(x: never): never {
   throw new Error(`Unhandled dataset kind: ${String(x)}`)
 }
 
-/** The site's ID with a copy button, plus USGS / alternate IDs if present. */
+/** Site ID with a copy button, plus any USGS / alternate IDs. */
 function SiteIds({ id, p }: { id: string; p: Props }) {
   const [copied, setCopied] = useState(false)
   const extra = [
@@ -239,14 +230,14 @@ function SiteIds({ id, p }: { id: string; p: Props }) {
 
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined)
 
-/** `Mar 21, 2023`, or undefined for a missing/unparseable date. */
+/** `Mar 21, 2023`. */
 function fmtDate(v: unknown): string | undefined {
   return typeof v === "string" ? (formatDate(v) ?? undefined) : undefined
 }
 
 const yearOf = (v: unknown) => (typeof v === "string" && /^\d{4}/.test(v) ? v.slice(0, 4) : undefined)
 
-/** `1998–2024`, or one year if both match; undefined if either is missing. */
+/** `1998–2024`, or one year if both match. */
 function yearRange(start: unknown, end: unknown): string | undefined {
   const a = yearOf(start)
   const b = yearOf(end)
@@ -254,7 +245,7 @@ function yearRange(start: unknown, end: unknown): string | undefined {
   return a === b ? a : `${a}–${b}`
 }
 
-/** A value with its date in brackets, e.g. `160 ft (Mar 21, 2023)`. */
+/** `160 ft (Mar 21, 2023)`. */
 function withDate(value: unknown, unit: string, date: unknown): string | undefined {
   const v = fmt(value, unit)
   if (!v) return undefined
@@ -262,7 +253,7 @@ function withDate(value: unknown, unit: string, date: unknown): string | undefin
   return d ? `${v} (${d})` : v
 }
 
-/** Headline numbers, one grid column each; items without a value drop out. */
+/** Headline numbers; empty ones drop out. */
 function Stats({ items }: { items: { value?: string; label: string; sub?: string }[] }) {
   const shown = items.filter((s) => s.value)
   if (shown.length === 0) return null
@@ -283,7 +274,7 @@ function Stats({ items }: { items: { value?: string; label: string; sub?: string
   )
 }
 
-/** Label/value rows; rows without a value are skipped. */
+/** Label/value rows; empty ones drop out. */
 function Facts({ rows }: { rows: [string, string | undefined][] }) {
   const shown = rows.filter((r): r is [string, string] => !!r[1])
   if (shown.length === 0) return null
@@ -307,7 +298,7 @@ function SectionTitle({ children }: { children: ReactNode }) {
   )
 }
 
-/** The one plain-language takeaway for a site. */
+/** One plain-language line about the site. */
 function Takeaway({ children }: { children: ReactNode }) {
   return (
     <div data-testid="site-takeaway" className="space-y-2 rounded-lg bg-muted/60 p-3 text-sm">
@@ -316,7 +307,7 @@ function Takeaway({ children }: { children: ReactNode }) {
   )
 }
 
-// ── Wells ───────────────────────────────────────────────────────────────
+// ── Water levels ───────────────────────────────────────────────────────────────
 
 function WellBody({ id, name, p }: { id: string; name: string; p: Props }) {
   const count = num(p.nrecords)
@@ -378,7 +369,7 @@ function AnalyteBody({
   dataset: Dataset
   id: string
   p: Props
-  /** The facet on the latest value: salinity or concentration bins. */
+  /** The latest-value facet (salinity or concentration). */
   facet?: Facet
   sites: Feature[]
 }) {
@@ -441,7 +432,7 @@ function AnalyteBody({
   )
 }
 
-/** `0.2–14`, or undefined if either end is missing. */
+/** `0.2–14`. */
 function valueRange(min: unknown, max: unknown): string | undefined {
   const a = fmt(min)
   const b = fmt(max)
@@ -468,10 +459,7 @@ function BinLine({ value, facet }: { value: number; facet: Facet }) {
   )
 }
 
-/**
- * The share of sites whose latest value is below `value`, as a whole
- * percent; undefined when no site has a numeric latest value.
- */
+/** Percent of sites whose latest value is below `value`. */
 function percentBelow(value: number, sites: Feature[]): number | undefined {
   let below = 0
   let total = 0
@@ -484,7 +472,7 @@ function percentBelow(value: number, sites: Feature[]): number | undefined {
   return total === 0 ? undefined : Math.round((below / total) * 100)
 }
 
-/** Where the latest value ranks among every site's latest value. */
+/** Where the latest value ranks among all sites. */
 function RankLine({ value, sites, analyte }: { value: number; sites: Feature[]; analyte: string }) {
   const pct = useMemo(() => percentBelow(value, sites), [value, sites])
   if (pct === undefined) return null
@@ -496,10 +484,7 @@ function RankLine({ value, sites, analyte }: { value: number; sites: Feature[]; 
   )
 }
 
-/**
- * A site's numeric samples over time. Text results ("< MRL 0.001 MG/L") have
- * no value to plot and are left to the Samples table.
- */
+/** A site's numeric samples over time; text results stay in the table. */
 function SamplesChart({
   collectionId,
   id,
@@ -511,7 +496,7 @@ function SamplesChart({
   label: string
   unit: string
 }) {
-  // Same query as SamplesTable, so switching tabs doesn't refetch.
+  // Shares SamplesTable's query, so no refetch.
   const { data, isLoading } = useSiteSamples(collectionId, id)
   const points = useMemo(
     () =>
@@ -535,7 +520,7 @@ function SamplesChart({
   )
 }
 
-/** A site's samples from its time-series collection, newest first. */
+/** A site's samples, newest first. */
 function SamplesTable({ collectionId, id }: { collectionId?: string; id: string }) {
   const { data, isLoading } = useSiteSamples(collectionId, id)
   if (isLoading) return <Skeleton className="h-32 w-full" />
@@ -581,13 +566,13 @@ const IONS: { key: string; label: string; kind: "cation" | "anion" }[] = [
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-/** When the ions were sampled: the year for one date, else the date count. */
+/** The sample year, or the number of dates if they differ. */
 function sampledStat(firstDate: unknown, dates: (string | undefined)[]) {
   if (dates.length === 1) return { value: yearOf(firstDate), label: "sampled", sub: dates[0] }
   return { value: dates.length > 1 ? String(dates.length) : undefined, label: "sample dates" }
 }
 
-/** `Hard (180 mg/L as CaCO₃)`; undefined when the class is missing or "insufficient". */
+/** `Hard (180 mg/L as CaCO₃)`. */
 function hardnessText(cls: unknown, caco3: unknown): string | undefined {
   if (typeof cls !== "string" || cls === "insufficient") return undefined
   const v = fmt(caco3, "mg/L")
@@ -624,8 +609,7 @@ function IonsBody({ p }: { p: Props }) {
               <Facts
                 rows={rows.map((ion) => [
                   ion.label,
-                  // One shared date is already in the stats; show per-ion
-                  // dates only when they differ.
+                  // Per-ion dates only when they differ.
                   dates.length > 1 ? withDate(ion.v, ion.unit, ion.date) : fmt(ion.v, ion.unit),
                 ])}
               />

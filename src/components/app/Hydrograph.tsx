@@ -17,10 +17,9 @@ interface HydrographProps {
   dark?: boolean
   /** Plot height in px (default 300). */
   chartHeight?: number
-  /** Show the "expand to modal" button (default true). */
+  /** Show the expand button (default true). */
   expandable?: boolean
-  /** Hide the stats box above the chart, for hosts that already show those
-   *  numbers (the map's site panel). */
+  /** Hide the stats box (the site panel shows its own). */
   compact?: boolean
 }
 
@@ -28,15 +27,10 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 
 const fmtNum = (n: number) => n.toFixed(2)
-/** Depth readings are to the hundredth of a foot; keep that in the tooltip. */
+/** Depths are to 0.01 ft; keep that in the tooltip. */
 const fmtDepth = (v: number, units?: string) => `${fmtNum(v)} ${units ?? ""}`.trim()
 
-/**
- * One well's water-level hydrograph: depth to water over time, fetched live on
- * demand via `useWellSeries`, with a stats box above a `TimeSeriesChart`.
- * Depth increases downward, so the y-axis is inverted (0 at the top). Shared
- * by the planning page and the map's site panel.
- */
+/** One well's depth to water over time: a stats box over a `TimeSeriesChart`. */
 export function Hydrograph({
   wellId,
   name,

@@ -86,8 +86,7 @@ function approvalTone(value: string): Tone {
   return "slate"
 }
 
-/** `value` (the normalized state) picks the tone; `label`, the source's own
- *  wording, is the text when given. */
+/** `value` picks the tone; `label` (the source's wording) is the text. */
 export function ApprovalChip({ value, label }: { value: string; label?: string }) {
   const tone = approvalTone(value)
   return (

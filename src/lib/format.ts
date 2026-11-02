@@ -44,11 +44,7 @@ export function formatDate(raw: string): string | null {
   return `${date}, ${h}:${mm} ${ampm}`
 }
 
-/**
- * A number rounded for reading: 100 and up as whole numbers with separators,
- * 1–100 to one decimal, below 1 to two significant figures (0.0010000000474
- * → 0.001). The unit, if given, is attached. Undefined for non-numbers.
- */
+/** Rounded by size (100+ whole, 1–100 one decimal, below 1 two sig figs), with unit. */
 export function formatNumber(v: unknown, unit?: string): string | undefined {
   if (typeof v !== "number" || !Number.isFinite(v)) return undefined
   const a = Math.abs(v)

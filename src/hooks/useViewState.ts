@@ -34,7 +34,7 @@ export function useViewState() {
     search,
     selection,
     regions,
-    /** Show a dataset, clearing the selection (it belongs to the old one). */
+    /** Show a dataset and clear the selection. */
     setDataset(id: string) {
       // Facets differ per dataset, so color-by and bin selections reset.
       patch({

@@ -15,13 +15,11 @@ export interface TimeSeriesPoint {
   /** ISO date or datetime. */
   t: string
   v: number
-  /** Normalized QA state (`approved`, `provisional`, `unknown`). Colors the
-   *  point when `colorByApproval` is on. */
+  /** Normalized QA state; picks the point color. */
   approval?: string
-  /** The approval label as the source reported it (e.g. "Historical",
-   *  "Final"). Shown in the tooltip; falls back to `approval`. */
+  /** The source's own approval label, for the tooltip. */
   approvalLabel?: string
-  /** Measurement qualifier (USGS `lev_status` for water levels). Shapes the point. */
+  /** Measurement qualifier; picks the point shape. */
   qualifier?: string
   source?: string
 }
@@ -29,46 +27,35 @@ export interface TimeSeriesPoint {
 interface TimeSeriesChartProps {
   /** Points in time order, oldest first. */
   points: TimeSeriesPoint[]
-  /** Y-axis label without units, e.g. "Depth to water" or "Arsenic". */
+  /** Y-axis label, without units. */
   yLabel: string
   units?: string
-  /** Draw the y-axis upside down (depth below ground: 0 at the top). */
+  /** Flip the y-axis (depth: 0 at the top). */
   invertY?: boolean
   /** Series label; also the modal title. */
   name?: string
-  /** Modal title when `name` is missing (e.g. the site id). */
+  /** Modal title when there's no `name`. */
   title?: string
-  /** Force a connected line. When omitted, continuity is inferred from reading
-   *  density: several readings per day is a logger (line), otherwise the
-   *  readings draw as an unconnected scatter. */
+  /** Force a connected line; otherwise inferred from reading density. */
   continuous?: boolean
-  /** Tune axis/line colors for a dark surface (default: light). */
+  /** Colors for a dark surface. */
   dark?: boolean
-  /** Plot height in px (default 300). The expanded modal renders taller. */
+  /** Plot height in px (default 300). */
   chartHeight?: number
-  /** Show the "expand to modal" button (default true). The modal renders a
-   *  second chart with this off, so the button never nests. */
+  /** Show the expand button (default true). */
   expandable?: boolean
   /** Shown when there are no points. */
   emptyMessage?: string
-  /** Color points by approval and show the approval legend (default true).
-   *  Off draws every point in the series color. */
+  /** Color points by approval (default true); off uses one color. */
   colorByApproval?: boolean
-  /** Tooltip value text. Defaults to `formatNumber` (rounded by size). */
+  /** Tooltip value text (default `formatNumber`). */
   formatValue?: (v: number, units?: string) => string | undefined
 }
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
 
-/**
- * Approval (QA) state → point/line COLOR, following USGS hydrograph convention:
- * approved data blue, provisional data red, everything else (missing state)
- * gray. Color encodes approval and nothing else, so it never collides with the
- * measurement-condition signal (which is carried by SYMBOL SHAPE below). Blues
- * are dark-mode-aware to stay legible on both surfaces; the approved blue tracks
- * the neutral line color. Tooltips are raw HTML, so this returns a hex.
- */
+/** Approval → color, USGS style: approved blue, provisional red, else gray. */
 type ApprovalClass = { key: string; label: string; color: string }
 function approvalClass(approval: string | undefined, dark: boolean): ApprovalClass {
   const s = (approval ?? "").toLowerCase()
@@ -79,12 +66,7 @@ function approvalClass(approval: string | undefined, dark: boolean): ApprovalCla
   return { key: "unknown", label: "Unknown", color: "#9ca3af" }
 }
 
-/** The raw qualifier is one of ~20 verbose USGS `lev_status` strings — too many
- *  to distinguish individually. Bucket each into a handful of measurement
- *  conditions carried by SYMBOL SHAPE (USGS keys color to approval, not
- *  condition), so a point's approval and its condition read on independent
- *  channels. `symbol` is an ECharts symbol name; `glyph` mirrors it in the
- *  HTML legend. */
+/** Buckets USGS `lev_status` qualifiers into a few conditions, shown as shapes. */
 type ConditionClass = { key: string; label: string; symbol: string; glyph: string }
 const CONDITION_NORMAL: ConditionClass = {
   key: "normal",
@@ -94,15 +76,11 @@ const CONDITION_NORMAL: ConditionClass = {
 }
 function conditionClass(qualifier?: string): ConditionClass {
   const s = (qualifier ?? "").toLowerCase()
-  // No qualifier, an explicit "static", or "not affected" are all a normal,
-  // unaffected reading.
   if (!s || s.includes("static") || s.includes("not affected")) return CONDITION_NORMAL
-  // Pumping wins over "Above" etc. — "Above, Pumping" is a pumping condition.
+  // "Above, Pumping" counts as pumping.
   if (s.includes("pump")) return { key: "pumping", label: "Pumping-affected", symbol: "triangle", glyph: "▲" }
   if (/(dry|flow|obstruction|cascad)/.test(s))
     return { key: "impaired", label: "Dry / flowing / obstructed", symbol: "diamond", glyph: "◆" }
-  // Everything else that still affects the level (atmospheric, nearby surface
-  // water, foreign substance, unspecified "other" remarks).
   return { key: "other", label: "Other affected", symbol: "rect", glyph: "■" }
 }
 
@@ -110,12 +88,7 @@ function conditionClass(qualifier?: string): ConditionClass {
 const escapeHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
-/**
- * A time series as an ECharts line or scatter, colored by approval and shaped
- * by measurement condition, with an expand-to-modal button. Takes its points
- * as props, so any series can use it: water levels (`Hydrograph`) and
- * chemistry samples on the map's site panel.
- */
+/** A time series as a line or scatter, with legends and an expand modal. */
 export function TimeSeriesChart({
   points,
   yLabel,
@@ -144,16 +117,10 @@ export function TimeSeriesChart({
   const axis = dark ? "#9ca3af" : "#6b7280"
   const line = dark ? "#38bdf8" : "#0369a1"
 
-  // Continuous datastreams (loggers) draw as a connected line; discrete
-  // manual readings draw as an unconnected scatter. When the caller doesn't
-  // state it, infer from density: a logger averages several readings per
-  // distinct day, a manual record roughly one.
+  // Loggers (2+ readings a day) draw as a line, manual readings as a scatter.
   const distinctDays = new Set(points.map((p) => p.t.slice(0, 10))).size
   const isContinuous = continuous ?? (distinctDays > 0 && points.length / distinctDays >= 2)
-  // Carry per-observation provenance as extra data dims so the tooltip can show
-  // each point's approval/qualifier (ignored by the cartesian axes). Color each
-  // point by its approval class and shape it by its measurement condition — two
-  // independent channels, so provisional (red) never reads as pumping again.
+  // Extra dims carry approval, qualifier and label to the tooltip.
   const seriesData = points.map((p) => {
     const ac = approvalClass(p.approval, dark)
     const cc = conditionClass(p.qualifier)
@@ -163,8 +130,7 @@ export function TimeSeriesChart({
       symbol: cc.symbol,
     }
   })
-  // Approval (color) and condition (shape) classes present in this series, each
-  // ordered by first appearance so the two legends are stable across renders.
+  // Legend entries, in order of first appearance.
   const approvalLegend: ApprovalClass[] = []
   const conditionLegend: ConditionClass[] = []
   const seenApproval = new Set<string>()
@@ -181,21 +147,17 @@ export function TimeSeriesChart({
       conditionLegend.push(cc)
     }
   }
-  // Approval legend earns its space when a series mixes states, or when the sole
-  // state is a meaningful one (approved/provisional, not "unknown").
+  // Only worth showing if it tells points apart or isn't all "unknown".
   const showApprovalLegend =
     colorByApproval &&
     (approvalLegend.length > 1 ||
       (approvalLegend.length === 1 && approvalLegend[0].key !== "unknown"))
-  // Condition legend (scatter only — a connected line has no per-point symbol)
-  // shows when conditions actually distinguish points.
+  // Scatter only: a line has no per-point symbols.
   const showConditionLegend =
     !isContinuous &&
     (conditionLegend.length > 1 ||
       (conditionLegend.length === 1 && conditionLegend[0].key !== "normal"))
-  // A connected logger line can't color per point; take the USGS cue and draw
-  // the whole line red if any reading is provisional, else the approved/neutral
-  // blue (unknown loggers keep the neutral blue rather than washing out gray).
+  // A line can't color per point: red if any reading is provisional.
   const lineColor = colorByApproval && points.some((p) => approvalClass(p.approval, dark).key === "provisional")
     ? approvalClass("provisional", dark).color
     : line
@@ -212,8 +174,6 @@ export function TimeSeriesChart({
     : {
         type: "scatter",
         symbolSize: 6,
-        // Per-point color (approval) and symbol (condition) come from each data
-        // item's itemStyle/symbol set above.
         data: seriesData,
         name: name ?? title,
       }
@@ -239,8 +199,6 @@ export function TimeSeriesChart({
         if (!p) return ""
         const [t, v, approval, qualifier, label] = p.value
         const parts: string[] = []
-        // The source's own label, colored by its normalized class when the
-        // chart colors by approval.
         if (label) {
           const ac = approvalClass(approval, dark)
           parts.push(

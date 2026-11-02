@@ -24,7 +24,7 @@ interface ObservationTableProps {
   wellId: string
   /** Well name, used in the CSV filename. */
   name?: string
-  /** Start expanded (e.g. when the table has a tab of its own). */
+  /** Start expanded. */
   defaultOpen?: boolean
 }
 

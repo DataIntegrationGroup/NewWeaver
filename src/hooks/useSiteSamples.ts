@@ -5,25 +5,21 @@ import { DIE_FEATURES_BASE_URL } from "@/config"
 import { bareWellId } from "@/lib/planning"
 
 export interface SampleRow {
-  /** ISO date of the sample. */
+  /** ISO date. */
   date: string
-  /** Numeric result, or null when the lab reported text (e.g. "< MRL"). */
+  /** Null for text results like "< MRL". */
   value: number | null
-  /** The result as reported, for text results. */
+  /** The result as reported. */
   text: string
   units?: string
   source?: string
-  /** The approval label as the source reported it (e.g. "Final"). */
+  /** The source's own approval label. */
   approvalLabel?: string
 }
 
 const ENTITIES: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&amp;": "&" }
 
-/**
- * The result as a number. The time-series collections send numeric results
- * as strings ("470.0"); anything that isn't a plain number ("< MRL 0.001
- * MG/L") is a text result and gets null.
- */
+/** Numbers arrive as strings ("470.0"); anything else is a text result (null). */
 function toValue(raw: unknown): number | null {
   if (typeof raw === "number") return Number.isFinite(raw) ? raw : null
   if (typeof raw !== "string" || !/^\s*-?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?\s*$/i.test(raw)) return null
@@ -36,9 +32,8 @@ function unescape(s: string): string {
 }
 
 /**
- * One site's samples from a DIE time-series collection, newest first.
- * Filtered by the bare id, then narrowed to this site's rows (feature ids are
- * `source:id:date`), since a bare id can repeat across agencies.
+ * One site's samples, newest first. Narrowed to `source:id` rows since a bare
+ * id can repeat across agencies.
  */
 export async function fetchSiteSamples(collectionId: string, siteId: string): Promise<SampleRow[]> {
   const fc = await featuresClient(DIE_FEATURES_BASE_URL).getAllItems(

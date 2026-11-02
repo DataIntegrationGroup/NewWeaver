@@ -357,7 +357,7 @@ export interface SeriesPoint {
   source?: string
   /** Normalized QA/approval state, e.g. `approved`, `provisional`, `unknown`. */
   approval?: string
-  /** The approval label as the source reported it. */
+  /** The source's own approval label. */
   approvalLabel?: string
   /** Data qualifier flag when the source attaches one. */
   qualifier?: string
@@ -389,10 +389,8 @@ export async function fetchWellSeries(id: string): Promise<WellSeries> {
     10000,
     20
   )
-  // The bare id can repeat across agencies (BernCo "10000" vs another
-  // source's "10000"). Keep this site's rows (feature ids are
-  // `source:id:date`); fall back to every row if none match, for products
-  // whose source names differ from the timeseries'.
+  // A bare id can repeat across agencies: keep this site's `source:id` rows,
+  // or every row if none match.
   const own = fc.features.filter((f) => String(f.properties?.feature_id ?? "").startsWith(`${id}:`))
   const rows = id.includes(":") && own.length > 0 ? own : fc.features
   let units = "ft"

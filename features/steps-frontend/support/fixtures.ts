@@ -331,10 +331,9 @@ export const DIE_WATER_LEVELS = (() => {
 })()
 
 // ── Site detail panel ────────────────────────────────────────────────────
-// Served per scenario by site-detail.steps.ts (page routes), so the shared
-// collection list and the other specs stay as they are.
+// Served per scenario by site-detail.steps.ts.
 
-/** DIE_COLLECTIONS plus what the panel's arsenic and major-chemistry cases need. */
+/** DIE_COLLECTIONS plus the panel's arsenic and major-chemistry collections. */
 export const SITE_PANEL_COLLECTIONS = {
   ...DIE_COLLECTIONS,
   collections: [
@@ -383,11 +382,7 @@ export const DIE_WL_TIMESERIES = fc([
   sample("NMBGMR:WL-0001", "2024-09-30", 40, "ft", "Historical"),
 ])
 
-/**
- * nm_arsenic_summary: three sites. AS-1's latest value is above one of the
- * three (higher than 33% of sites). AS-3 has only text results in its time
- * series.
- */
+/** nm_arsenic_summary: AS-1 ranks above 33% of sites; AS-3 has only text results. */
 export const DIE_ARSENIC = fc([
   point("WQP:AS-1", [-106.65, 35.1], {
     name: "Corrales Well", source: "WQP", latest_value: 0.012, latest_units: "mg/L",
@@ -406,7 +401,7 @@ export const DIE_ARSENIC = fc([
   }),
 ])
 
-/** nm_arsenic_timeseries: numeric results arrive as strings, like the real API. */
+/** nm_arsenic_timeseries: numbers as strings, like the real API. */
 export const DIE_ARSENIC_TIMESERIES = fc([
   sample("WQP:AS-1", "2004-08-10", "0.0081", "mg/L", "Final"),
   sample("WQP:AS-1", "2011-03-14", "&lt; MRL 0.001 MG/L", "mg/L", "Final"),

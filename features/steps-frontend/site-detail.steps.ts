@@ -24,8 +24,7 @@ async function text(locator: { textContent: () => Promise<string | null> }) {
 }
 
 Given("the site panel's data is served", async function (this: BrowserWorld) {
-  // Page routes run before the shared context mocks (support/world), so only
-  // the requests named here change; everything else falls through.
+  // Page routes run before the shared mocks; anything not listed falls through.
   await this.page.route(/die-pygeoapi-[^/]*\.run\.app/, async (route: Route) => {
     const url = new URL(route.request().url())
     const json = (body: unknown) =>
@@ -49,7 +48,7 @@ Given("the site panel's data is served", async function (this: BrowserWorld) {
 When(
   "the user opens site {string} in the {string} dataset",
   async function (this: BrowserWorld, featureId: string, datasetId: string) {
-    // Start away from the fixture sites so zooming to one is observable.
+    // Start away from the sites so zooming is observable.
     const params = new URLSearchParams({
       ds: datasetId,
       sel: `${datasetId}~${featureId}`,
