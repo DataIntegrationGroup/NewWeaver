@@ -212,7 +212,7 @@ export type LayerConfig = FeaturesLayer | StaLayer | ArcGisLayer | WfsLayer
 // the pale basemap (matches the original Weaver black point stroke).
 const SCATTER_STROKE = "#1f2937"
 
-const pointStyle: LayerStyle = {
+export const pointStyle: LayerStyle = {
   type: "circle",
   paint: {
     "circle-radius": 3.75,
