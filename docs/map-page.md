@@ -68,7 +68,35 @@ facets differ per dataset. Active filters show as removable chips over the map.
   `src/lib/dieProps.ts` turns those into `null` on load, so filters, MapLibre
   expressions and the table never mistake them for values.
 - Time series (e.g. `nm_waterlevels_timeseries`, ~880k rows) are only ever
-  fetched per site.
+  fetched per site. Their `parameter_value` arrives as a string (`"470.0"`);
+  text results like `"< MRL 0.001 MG/L"` stay text and aren't charted.
+
+## Site detail panel
+
+`SiteDetail.tsx` is the right-hand panel for a clicked site: resizable (540px
+default), full-width below `lg`. The header has the site name, `Source ·
+Dataset`, zoom and close; the site ID with a copy button sits at the bottom.
+The body depends on the dataset's `kind` (an exhaustive `switch`):
+
+- **well:** up to four headline numbers (latest depth to water, readings,
+  years of record, well depth). Tabs: Chart (`Hydrograph`), Details (from the
+  summary), Readings (`ObservationTable`).
+- **analyte:** latest value, samples, range, well depth; a one-line takeaway
+  (salinity class for TDS, otherwise the share of sites below this one). Tabs:
+  Chart, Details, Samples, the chart and samples from `nm_<analyte>_timeseries`.
+- **ions:** cations and anions as label/value rows like the other chemistry
+  results, then hardness and dominant cation and anion. No chart yet.
+
+Numbers are rounded for reading (`formatNumber` in `src/lib/format.ts`) and
+always carry their unit. `nm_waterlevel_trends` isn't shown anywhere, so
+there's no change in depth to water, until the trends layers are reworked.
+
+**Charts.** `TimeSeriesChart` is the shared chart; `Hydrograph` wraps it for
+water levels with an inverted depth axis. Water levels color points by DIE's
+normalized approval (`approval_status_normalized`); chemistry charts use one
+color. Wherever an approval is shown as text (tooltips, the latest-reading
+chip, the observations table and its CSV), it is the source's own label
+(`approval_status`).
 
 ## Guardrails
 
@@ -81,8 +109,7 @@ facets differ per dataset. Active filters show as removable chips over the map.
 
 ## Known gaps
 
-- Site detail panel: InspectPanel stays until W10-491 replaces it.
 - Source labels (`ST/DWB`, `ISCSevenRivers`, `BOR-RISE`, `WQP/NWIS`) are
   guesses until DIE confirms them.
-- Some DIE values carry float noise (e.g. `474.7648751924755`); nothing rounds
-  them yet.
+- Some DIE values carry float noise (e.g. `474.7648751924755`). The site
+  panel rounds them; the attribute table doesn't yet.
