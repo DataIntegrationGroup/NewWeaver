@@ -129,10 +129,10 @@ export function DatasetDetail({ d, className }: { d: Dataset; className?: string
         onOpenChange={setDownloadOpen}
       />
 
-      {d.mapLayerId && (
+      {d.mapDatasetId && (
         <Link
           to="/map"
-          search={datasetMapSearch(d.mapLayerId)}
+          search={datasetMapSearch(d.mapDatasetId)}
           className={buttonVariants({ className: "w-full" })}
           data-testid="datasets-detail-map"
         >
