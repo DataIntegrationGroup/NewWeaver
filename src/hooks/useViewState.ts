@@ -34,13 +34,12 @@ export function useViewState() {
     search,
     selection,
     regions,
-    /** Show a dataset. Changes the dataset and the selection in one URL
-     *  update: two patches in the same tick would overwrite each other. */
-    setDataset(id: string, sel?: Selection) {
+    /** Show a dataset, clearing the selection (it belongs to the old one). */
+    setDataset(id: string) {
       // Facets differ per dataset, so color-by and bin selections reset.
       patch({
         ds: id,
-        sel: sel ? encodeSelection(sel) : undefined,
+        sel: undefined,
         color: undefined,
         f: undefined,
       })
