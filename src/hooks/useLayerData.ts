@@ -114,9 +114,10 @@ function ensureFeatureIds(fc: FeatureCollection, keyByFeatureId = false): Featur
 }
 
 /** Vector items from an OGC API Features collection, as GeoJSON. */
-export function useFeaturesLayer(layer: FeaturesLayer) {
+export function useFeaturesLayer(layer: FeaturesLayer, enabled = true) {
   return useQuery({
     queryKey: featuresLayerKey(layer),
+    enabled,
     queryFn: async () => {
       const pageSize = 10000
       const maxPages = layer.maxFeatures

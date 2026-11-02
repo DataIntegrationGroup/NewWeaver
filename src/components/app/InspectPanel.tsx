@@ -39,6 +39,9 @@ import type { Datastream } from "@/clients/sensorThings"
 interface InspectPanelProps {
   layer: LayerConfig
   featureId: string
+  /** The layer's loaded features. When given, the panel reads the selected
+   *  one from here instead of fetching the collection itself. */
+  features?: Feature[]
   onClose: () => void
   /** Center the map on a coordinate (the panel's "Zoom to" action). */
   onZoomTo?: (lng: number, lat: number) => void
@@ -517,9 +520,9 @@ function AttributeInspect({
 }
 
 /** Attribute list for a vector feature from OGC API Features. */
-function FeatureInspect({ layer, featureId, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
-  const { data } = useFeaturesLayer(layer)
-  return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
+function FeatureInspect({ layer, featureId, features, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
+  const { data } = useFeaturesLayer(layer, !features)
+  return <AttributeInspect title={layer.title} lead={<PlainLead layer={layer} />} fc={features ? { features } : data} featureId={featureId} fields={layer.fields} format={layer.formatValue} onClose={onClose} onZoomTo={onZoomTo} />
 }
 
 /**
@@ -601,9 +604,9 @@ function ProductSection({
  *  feature was selected from (flag `wellMetadata`; e.g. nm_waterlevel_status,
  *  nm_waterlevel_trends). The feature's `id` is the shared key that fetches
  *  the timeseries and every folded product. */
-function WellInspect({ layer, featureId, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
-  const { data } = useFeaturesLayer(layer)
-  const feature = data?.features.find((f) => String(f.id ?? f.properties?.id) === featureId)
+function WellInspect({ layer, featureId, features, onClose, onZoomTo }: { layer: FeaturesLayer } & Omit<InspectPanelProps, "layer">) {
+  const { data } = useFeaturesLayer(layer, !features)
+  const feature = (features ?? data?.features)?.find((f) => String(f.id ?? f.properties?.id) === featureId)
   const pos = firstPosition(feature)
   const props = (feature?.properties ?? {}) as Record<string, unknown>
   // Source-qualified key (`ST2/BernCo:10493`) — unique, unlike the bare id.
@@ -769,14 +772,14 @@ function StaInspect({ layer, featureId, onClose, onZoomTo }: { layer: StaLayer }
   )
 }
 
-export function InspectPanel({ layer, featureId, onClose, onZoomTo }: InspectPanelProps) {
+export function InspectPanel({ layer, featureId, features, onClose, onZoomTo }: InspectPanelProps) {
   if (layer.source === "features" && layer.wellMetadata)
-    return <WellInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
+    return <WellInspect layer={layer} featureId={featureId} features={features} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "sta")
     return <StaInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "arcgis")
     return <ArcGisInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
   if (layer.source === "wfs")
     return <WfsInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
-  return <FeatureInspect layer={layer} featureId={featureId} onClose={onClose} onZoomTo={onZoomTo} />
+  return <FeatureInspect layer={layer} featureId={featureId} features={features} onClose={onClose} onZoomTo={onZoomTo} />
 }

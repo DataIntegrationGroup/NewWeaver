@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Layers, Maximize } from "lucide-react"
-import { useQueryClient } from "@tanstack/react-query"
-import type { Map as MaplibreMap, GeoJSONSource } from "maplibre-gl"
+import type { Map as MaplibreMap } from "maplibre-gl"
 import type { FeatureCollection, Polygon, Position } from "geojson"
 import {
   Map,
@@ -26,14 +25,7 @@ import {
 } from "@/components/ui/basemap-selector"
 
 import type { LayerConfig } from "@/catalog/layers"
-import type { FeatureFilters } from "@/lib/filterFeatures"
 import { selectFields, fieldLabel, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
-import {
-  staLayerKey,
-  featuresLayerKey,
-  arcgisLayerKey,
-  wfsLayerKey,
-} from "@/hooks/useLayerData"
 
 /** Plain string cast used when a layer declares no value formatter. */
 const defaultFormat = (key: string, value: unknown) => roundedFieldValue(key, value) ?? String(value ?? "")
@@ -69,14 +61,6 @@ function resolveCircleColor(
   return fallback
 }
 
-/** React Query cache key for a layer's GeoJSON data (mirrors the data hooks). */
-function layerCacheKey(layer: LayerConfig) {
-  if (layer.source === "sta") return staLayerKey(layer)
-  if (layer.source === "arcgis") return arcgisLayerKey(layer)
-  if (layer.source === "wfs") return wfsLayerKey(layer)
-  return featuresLayerKey(layer)
-}
-
 /** Expand a bbox to include every coordinate in a geometry's nested arrays. */
 function growBbox(coords: unknown, bbox: [number, number, number, number]) {
   if (typeof (coords as number[])[0] === "number") {
@@ -90,58 +74,23 @@ function growBbox(coords: unknown, bbox: [number, number, number, number]) {
   for (const c of coords as unknown[]) growBbox(c, bbox)
 }
 import type { Selection } from "@/lib/urlState"
-import {
-  CatalogLayer,
-  renderLayerId,
-  clusterLayerId,
-  interactiveLayerIdsFor,
-  isClustered,
-} from "./MapLayers"
+import { DatasetSource, renderLayerId } from "./MapLayers"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AttributeValue } from "@/components/app/AttributeValue"
-import { ActiveLayerChips } from "./ActiveLayerChips"
 import { MapLegend } from "./MapLegend"
 
 interface MapViewProps {
   /** Optional external ref so the parent can drive the map (e.g. fly-to). */
   mapRef?: React.RefObject<MapRef | null>
-  layers: LayerConfig[]
-  filters: FeatureFilters
-  /** Layer id → opacity (0–1). */
-  opacityById?: Record<string, number>
-  /** Layer id → free-text attribute filter (settings popover). */
-  attributeQueryById?: Record<string, string>
-  /** Layer id → selected values for the layer's facet (settings popover). */
-  facetValuesById?: Record<string, string[]>
-  /** Layer id → clustering override (settings popover). */
-  clusterById?: Record<string, boolean>
-  /** Layer id → bubble-map (size-by-value) toggle (settings popover). */
-  bubbleById?: Record<string, boolean>
-  /** Layer id → color-by-class toggle (settings popover). */
-  classifyById?: Record<string, boolean>
-  /** Layer id → [min, max] value range filter over the layer's rangeField. */
-  rangeById?: Record<string, [number, number]>
-  /** Layer id → minimum-records threshold over the layer's minRecordsField. */
-  minRecordsById?: Record<string, number>
-  /** Layer id → recency window (years, 0 = All) over the layer's recencyField. */
-  recencyById?: Record<string, number>
-  /** Layer id → color override hex string. */
-  colorById?: Record<string, string>
-  /** Ids of enabled layers hidden from the map via their chip (still listed). */
-  hiddenLayerIds?: string[]
-  /** Reports a layer's filtered feature count (for the empty-filter state). */
-  onLayerCount?: (id: string, count: number) => void
-  /** When set, the active text filter matched no features — show an empty card. */
-  emptyFilterQuery?: string
-  /** Remove a layer entirely from its on-map chip (× button). */
-  onToggleLayer?: (id: string) => void
-  /** Toggle a layer's map visibility from its on-map chip (body click). */
-  onToggleLayerHidden?: (id: string) => void
+  /** The map dataset as a layer (style, legend, title). */
+  layer: LayerConfig
+  /** Its sites, already filtered. */
+  data: FeatureCollection
+  /** Every filter came back empty: show a card saying so. */
+  empty?: boolean
   selection?: Selection
   /** Pin dropped by the location search (SPEC §T.T3). */
   marker?: { lng: number; lat: number } | null
-  /** Fit the map to a set of layers' extent (measurement facet, SPEC §T.T4). */
-  fitRequest?: { ids: string[]; nonce: number }
   initialView: { longitude: number; latitude: number; zoom: number }
   /** Frame the data extent on first paint (no explicit view in the URL). */
   autoFit?: boolean
@@ -154,34 +103,24 @@ interface MapViewProps {
   onShapesChange: (shapes: Polygon[]) => void
   /** Selected region of interest (county/PWS/basin), drawn as a boundary. */
   region?: { polygons: Polygon[] }
+  /** Float the layer legend over the map (off when the sidebar shows it). */
+  showLegend?: boolean
+  /** Rendered along the top of the map (e.g. active filter chips). */
+  overlay?: React.ReactNode
 }
 
 /**
- * MapView — the primary surface. Renders visible catalog layers, routes map
- * clicks to feature selection, and reports view changes (extent → URL).
+ * MapView — the primary surface. Renders the map dataset's filtered sites,
+ * routes map clicks to feature selection, and reports view changes (extent →
+ * URL).
  */
 export function MapView({
   mapRef: externalMapRef,
-  layers,
-  filters,
-  opacityById,
-  attributeQueryById,
-  facetValuesById,
-  clusterById,
-  bubbleById,
-  classifyById,
-  rangeById,
-  minRecordsById,
-  recencyById,
-  colorById,
-  hiddenLayerIds,
-  onLayerCount,
-  emptyFilterQuery,
-  onToggleLayer,
-  onToggleLayerHidden,
+  layer,
+  data,
+  empty,
   selection,
   marker,
-  fitRequest,
   initialView,
   autoFit,
   basemap,
@@ -192,30 +131,26 @@ export function MapView({
   onMove,
   onShapesChange,
   region,
+  showLegend = true,
+  overlay,
 }: MapViewProps) {
   const internalMapRef = useRef<MapRef | null>(null)
   const mapRef = externalMapRef ?? internalMapRef
-  const queryClient = useQueryClient()
   const [mapLoaded, setMapLoaded] = useState(false)
   const [cursor, setCursor] = useState<[number, number] | null>(null)
 
-  // Zoom to the combined extent of the loaded features. With no ids, fits all
-  // visible layers; with ids, only those (used by the measurement facet, T4).
-  // Returns true if it actually fit (i.e. some feature geometry was loaded).
-  const fitToData = (ids?: string[]): boolean => {
+  // Zoom to the extent of the shown sites. Returns true if it actually fit
+  // (i.e. some feature geometry was loaded).
+  const fitToData = (): boolean => {
     const map = mapRef.current
     if (!map) return false
-    const target = ids ? layers.filter((l) => ids.includes(l.id)) : layers
     const bbox: [number, number, number, number] = [Infinity, Infinity, -Infinity, -Infinity]
     let any = false
-    for (const layer of target) {
-      const fc = queryClient.getQueryData<FeatureCollection>(layerCacheKey(layer))
-      for (const f of fc?.features ?? []) {
-        const g = f.geometry
-        if (!g || g.type === "GeometryCollection") continue
-        growBbox((g as { coordinates: unknown }).coordinates, bbox)
-        any = true
-      }
+    for (const f of data.features) {
+      const g = f.geometry
+      if (!g || g.type === "GeometryCollection") continue
+      growBbox((g as { coordinates: unknown }).coordinates, bbox)
+      any = true
     }
     if (any && Number.isFinite(bbox[0])) {
       map.fitBounds(
@@ -229,52 +164,24 @@ export function MapView({
 
   // First-paint auto-fit: when the URL carries no explicit view, frame the data
   // across New Mexico instead of the static all-NM view (SPEC §V.V5). Fires once,
-  // after the map is ready and the enabled layers' features have loaded. A user
-  // pan or a shared deep-link (autoFit=false) is never overridden.
-  const didAutoFit = useRef(false)
-  const tryAutoFit = () => {
-    if (!autoFit || didAutoFit.current || !mapLoaded) return
-    if (fitToData()) didAutoFit.current = true
-  }
-
-  // Facet fit (SPEC §T.T4): when a measurement category is chosen, frame just
-  // its layers. Their data may still be loading, so the request is held and
-  // retried as those layers' features land (handleLayerCount), then cleared.
-  const pendingFit = useRef<string[] | null>(null)
-  const tryPendingFit = () => {
-    if (!pendingFit.current || !mapLoaded) return
-    if (fitToData(pendingFit.current)) pendingFit.current = null
-  }
+  // after the map is ready and the sites have loaded. A user pan or a shared
+  // deep-link (autoFit=false) is never overridden. Read once at mount: the
+  // map's first move writes a view to the URL, which turns `autoFit` off
+  // before the sites have landed.
+  const didAutoFit = useRef(!autoFit)
   useEffect(() => {
-    if (fitRequest?.ids?.length) {
-      pendingFit.current = fitRequest.ids
-      tryPendingFit()
-    }
-    // Only react to a new request (nonce), not to identity churn of the array.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitRequest?.nonce])
+    if (didAutoFit.current || !mapLoaded) return
+    if (fitToData()) didAutoFit.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fitToData reads data
+  }, [mapLoaded, data])
 
-  // A layer reporting its count means its features just landed in the cache —
-  // a good moment to attempt the first-paint fit and any pending facet fit.
-  const handleLayerCount = (id: string, count: number) => {
-    onLayerCount?.(id, count)
-    tryAutoFit()
-    tryPendingFit()
-  }
-  const interactiveLayerIds = useMemo(
-    () => layers.flatMap((l) => interactiveLayerIdsFor(l, clusterById?.[l.id])),
-    [layers, clusterById]
+  // The full rows by id: MapLibre's tiled properties drop nulls, so the
+  // popup reads the untiled feature instead.
+  const featuresById = useMemo(
+    () => new globalThis.Map(data.features.map((f) => [String(f.properties?.id ?? f.id), f])),
+    [data]
   )
-  // Draw fill (choropleth) layers beneath everything else so polygons don't
-  // cover point layers or steal their clicks. Stable sort preserves order
-  // within each group.
-  const orderedLayers = useMemo(
-    () => [...layers].sort((a, b) => (a.style.type === "fill" ? 0 : 1) - (b.style.type === "fill" ? 0 : 1)),
-    [layers]
-  )
-  const clusterLayerIds = new Set(
-    layers.filter((l) => isClustered(l, clusterById?.[l.id])).map(clusterLayerId)
-  )
+  const interactiveLayerIds = useMemo(() => [renderLayerId(layer)], [layer])
   const [drawMap, setDrawMap] = useState<MaplibreMap | null>(null)
   // While a draw tool is armed, suppress feature hover popups so the pointer is
   // free to draw without popups fighting the crosshair.
@@ -317,38 +224,26 @@ export function MapView({
       return
     }
     const hit = e.features?.[0]
-    // Clusters get a pointer cursor but no attribute popup.
-    if (!hit || hit.properties?.cluster) {
+    if (!hit) {
       setHoverInfo((prev) => (prev ? null : prev))
       return
     }
     const hitProperties = (hit.properties ?? {}) as Record<string, unknown>
-    const layer = layers.find((l) => renderLayerId(l) === hit.layer?.id)
-    // MapLibre's rendered-feature properties come from its internal GeoJSON
-    // tiling, which silently drops any property whose value is null — a
-    // feature with several null fields would show fewer rows in the popup
-    // than the same feature's table row/inspect panel. Prefer the untiled
-    // properties from the layer's own cached FeatureCollection when available.
     const featureId = String(hitProperties.id ?? hit.id ?? "")
-    const cached = layer
-      ? queryClient
-          .getQueryData<FeatureCollection>(layerCacheKey(layer))
-          ?.features.find((f) => String(f.properties?.id ?? f.id) === featureId)
-      : undefined
-    const properties = (cached?.properties ?? hitProperties) as Record<string, unknown>
-    const override = layer ? colorById?.[layer.id] : undefined
-    const color =
-      override ?? resolveCircleColor(layer?.style.paint?.["circle-color"], properties)
+    const properties = (featuresById.get(featureId)?.properties ?? hitProperties) as Record<
+      string,
+      unknown
+    >
     setHoverInfo({
       longitude: e.lngLat.lng,
       latitude: e.lngLat.lat,
       name: (properties.name as string) ?? undefined,
-      title: layer?.title,
+      title: layer.title,
       subtitle: (properties.trend_category as string) ?? undefined,
-      color,
+      color: resolveCircleColor(layer.style.paint?.["circle-color"], properties),
       properties,
-      fields: layer?.fields,
-      format: layer?.formatValue,
+      fields: layer.fields,
+      format: layer.formatValue,
     })
   }
 
@@ -358,39 +253,7 @@ export function MapView({
       onClearSelection()
       return
     }
-    // A click on a cluster zooms in until it breaks apart, rather than selecting.
-    const hitLayerId = hit.layer?.id ?? ""
-    if (clusterLayerIds.has(hitLayerId)) {
-      expandCluster(hitLayerId, hit)
-      return
-    }
-    const layer = layers.find((l) => renderLayerId(l) === hitLayerId)
-    if (!layer) return
-    // Prefer the feature's own `id` property: a clustered source reassigns the
-    // MapLibre feature id to a supercluster id, so `hit.id` would not match the
-    // real feature in the data (breaking the inspect panel and highlight).
-    const featureId = String(hit.properties?.id ?? hit.id ?? "")
-    onSelect({ layerId: layer.id, featureId })
-  }
-
-  // Zoom to the level at which a clicked cluster splits, centered on it.
-  const expandCluster = (
-    clusterLayer: string,
-    hit: NonNullable<MapLayerMouseEvent["features"]>[number]
-  ) => {
-    const map = mapRef.current?.getMap()
-    const sourceId = clusterLayer.replace(/-clusters$/, "")
-    const source = map?.getSource(sourceId) as GeoJSONSource | undefined
-    const clusterId = hit.properties?.cluster_id
-    if (!map || !source || clusterId == null) return
-    const geom = hit.geometry
-    const center =
-      geom?.type === "Point" ? (geom.coordinates as [number, number]) : undefined
-    Promise.resolve(source.getClusterExpansionZoom(clusterId))
-      .then((zoom) => {
-        if (center) map.easeTo({ center, zoom, duration: 400 })
-      })
-      .catch(() => {})
+    onSelect({ layerId: layer.id, featureId: String(hit.properties?.id ?? hit.id ?? "") })
   }
 
   const emitMove = () => {
@@ -412,7 +275,7 @@ export function MapView({
   // fitBounds is exempt: it sets didAutoFit before animating, so by the time its
   // moveEnd lands the flag is already true.
   const handleMoveEnd = () => {
-    if (autoFit) didAutoFit.current = true
+    didAutoFit.current = true
     emitMove()
   }
 
@@ -442,9 +305,6 @@ export function MapView({
       layerIds: () => map.getStyle().layers.map((l) => l.id),
     }
     emitMove()
-    // Features may already be cached before the map finished loading; attempt
-    // the first-paint fit now that the map is ready.
-    if (autoFit && !didAutoFit.current && fitToData()) didAutoFit.current = true
   }
 
   return (
@@ -504,29 +364,14 @@ export function MapView({
             />
           </Source>
         )}
-        {orderedLayers.map((layer) => (
-          <CatalogLayer
-            key={layer.id}
-            layer={layer}
-            filters={filters}
-            opacity={opacityById?.[layer.id] ?? 1}
-            attributeQuery={attributeQueryById?.[layer.id]}
-            facetValues={facetValuesById?.[layer.id]}
-            clusterOverride={clusterById?.[layer.id]}
-            bubble={bubbleById?.[layer.id]}
-            classify={classifyById?.[layer.id]}
-            range={rangeById?.[layer.id]}
-            minRecords={minRecordsById?.[layer.id]}
-            recency={recencyById?.[layer.id]}
-            colorOverride={colorById?.[layer.id]}
-            shapes={drawnShapes}
-            visible={!hiddenLayerIds?.includes(layer.id)}
-            onCount={handleLayerCount}
-            selectedFeatureId={
-              selection?.layerId === layer.id ? selection.featureId : undefined
-            }
-          />
-        ))}
+        <DatasetSource
+          // A Source can't change id in place; remount it for a new dataset.
+          key={layer.id}
+          layer={layer}
+          fc={data}
+          shapes={drawnShapes}
+          selectedFeatureId={selection?.layerId === layer.id ? selection.featureId : undefined}
+        />
 
         {hoverInfo && (
           <Popup
@@ -612,15 +457,15 @@ export function MapView({
         )}
       </Map>
 
-      {emptyFilterQuery && (
+      {empty && (
         <div
           data-testid="empty-filter"
           className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center"
         >
           <div className="pointer-events-auto max-w-sm rounded-lg border bg-card/95 px-4 py-3 text-center text-sm shadow-md backdrop-blur">
-            <p className="font-medium text-foreground">No features match your filter</p>
+            <p className="font-medium text-foreground">No sites match your filters</p>
             <p className="mt-0.5 text-muted-foreground">
-              Nothing in the visible layers matches “{emptyFilterQuery}”.
+              Remove a filter above to see more of {layer.title}.
             </p>
           </div>
         </div>
@@ -633,16 +478,11 @@ export function MapView({
         />
       )}
 
-      {onToggleLayer && onToggleLayerHidden && (
-        <ActiveLayerChips
-          layers={layers}
-          hiddenIds={hiddenLayerIds}
-          onToggle={onToggleLayerHidden}
-          onRemove={onToggleLayer}
-        />
-      )}
+      {overlay}
 
-      <MapLegend layers={layers} hiddenLayerIds={hiddenLayerIds} classifyById={classifyById} />
+      {showLegend && (
+        <MapLegend layer={layer} />
+      )}
 
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-2">
         <Popover>
@@ -675,7 +515,7 @@ export function MapView({
           variant="outline"
           size="icon-sm"
           aria-label="Zoom to data"
-          title="Zoom to the visible layers"
+          title="Zoom to the shown sites"
           data-testid="fit-to-data"
           onClick={() => fitToData()}
         >
