@@ -22,11 +22,9 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import type { LayerConfig, FeaturesLayer, StaLayer, ArcGisLayer, WfsLayer, AttributeFacet } from "@/catalog/layers"
-import { useFeaturesLayer, useStaLayer, useArcGisLayer, useWfsLayer } from "@/hooks/useLayerData"
-import { filterFeatures, matchesText, matchesValues, type FeatureFilters } from "@/lib/filterFeatures"
+import type { LayerConfig } from "@/catalog/layers"
 import { pointInAnyShape } from "@/lib/geo"
-import { selectFields, fieldLabel, WELL_DEPTH_UNITS_KEY, roundedFieldValue, type FieldDisplay } from "@/lib/fields"
+import { selectFields, fieldLabel, WELL_DEPTH_UNITS_KEY, roundedFieldValue } from "@/lib/fields"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AttributeValue } from "@/components/app/AttributeValue"
 import {
@@ -50,22 +48,15 @@ const features = tableFeatures({
 
 interface AttributeTableProps {
   layer: LayerConfig
-  filters: FeatureFilters
+  /** The layer's features, already filtered. */
+  data: FeatureCollection
+  loading?: boolean
   /** Drawn selection polygons; when present, the table is scoped to features inside them. */
   shapes?: Polygon[]
-  /** Per-layer free-text attribute filter, set from the layer's settings popover. */
-  attributeQuery?: string
-  /** Selected values for the layer's facet (settings popover). */
-  facetValues?: string[]
   selectedFeatureId?: string
   onSelect: (featureId: string) => void
-  /** Clear the active filters/selection from the footer chips. */
-  onClearText?: () => void
-  onClearExtent?: () => void
+  /** Clear the drawn selection from its footer chip. */
   onClearShapes?: () => void
-  onClearRegions?: () => void
-  onClearAttributeQuery?: () => void
-  onClearFacet?: () => void
   /** Open the export flow for this layer's features (SPEC §T.T5). */
   onExport?: () => void
 }
@@ -93,50 +84,25 @@ function FilterChip({ label, onClear }: { label: string; onClear?: () => void })
   )
 }
 
-function TableView({
-  fc,
-  fields,
-  facet,
-  format = (k, v) => roundedFieldValue(k, v) ?? String(v ?? ""),
+export function AttributeTable({
+  layer,
+  data,
   loading,
-  filters,
   shapes,
-  attributeQuery,
-  facetValues,
   selectedFeatureId,
   onSelect,
-  onClearText,
-  onClearExtent,
   onClearShapes,
-  onClearRegions,
-  onClearAttributeQuery,
-  onClearFacet,
   onExport,
-}: {
-  fc: FeatureCollection
-  fields?: FieldDisplay
-  facet?: AttributeFacet
-  format?: (key: string, value: unknown) => string
-  loading?: boolean
-} & Omit<AttributeTableProps, "layer">) {
+}: AttributeTableProps) {
+  const { fields, formatValue: format = (k, v) => roundedFieldValue(k, v) ?? String(v ?? "") } = layer
   const [sorting, setSorting] = useState<SortingState>([])
   const [dense, setDense] = useState(false)
 
-  // Apply the text/extent filters, the layer's own attribute filter and
-  // facet selection, then narrow to any drawn selection polygons.
-  const rows = useMemo(() => {
-    let features = filterFeatures(fc, filters).features
-    if (attributeQuery) {
-      features = features.filter((f) => matchesText(f, attributeQuery))
-    }
-    if (facet && facetValues && facetValues.length > 0) {
-      features = features.filter((f) => matchesValues(f, facet.field, facetValues))
-    }
-    if (shapes && shapes.length > 0) {
-      features = features.filter((f) => pointInAnyShape(f, shapes))
-    }
-    return features
-  }, [fc, filters, attributeQuery, facet, facetValues, shapes])
+  // Filters are applied upstream; narrow to any drawn selection polygons.
+  const rows = useMemo(
+    () => (shapes?.length ? data.features.filter((f) => pointInAnyShape(f, shapes)) : data.features),
+    [data, shapes]
+  )
 
   const columns = useMemo<ColumnDef<typeof features, Feature>[]>(() => {
     const keys = new Set<string>()
@@ -308,22 +274,6 @@ function TableView({
             {rows.length.toLocaleString()} feature{rows.length === 1 ? "" : "s"}
           </span>
           <div className="flex min-w-0 items-center gap-1.5 overflow-x-auto">
-            {filters.q && (
-              <FilterChip label={`“${filters.q}”`} onClear={onClearText} />
-            )}
-            {filters.bbox && <FilterChip label="Map view" onClear={onClearExtent} />}
-            {filters.regionPolygons && filters.regionPolygons.length > 0 && (
-              <FilterChip label="Region" onClear={onClearRegions} />
-            )}
-            {attributeQuery && (
-              <FilterChip label={`“${attributeQuery}”`} onClear={onClearAttributeQuery} />
-            )}
-            {facet && facetValues && facetValues.length > 0 && (
-              <FilterChip
-                label={`${facet.label}: ${facetValues.join(", ")}`}
-                onClear={onClearFacet}
-              />
-            )}
             {shapes && shapes.length > 0 && (
               <FilterChip label="Selection" onClear={onClearShapes} />
             )}
@@ -356,31 +306,4 @@ function TableView({
       </div>
     </div>
   )
-}
-
-function FeaturesTable({ layer, ...rest }: { layer: FeaturesLayer } & Omit<AttributeTableProps, "layer">) {
-  const { data, isFetching } = useFeaturesLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
-}
-
-function StaTable({ layer, ...rest }: { layer: StaLayer } & Omit<AttributeTableProps, "layer">) {
-  const { data, isFetching } = useStaLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
-}
-
-function ArcGisTable({ layer, ...rest }: { layer: ArcGisLayer } & Omit<AttributeTableProps, "layer">) {
-  const { data, isFetching } = useArcGisLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
-}
-
-function WfsTable({ layer, ...rest }: { layer: WfsLayer } & Omit<AttributeTableProps, "layer">) {
-  const { data, isFetching } = useWfsLayer(layer)
-  return <TableView fc={data ?? { type: "FeatureCollection", features: [] }} fields={layer.fields} facet={layer.facet} format={layer.formatValue} loading={isFetching} {...rest} />
-}
-
-export function AttributeTable({ layer, ...rest }: AttributeTableProps) {
-  if (layer.source === "sta") return <StaTable layer={layer} {...rest} />
-  if (layer.source === "arcgis") return <ArcGisTable layer={layer} {...rest} />
-  if (layer.source === "wfs") return <WfsTable layer={layer} {...rest} />
-  return <FeaturesTable layer={layer} {...rest} />
 }
