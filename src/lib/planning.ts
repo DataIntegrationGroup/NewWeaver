@@ -387,9 +387,15 @@ export async function fetchWellSeries(id: string): Promise<WellSeries> {
     10000,
     20
   )
+  // The bare id can repeat across agencies (BernCo "10000" vs another
+  // source's "10000"). Keep this site's rows (feature ids are
+  // `source:id:date`); fall back to every row if none match, for products
+  // whose source names differ from the timeseries'.
+  const own = fc.features.filter((f) => String(f.properties?.feature_id ?? "").startsWith(`${id}:`))
+  const rows = id.includes(":") && own.length > 0 ? own : fc.features
   let units = "ft"
   const points: SeriesPoint[] = []
-  for (const f of fc.features) {
+  for (const f of rows) {
     const p = (f.properties ?? {}) as Record<string, unknown>
     const t = String(p.datetime ?? "")
     const v = num(p.parameter_value)
