@@ -46,49 +46,51 @@ export function FilterControls({ bbox, q, onBboxChange, onQueryChange }: FilterC
   }
 
   return (
-    <div className="flex items-center gap-4">
-      <Field orientation="horizontal" className="w-auto">
-        <Switch
-          id={`${id}-bbox`}
-          data-testid="filter-bbox"
-          checked={bbox}
-          onCheckedChange={onBboxChange}
-        />
-        <FieldLabel htmlFor={`${id}-bbox`} className="whitespace-nowrap">
-          Filter to map view
-        </FieldLabel>
-      </Field>
+    <div className="space-y-2">
       <Input
         data-testid="filter-text"
-        aria-label="Filter features"
-        placeholder="Filter features…"
-        className="h-8 w-56"
+        aria-label="Search sites"
+        placeholder="Site name, ID or source…"
+        className="h-8 w-full"
         value={text}
         onChange={(e) => onType(e.target.value)}
       />
-      {/* Its own provider, so it works without one at the app root. */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label="About filtering"
-                data-testid="filter-info"
-                className="text-muted-foreground"
-              />
-            }
-          >
-            <Info />
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="max-w-64">
-            <strong>Filter to map view</strong> limits data to the current map
-            extent. The text box matches feature attributes — type to narrow what’s
-            shown.
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="flex items-center gap-2">
+        <Field orientation="horizontal" className="w-auto">
+          <Switch
+            id={`${id}-bbox`}
+            data-testid="filter-bbox"
+            checked={bbox}
+            onCheckedChange={onBboxChange}
+          />
+          <FieldLabel htmlFor={`${id}-bbox`} className="whitespace-nowrap">
+            Only sites in the map view
+          </FieldLabel>
+        </Field>
+        {/* Its own provider, so it works without one at the app root. */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="About filtering"
+                  data-testid="filter-info"
+                  className="text-muted-foreground"
+                />
+              }
+            >
+              <Info />
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-64">
+              <strong>Only sites in the map view</strong> limits data to the current
+              map extent. The search box matches any site attribute: name, ID,
+              source and so on.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
     </div>
   )
 }

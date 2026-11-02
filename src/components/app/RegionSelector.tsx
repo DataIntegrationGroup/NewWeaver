@@ -6,7 +6,8 @@
  * different, narrower semantic than a drawn shape's additive widening.
  */
 import { useMemo, useRef, useState } from "react"
-import { Download, X } from "lucide-react"
+import { X } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -23,7 +24,6 @@ import {
   type RegionKind,
 } from "@/catalog/regions"
 import { useRegionOptions } from "@/hooks/useRegions"
-import type { RegionCoverage } from "@/lib/regions"
 
 export interface RegionChip {
   kind: RegionKind
@@ -34,23 +34,13 @@ export interface RegionChip {
 
 interface RegionSelectorProps {
   chips: RegionChip[]
-  coverage: RegionCoverage | null
   onAdd: (kind: RegionKind, id: string) => void
   onRemove: (kind: RegionKind, id: string) => void
-  onClearAll: () => void
-  onExport: () => void
 }
 
 const MAX_SUGGESTIONS = 8
 
-export function RegionSelector({
-  chips,
-  coverage,
-  onAdd,
-  onRemove,
-  onClearAll,
-  onExport,
-}: RegionSelectorProps) {
+export function RegionSelector({ chips, onAdd, onRemove }: RegionSelectorProps) {
   const [kind, setKind] = useState<RegionKind | undefined>(undefined)
   const [query, setQuery] = useState("")
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -86,7 +76,6 @@ export function RegionSelector({
   }
 
   const entry = kind ? REGION_CATALOG[kind] : undefined
-  const anyLoading = chips.some((c) => c.loading)
 
   return (
     <section aria-label="Select regions of interest" data-testid="region-selector">
@@ -168,77 +157,24 @@ export function RegionSelector({
       {chips.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-1.5" data-testid="region-chips">
           {chips.map((c) => (
-            <li
-              key={`${c.kind}:${c.id}`}
-              data-testid="region-chip"
-              className="inline-flex items-center gap-1 rounded-full border bg-muted px-2 py-0.5 text-xs"
-            >
-              <span className="text-muted-foreground">{REGION_CATALOG[c.kind].label}:</span>
-              <span className="max-w-40 truncate">{c.name ?? (c.loading ? "Loading…" : c.id)}</span>
-              <button
-                type="button"
-                aria-label={`Remove ${c.name ?? c.id}`}
-                data-testid="region-chip-remove"
-                onClick={() => onRemove(c.kind, c.id)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-3" />
-              </button>
+            <li key={`${c.kind}:${c.id}`} data-testid="region-chip">
+              <Badge variant="outline" className="h-6 pr-0.5">
+                <span className="text-muted-foreground">{REGION_CATALOG[c.kind].label}:</span>
+                <span className="max-w-40 truncate">{c.name ?? (c.loading ? "Loading…" : c.id)}</span>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-5 rounded-full"
+                  aria-label={`Remove ${c.name ?? c.id}`}
+                  data-testid="region-chip-remove"
+                  onClick={() => onRemove(c.kind, c.id)}
+                >
+                  <X />
+                </Button>
+              </Badge>
             </li>
           ))}
         </ul>
-      )}
-
-      {chips.length > 0 && (
-        <div className="mt-2 rounded-md border bg-muted/40 p-3" data-testid="region-panel">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium">
-              {chips.length} region{chips.length === 1 ? "" : "s"} selected
-            </p>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="region-clear-all"
-              onClick={onClearAll}
-            >
-              Clear all
-            </Button>
-          </div>
-          {!anyLoading && coverage && (
-            coverage.total > 0 ? (
-              <>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {coverage.total} monitored{" "}
-                  {coverage.total === 1 ? "point" : "points"} inside:
-                </p>
-                <ul className="mt-1.5 space-y-1 text-sm" data-testid="region-coverage-list">
-                  {coverage.layers.map((l) => (
-                    <li key={l.layerId} className="flex justify-between gap-2">
-                      <span>{l.title}</span>
-                      <span className="shrink-0 text-muted-foreground">{l.count}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full"
-                  data-testid="region-export"
-                  onClick={onExport}
-                >
-                  <Download />
-                  Download this data
-                </Button>
-              </>
-            ) : (
-              <p className="mt-2 text-sm text-muted-foreground" data-testid="region-coverage-empty">
-                No monitored data inside the selected regions among the visible layers.
-              </p>
-            )
-          )}
-        </div>
       )}
     </section>
   )

@@ -8,20 +8,24 @@
  * they're in the right place.
  */
 import { useEffect, useRef, useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
 import { Download, MapPin, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { LayerConfig } from "@/catalog/layers"
 import {
   geocodeAddress,
   suggestPlaces,
   type GeocodeResult,
 } from "@/lib/geocode"
-import { nearbyCoverage, COVERAGE_RADIUS_KM, type Coverage } from "@/lib/coverage"
+import {
+  nearbyCoverage,
+  COVERAGE_RADIUS_KM,
+  type Coverage,
+  type CoverageSource,
+} from "@/lib/coverage"
 
 interface LocationSearchProps {
-  layers: LayerConfig[]
+  /** Sites counted around a found place. */
+  sources: CoverageSource[]
   /** Fly the map to this point and drop a pin; null clears the pin. */
   onLocate: (result: GeocodeResult | null) => void
   /** Open the export flow for the data the user has narrowed to (SPEC §T.T5). */
@@ -32,8 +36,7 @@ type Status = "idle" | "searching" | "notfound" | "error" | "located"
 
 const SUGGEST_DEBOUNCE_MS = 250
 
-export function LocationSearch({ layers, onLocate, onExport }: LocationSearchProps) {
-  const queryClient = useQueryClient()
+export function LocationSearch({ sources, onLocate, onExport }: LocationSearchProps) {
   const [value, setValue] = useState("")
   const [status, setStatus] = useState<Status>("idle")
   const [result, setResult] = useState<GeocodeResult | null>(null)
@@ -75,7 +78,7 @@ export function LocationSearch({ layers, onLocate, onExport }: LocationSearchPro
     setResult(found)
     setStatus("located")
     onLocate(found)
-    setCoverage(nearbyCoverage([found.lng, found.lat], layers, queryClient))
+    setCoverage(nearbyCoverage([found.lng, found.lat], sources))
   }
 
   const pick = (s: GeocodeResult) => {
