@@ -101,7 +101,7 @@ export function Hydrograph({
               Latest reading
             </span>
             {lastPoint.source && <MetaChip label="Source" value={lastPoint.source} />}
-            {lastPoint.approval && <ApprovalChip value={lastPoint.approval} />}
+            {lastPoint.approval && <ApprovalChip value={lastPoint.approval} label={lastPoint.approvalLabel} />}
             {lastPoint.qualifier && <MetaChip label="Qualifier" value={lastPoint.qualifier} />}
           </div>
         )}

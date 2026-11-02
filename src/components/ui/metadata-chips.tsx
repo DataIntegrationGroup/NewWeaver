@@ -86,12 +86,14 @@ function approvalTone(value: string): Tone {
   return "slate"
 }
 
-export function ApprovalChip({ value }: { value: string }) {
+/** `value` (the normalized state) picks the tone; `label`, the source's own
+ *  wording, is the text when given. */
+export function ApprovalChip({ value, label }: { value: string; label?: string }) {
   const tone = approvalTone(value)
   return (
     <span data-testid="approval-chip" className={cn(chipBase, TONE[tone])}>
       <span className={cn("size-1.5 shrink-0 rounded-full", DOT[tone])} />
-      {value}
+      {label ?? value}
     </span>
   )
 }

@@ -18,6 +18,9 @@ export interface TimeSeriesPoint {
   /** Normalized QA state (`approved`, `provisional`, `unknown`). Colors the
    *  point when `colorByApproval` is on. */
   approval?: string
+  /** The approval label as the source reported it (e.g. "Historical",
+   *  "Final"). Shown in the tooltip; falls back to `approval`. */
+  approvalLabel?: string
   /** Measurement qualifier (USGS `lev_status` for water levels). Shapes the point. */
   qualifier?: string
   source?: string
@@ -103,6 +106,10 @@ function conditionClass(qualifier?: string): ConditionClass {
   return { key: "other", label: "Other affected", symbol: "rect", glyph: "■" }
 }
 
+/** Tooltips are raw HTML; source labels are API text. */
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+
 /**
  * A time series as an ECharts line or scatter, colored by approval and shaped
  * by measurement condition, with an expand-to-modal button. Takes its points
@@ -151,7 +158,7 @@ export function TimeSeriesChart({
     const ac = approvalClass(p.approval, dark)
     const cc = conditionClass(p.qualifier)
     return {
-      value: [p.t, p.v, p.approval ?? "", p.qualifier ?? ""],
+      value: [p.t, p.v, p.approval ?? "", p.qualifier ?? "", p.approvalLabel ?? p.approval ?? ""],
       itemStyle: { color: colorByApproval ? ac.color : line },
       symbol: cc.symbol,
     }
@@ -227,20 +234,22 @@ export function TimeSeriesChart({
     },
     tooltip: {
       trigger: "axis",
-      formatter: (ps: { value: [string, number, string, string] }[]) => {
+      formatter: (ps: { value: [string, number, string, string, string] }[]) => {
         const p = ps[0]
         if (!p) return ""
-        const [t, v, approval, qualifier] = p.value
+        const [t, v, approval, qualifier, label] = p.value
         const parts: string[] = []
-        if (approval) {
+        // The source's own label, colored by its normalized class when the
+        // chart colors by approval.
+        if (label) {
           const ac = approvalClass(approval, dark)
           parts.push(
             colorByApproval && ac.key !== "unknown"
-              ? `<span style="color:${ac.color};font-weight:600">${approval}</span>`
-              : `<span style="opacity:0.7">${approval}</span>`
+              ? `<span style="color:${ac.color};font-weight:600">${escapeHtml(label)}</span>`
+              : `<span style="opacity:0.7">${escapeHtml(label)}</span>`
           )
         }
-        if (qualifier) parts.push(`<span style="opacity:0.7">${qualifier}</span>`)
+        if (qualifier) parts.push(`<span style="opacity:0.7">${escapeHtml(qualifier)}</span>`)
         const meta = parts.join('<span style="opacity:0.7"> · </span>')
         return (
           `${fmtDate(t)}<br/><strong>${formatValue(v, units) ?? v}</strong>` +

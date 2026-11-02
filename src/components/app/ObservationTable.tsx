@@ -50,8 +50,15 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
 
   const download = () => {
     const csv = toCsv(
-      ["datetime", `depth_to_water_${units}`, "source", "approval_status", "qualifier"],
-      points.map((p) => [p.t, p.v, p.source ?? "", p.approval ?? "", p.qualifier ?? ""])
+      ["datetime", `depth_to_water_${units}`, "source", "approval_status", "approval_status_normalized", "qualifier"],
+      points.map((p) => [
+        p.t,
+        p.v,
+        p.source ?? "",
+        p.approvalLabel ?? "",
+        p.approval ?? "",
+        p.qualifier ?? "",
+      ])
     )
     downloadFile(
       `${exportFilename(`observations-${name ?? wellId}`)}.csv`,
@@ -98,7 +105,7 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
                       {p.source ?? "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {p.approval ? fmtApproval(p.approval) : "—"}
+                      {p.approvalLabel ?? (p.approval ? fmtApproval(p.approval) : "—")}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{p.qualifier ?? "—"}</TableCell>
                   </TableRow>

@@ -357,6 +357,8 @@ export interface SeriesPoint {
   source?: string
   /** Normalized QA/approval state, e.g. `approved`, `provisional`, `unknown`. */
   approval?: string
+  /** The approval label as the source reported it. */
+  approvalLabel?: string
   /** Data qualifier flag when the source attaches one. */
   qualifier?: string
 }
@@ -406,6 +408,7 @@ export async function fetchWellSeries(id: string): Promise<WellSeries> {
         v,
         source: str(p.source),
         approval: str(p.approval_status_normalized),
+        approvalLabel: str(p.approval_status),
         qualifier: str(p.qualifier),
       })
     }
