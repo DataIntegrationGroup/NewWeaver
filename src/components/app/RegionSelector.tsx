@@ -38,8 +38,6 @@ interface RegionSelectorProps {
   onRemove: (kind: RegionKind, id: string) => void
 }
 
-const MAX_SUGGESTIONS = 8
-
 export function RegionSelector({ chips, onAdd, onRemove }: RegionSelectorProps) {
   const [kind, setKind] = useState<RegionKind | undefined>(undefined)
   const [query, setQuery] = useState("")
@@ -52,13 +50,14 @@ export function RegionSelector({ chips, onAdd, onRemove }: RegionSelectorProps) 
     [chips, kind]
   )
 
+  // Every match, not a top few: the longest list (public water systems) is a
+  // few hundred names, and the dropdown scrolls.
   const suggestions = useMemo(() => {
     if (!options) return []
     const q = query.trim().toLowerCase()
-    const matches = (q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options).filter(
+    return (q ? options.filter((o) => o.name.toLowerCase().includes(q)) : options).filter(
       (o) => !selectedIds.has(o.id)
     )
-    return matches.slice(0, MAX_SUGGESTIONS)
   }, [options, query, selectedIds])
 
   const changeKind = (next: RegionKind) => {
