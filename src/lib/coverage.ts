@@ -1,19 +1,11 @@
 /**
  * Location coverage — given a searched point, summarise what monitoring data
- * exists nearby across the visible layers (SPEC §T.T3 / §V.V3). Reads the
- * already-cached layer GeoJSON; computes counts and the nearest point within a
+ * exists nearby in the loaded sites (SPEC §T.T3 / §V.V3). Computes counts and
+ * the nearest point within a
  * radius so the UI can answer both "here's what we have" and, crucially,
  * "nothing monitored here".
  */
-import type { QueryClient } from "@tanstack/react-query"
-import type { FeatureCollection, Position } from "geojson"
-import type { LayerConfig } from "@/catalog/layers"
-import {
-  staLayerKey,
-  featuresLayerKey,
-  arcgisLayerKey,
-  wfsLayerKey,
-} from "@/hooks/useLayerData"
+import type { Feature, Position } from "geojson"
 
 /** Default coverage radius: ~8 km (5 mi) around the searched point. */
 export const COVERAGE_RADIUS_KM = 8
@@ -34,11 +26,11 @@ export interface Coverage {
   total: number
 }
 
-function layerCacheKey(layer: LayerConfig) {
-  if (layer.source === "sta") return staLayerKey(layer)
-  if (layer.source === "arcgis") return arcgisLayerKey(layer)
-  if (layer.source === "wfs") return wfsLayerKey(layer)
-  return featuresLayerKey(layer)
+/** A set of sites to count, e.g. the map's dataset. */
+export interface CoverageSource {
+  id: string
+  title: string
+  features: Feature[]
 }
 
 /** Haversine great-circle distance in km. */
@@ -64,26 +56,19 @@ function firstCoord(coords: unknown): [number, number] | null {
   return firstCoord((coords as Position[])[0])
 }
 
-/**
- * Summarise nearby data for a point across the given layers, reading cached
- * GeoJSON from the query client. Layers with no cached data are skipped.
- */
+/** Summarise nearby data for a point across the given sources. */
 export function nearbyCoverage(
   point: [number, number],
-  layers: LayerConfig[],
-  queryClient: QueryClient,
+  sources: CoverageSource[],
   radiusKm = COVERAGE_RADIUS_KM
 ): Coverage {
   const out: LayerCoverage[] = []
   let total = 0
 
-  for (const layer of layers) {
-    const fc = queryClient.getQueryData<FeatureCollection>(layerCacheKey(layer))
-    if (!fc?.features?.length) continue
-
+  for (const source of sources) {
     let count = 0
     let nearestKm: number | null = null
-    for (const f of fc.features) {
+    for (const f of source.features) {
       const g = f.geometry
       if (!g || g.type === "GeometryCollection") continue
       const coord = firstCoord((g as { coordinates: unknown }).coordinates)
@@ -95,7 +80,7 @@ export function nearbyCoverage(
       }
     }
     if (count > 0) {
-      out.push({ layerId: layer.id, title: layer.title, count, nearestKm })
+      out.push({ layerId: source.id, title: source.title, count, nearestKm })
       total += count
     }
   }

@@ -1051,26 +1051,20 @@ export function RegionalPlanning() {
     [selectedList]
   )
 
-  const featureQueries = useRegionFeatures(refs)
-
-  // Which selected regions have their geometry loaded — the useQueries array's
-  // identity churns every render, so memoize on this stable readiness string
-  // (not the array itself) to avoid recomputing polygons on every render.
-  const readySignature = featureQueries.map((q) => (q.data ? "1" : "0")).join("")
+  // Keeps its identity until a region query changes (useRegionFeatures).
+  const { regions: featureResults } = useRegionFeatures(refs)
 
   // Resolve each selected region to its polygons once its geometry lands.
   const planningRegions: PlanningRegion[] = useMemo(() => {
     const out: PlanningRegion[] = []
     selectedList.forEach((r, i) => {
-      const feature = featureQueries[i]?.data
+      const feature = featureResults[i]?.feature
       if (!feature) return
       const polys = regionPolygons(feature)
       if (polys.length) out.push({ key: regionKey(r.kind, r.id), name: r.name, polygons: polys })
     })
     return out
-    // featureQueries identity churns each render; depend on the resolved data.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedList, readySignature])
+  }, [selectedList, featureResults])
 
   const geometryLoading = refs.length > 0 && planningRegions.length < refs.length
   const {

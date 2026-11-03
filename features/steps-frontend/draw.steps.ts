@@ -3,15 +3,15 @@ import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
 
-// Rectangle/polygon fixtures over the two fixture locations (YALE1 @ -106.62,
-// 35.08 and ALPHA WELL @ -104.52, 33.39). A drawn shape RESTRICTS the export
-// selection to the points inside it (matching the attribute table), so each
-// fixture encloses exactly one of the two points.
+// Rectangle/polygon fixtures over two of the Water Levels fixture sites (Yale
+// Well @ -106.62, 35.08 and Bitter Lake Well @ -104.52, 33.39). A drawn shape
+// RESTRICTS the export selection to the sites inside it (matching the
+// attribute table), so each fixture encloses exactly one site.
 const RECT_YALE = {
   type: "Polygon",
   coordinates: [[[-106.72, 35.0], [-106.52, 35.0], [-106.52, 35.18], [-106.72, 35.18], [-106.72, 35.0]]],
 }
-const POLY_ALPHA = {
+const POLY_BITTER_LAKE = {
   type: "Polygon",
   coordinates: [[[-104.62, 33.3], [-104.42, 33.3], [-104.42, 33.48], [-104.62, 33.48], [-104.62, 33.3]]],
 }
@@ -37,18 +37,18 @@ When("the user activates the polygon draw tool", async function (this: BrowserWo
 })
 
 // "Drawing" is injected via the test seam (the terra-draw canvas isn't
-// scriptable). Each fixture shape encloses exactly one of the two fixture
-// points, so the restrict semantics are observable in the selection summary.
+// scriptable). Each fixture shape encloses exactly one fixture site, so the
+// restrict semantics are observable in the selection summary.
 When("the user draws a rectangle over a cluster of points", async function (this: BrowserWorld) {
-  await this.setShapes([RECT_YALE]) // encloses YALE1 only
+  await this.setShapes([RECT_YALE]) // encloses Yale Well only
 })
 
 When("the user draws a polygon around some points", async function (this: BrowserWorld) {
-  await this.setShapes([POLY_ALPHA]) // encloses ALPHA only
+  await this.setShapes([POLY_BITTER_LAKE]) // encloses Bitter Lake Well only
 })
 
 Given("the full selection has more than one point", async function (this: BrowserWorld) {
-  // Baseline: with no shape drawn, both fixture points are selected.
+  // Baseline: with no shape drawn, every fixture site is selected.
   assert.ok((await selectionCounts(this)).total >= 2)
 })
 
@@ -78,7 +78,7 @@ Then("only points inside the polygon boundary are selected", async function (thi
 })
 
 Then("points outside the polygon are not selected", async function (this: BrowserWorld) {
-  // POLY_ALPHA encloses ALPHA only; YALE1 is outside → total is exactly 1.
+  // POLY_BITTER_LAKE encloses Bitter Lake Well only; the rest are outside → total is 1.
   assert.equal((await selectionCounts(this)).total, 1)
 })
 

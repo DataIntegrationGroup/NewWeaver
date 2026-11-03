@@ -1,6 +1,6 @@
 /**
- * Value formatting helpers shared by the inspect panel, table, and popup.
- * Currently: human-readable dates.
+ * Value formatting helpers shared by the inspect panel, table, and popup:
+ * human-readable dates and rounded numbers.
  *
  * These product fields are *calendar dates* (some serialized bare as
  * `YYYY-MM-DD`, some as `…T00:00:00Z`), not precise instants. We render the
@@ -42,4 +42,17 @@ export function formatDate(raw: string): string | null {
   const ampm = h < 12 ? "AM" : "PM"
   h = h % 12 || 12
   return `${date}, ${h}:${mm} ${ampm}`
+}
+
+/** Rounded by size (100+ whole, 1–100 one decimal, below 1 two sig figs), with unit. */
+export function formatNumber(v: unknown, unit?: string): string | undefined {
+  if (typeof v !== "number" || !Number.isFinite(v)) return undefined
+  const a = Math.abs(v)
+  const s =
+    a >= 100
+      ? Math.round(v).toLocaleString("en-US")
+      : a >= 1
+        ? v.toLocaleString("en-US", { maximumFractionDigits: 1 })
+        : v.toLocaleString("en-US", { maximumSignificantDigits: 2 })
+  return unit ? `${s} ${unit}` : s
 }

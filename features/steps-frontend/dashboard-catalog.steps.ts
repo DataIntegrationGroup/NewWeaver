@@ -59,11 +59,11 @@ When(
 )
 
 Then(
-  "the dataset details link to the map with the {string} layer",
+  "the dataset details link to the map with the {string} dataset",
   async function (this: BrowserWorld, id: string) {
     const href = await this.page.getByTestId("datasets-detail-map").getAttribute("href")
     assert.ok(href?.startsWith("/map"), `href: ${href}`)
-    assert.ok(href?.includes(id), `href should reference layer ${id}: ${href}`)
+    assert.equal(new URLSearchParams(href!.split("?")[1]).get("ds"), id, `href: ${href}`)
   }
 )
 

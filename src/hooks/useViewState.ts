@@ -13,7 +13,7 @@ import {
 /**
  * Single source of truth for view state, backed by the URL. Reads the route's
  * search params and exposes typed setters that patch them — so every change
- * (layers, extent, selection, filters) is reflected in a shareable link.
+ * (dataset, extent, selection, filters) is reflected in a shareable link.
  */
 export function useViewState() {
   const search = useSearch({ from: "/map" }) as WeaverSearch
@@ -34,18 +34,30 @@ export function useViewState() {
     search,
     selection,
     regions,
-    toggleLayer(id: string) {
-      const current = search.layers ?? []
-      const layers = current.includes(id)
-        ? current.filter((x) => x !== id)
-        : [...current, id]
-      patch({ layers })
+    /** Show a dataset and clear the selection. */
+    setDataset(id: string) {
+      // Facets differ per dataset, so color-by and bin selections reset.
+      patch({
+        ds: id,
+        sel: undefined,
+        color: undefined,
+        f: undefined,
+      })
     },
-    /** Enable the given layer ids (union with current visible). */
-    enableLayers(ids: string[]) {
-      const current = search.layers ?? []
-      const layers = [...new Set([...current, ...ids])]
-      patch({ layers })
+    setColorBy(facetId: string | undefined) {
+      patch({ color: facetId })
+    },
+    /** Set one facet's ticked bin keys; empty keeps every bin. */
+    setFacet(facetId: string, keys: string[]) {
+      const f = { ...search.f }
+      if (keys.length) f[facetId] = keys
+      else delete f[facetId]
+      patch({ f: Object.keys(f).length ? f : undefined })
+    },
+    /** Clear every filter (bins, regions, search, map view);
+     *  keeps the dataset, color-by, view and selection. */
+    clearFilters() {
+      patch({ f: undefined, regions: undefined, q: undefined, bbox: false })
     },
     setView(lng: number, lat: number, z: number) {
       patch({ lng, lat, z }, true)

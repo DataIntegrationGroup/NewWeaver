@@ -2,6 +2,7 @@ import { Given, When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
+import { SITE } from "./url.steps"
 
 async function openTable(world: BrowserWorld) {
   if ((await world.page.getByTestId("attribute-table").count()) === 0) {
@@ -21,16 +22,16 @@ Given("the attribute table is open", async function (this: BrowserWorld) {
   await openTable(this)
 })
 
-Then("the table shows one row per feature in the layer", async function (this: BrowserWorld) {
+Then("the table shows one row per site", async function (this: BrowserWorld) {
   const count = await this.page.getByTestId("table-count").textContent()
-  assert.match(count ?? "", /15 features/)
+  assert.match(count ?? "", /5 features/)
 })
 
-Then("the columns match the layer's attribute fields", async function (this: BrowserWorld) {
+Then("the columns match the dataset's attribute fields", async function (this: BrowserWorld) {
   const headers = await this.page.locator('[data-testid="attribute-table"] th').allTextContents()
   const joined = headers.join(" ")
   // Headers are humanized by fieldLabel (underscores → spaces).
-  for (const field of ["name", "count", "depth ft", "id"]) {
+  for (const field of ["name", "source", "latest date", "nrecords"]) {
     assert.ok(joined.includes(field), `missing column ${field} in ${headers.join(", ")}`)
   }
 })
@@ -49,9 +50,9 @@ Then("the attribute table columns exclude {string}", async function (this: Brows
   assert.ok(!headers.some((h) => h.trim() === field), `did not expect a "${field}" column in ${headers.join(", ")}`)
 })
 
-When("the user draws a selection around a single feature", async function (this: BrowserWorld) {
-  // A box around the fixture's wl-1 (@ -106.62, 35.08); the other 14 sit near
-  // Roswell, outside it.
+When("the user draws a selection around a single site", async function (this: BrowserWorld) {
+  // A box around the fixture's Yale Well (@ -106.62, 35.08); the other four
+  // sites sit well outside it.
   await this.setShapes([
     {
       type: "Polygon",
@@ -71,7 +72,7 @@ Then("the table shows {int} row", async function (this: BrowserWorld, n: number)
 
 When("the user sorts by a column", async function (this: BrowserWorld) {
   ;(this as unknown as { rowBefore: string | null }).rowBefore = await firstRowId(this)
-  await this.page.locator('[data-testid="attribute-table"] th', { hasText: "count" }).click()
+  await this.page.locator('[data-testid="attribute-table"] th', { hasText: "name" }).click()
 })
 
 Then("the rows reorder by that column's values", async function (this: BrowserWorld) {
@@ -91,23 +92,16 @@ When("the user clicks a table row", async function (this: BrowserWorld) {
   await this.page.getByTestId("table-row").first().click()
 })
 
-Then("the corresponding feature is highlighted on the map", async function (this: BrowserWorld) {
+Then("the corresponding site is selected on the map", async function (this: BrowserWorld) {
   const id = (this as unknown as { clickedRow: string | null }).clickedRow
-  await this.page.waitForFunction((fid) => /[?&]sel=/.test(window.location.search) && window.location.href.includes(String(fid)), id)
-  assert.ok(new URL(this.page.url()).searchParams.get("sel")?.startsWith("ocotillo-springs"))
-})
-
-Then("the inspect panel shows that feature's attributes", async function (this: BrowserWorld) {
-  await this.page.getByTestId("inspect-panel").waitFor()
-  await this.page.getByTestId("attribute-list").waitFor()
-})
-
-When("the user clicks a feature on the map", async function (this: BrowserWorld) {
-  await this.selectFeature("ocotillo-springs", "wl-3")
+  await this.page.waitForFunction(
+    (want) => new URLSearchParams(window.location.search).get("sel") === want,
+    `${SITE.layerId}~${id}`
+  )
 })
 
 Then("the matching row is highlighted in the table", async function (this: BrowserWorld) {
-  const row = this.page.locator('[data-testid="table-row"][data-feature-id="wl-3"]')
+  const row = this.page.locator(`[data-testid="table-row"][data-feature-id="${SITE.featureId}"]`)
   await row.waitFor()
   assert.equal(await row.getAttribute("data-selected"), "true")
 })

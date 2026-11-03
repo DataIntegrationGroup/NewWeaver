@@ -118,6 +118,9 @@ async function mockApi(route: Route): Promise<boolean> {
       if (params.get("limit") === "1" && count !== undefined) {
         return json({ ...fx.WATER_LEVELS_ITEMS, numberMatched: count }).then(() => true)
       }
+      // The map's default dataset gets sites with real DIE fields so its
+      // facets, legend and filters have something to bin.
+      if (items[1] === "nm_waterlevels_summary") return json(fx.DIE_WATER_LEVELS).then(() => true)
       return json(fx.WATER_LEVELS_ITEMS).then(() => true)
     }
     if (/\/collections\/[^/]+\/queryables/.test(url)) return json(fx.DIE_QUERYABLES).then(() => true)
@@ -191,7 +194,7 @@ export class BrowserWorld extends World {
   }
 
   /** Open the map app (default) at an optional search string. */
-  async open(search = "") {
+  async open(search = "", { waitForSites = true } = {}) {
     await this.page.goto(`${baseURL}/map${search}`)
     await this.page.getByTestId("map").waitFor()
     // Wait for the map's load event to attach the test seam, so map steps
@@ -199,6 +202,8 @@ export class BrowserWorld extends World {
     await this.page.waitForFunction(
       () => typeof (window as unknown as { __weaverMap?: unknown }).__weaverMap !== "undefined"
     )
+    // The legend renders once the dataset's sites have loaded.
+    if (waitForSites) await this.page.getByTestId("dataset-legend").waitFor()
   }
 
   /** Navigate to an arbitrary path (e.g. "/", "/help"). */
@@ -206,14 +211,12 @@ export class BrowserWorld extends World {
     await this.page.goto(`${baseURL}${path}`)
   }
 
-  /** Expand a collapsed SearchWidgets accordion section (location/regions/
-   *  measure/filter) if it isn't already open, so its controls are usable —
-   *  the sidebar sections are collapsed by default. */
-  async openSearchSection(section: "location" | "regions" | "measure" | "filter") {
-    const trigger = this.page.getByTestId(`search-widget-${section}-trigger`)
-    if ((await trigger.getAttribute("aria-expanded")) === "false") {
-      await trigger.click()
-    }
+  /** Open the sidebar's "Search sites" section (text filter and map-view
+   *  toggle) if it isn't already. It renders once the dataset has loaded. */
+  async openSiteSearch() {
+    const trigger = this.page.getByTestId("filter-search-trigger")
+    await trigger.waitFor()
+    if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click()
   }
 
   /** Inject drawn shapes via the app's test seam (no terra-draw canvas). */

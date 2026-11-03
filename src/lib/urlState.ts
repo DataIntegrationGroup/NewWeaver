@@ -1,9 +1,9 @@
 /**
- * URL-encoded view state. Visible layers, map extent, and the current
+ * URL-encoded view state. The map dataset, map extent, and the current
  * selection live in the route's search params so any view is a shareable link
  * (weaver-replacement-plan §4 "State in the URL").
  */
-import { LAYER_CATALOG } from "@/catalog/layers"
+import { DEFAULT_DATASET_ID } from "@/catalog/mapDatasets"
 import { REGION_KINDS, type RegionKind } from "@/catalog/regions"
 
 export interface Selection {
@@ -12,8 +12,13 @@ export interface Selection {
 }
 
 export interface WeaverSearch {
-  /** Visible layer ids. Optional in the URL (defaults applied on read). */
-  layers?: string[]
+  /** Map dataset id (catalog/mapDatasets). Defaults to Water Levels; an id
+   *  /collections doesn't list falls back to it on the map. */
+  ds?: string
+  /** Color-by facet id; the dataset's default when absent. */
+  color?: string
+  /** Ticked bins per facet id, as bin keys (lib/facets `binKey`). */
+  f?: Record<string, string[]>
   /** Map center + zoom. */
   lng?: number
   lat?: number
@@ -33,9 +38,24 @@ export interface RegionRef {
   id: string
 }
 
-const DEFAULT_LAYERS = LAYER_CATALOG.filter((l) => l.defaultVisible).map(
-  (l) => l.id
-)
+const DATASET_ID = /^[a-z0-9-]+$/
+
+/** `{ facetId: ["key", …] }`, dropping anything malformed or empty. */
+function asFacetKeys(v: unknown): Record<string, string[]> | undefined {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return undefined
+  const out: Record<string, string[]> = {}
+  for (const [k, keys] of Object.entries(v)) {
+    const list = asList(keys)
+    if (list.length) out[k] = list
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
+function asList(v: unknown): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string")
+  if (typeof v === "string") return v.split(",").filter(Boolean)
+  return []
+}
 
 function asString(v: unknown): string | undefined {
   return typeof v === "string" && v.length > 0 ? v : undefined
@@ -48,33 +68,21 @@ function asNumber(v: unknown): number | undefined {
 
 /** Parse/validate raw search into a typed WeaverSearch (TanStack Router). */
 export function validateSearch(raw: Record<string, unknown>): WeaverSearch {
-  let layers: string[]
-  if (Array.isArray(raw.layers)) {
-    layers = raw.layers.filter((x): x is string => typeof x === "string")
-  } else if (typeof raw.layers === "string") {
-    layers = raw.layers.split(",").filter(Boolean)
-  } else {
-    layers = DEFAULT_LAYERS
-  }
-
-  let regions: string[]
-  if (Array.isArray(raw.regions)) {
-    regions = raw.regions.filter((x): x is string => typeof x === "string")
-  } else if (typeof raw.regions === "string") {
-    regions = raw.regions.split(",").filter(Boolean)
-  } else {
-    regions = []
-  }
+  // A dataset id wins (checked against /collections on the map, which isn't
+  // loaded yet); else Water Levels.
+  const ds = DATASET_ID.test(asString(raw.ds) ?? "") ? (raw.ds as string) : DEFAULT_DATASET_ID
 
   return {
-    layers,
+    ds,
+    color: asString(raw.color),
+    f: asFacetKeys(raw.f),
     lng: asNumber(raw.lng),
     lat: asNumber(raw.lat),
     z: asNumber(raw.z),
     sel: asString(raw.sel),
     bbox: raw.bbox === true || raw.bbox === "true",
     q: asString(raw.q),
-    regions,
+    regions: asList(raw.regions),
   }
 }
 

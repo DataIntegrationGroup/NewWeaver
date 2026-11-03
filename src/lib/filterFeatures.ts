@@ -1,5 +1,10 @@
 import type { Feature, FeatureCollection, Polygon } from "geojson"
 import { firstPosition, pointInAnyShape } from "@/lib/geo"
+import {
+  matchesFacets,
+  type Facet,
+  type FacetSelections,
+} from "@/lib/facets"
 
 export interface FeatureFilters {
   /** Free-text match against attribute values. */
@@ -14,6 +19,8 @@ export interface FeatureFilters {
    * drawn shape, which widens the export selection additively — lib/selection.ts).
    */
   regionPolygons?: Polygon[]
+  /** Map dataset facets and the bins ticked in each (lib/facets). */
+  facets?: { facets: Facet[]; selections: FacetSelections }
 }
 
 // Building the lowercase, space-joined attribute blob is the expensive part
@@ -77,12 +84,16 @@ function inBounds(
   return lng >= w && lng <= e && lat >= s && lat <= n
 }
 
-/** Apply text + spatial filters to a FeatureCollection. */
+/** Apply text, spatial and facet filters to a FeatureCollection. */
 export function filterFeatures(
   fc: FeatureCollection,
   filters: FeatureFilters
 ): FeatureCollection {
   let features = fc.features
+  if (filters.facets) {
+    const { facets, selections } = filters.facets
+    features = features.filter((f) => matchesFacets(f, facets, selections))
+  }
   if (filters.q) features = features.filter((f) => matchesText(f, filters.q!))
   if (filters.bbox && filters.bounds) {
     const b = filters.bounds

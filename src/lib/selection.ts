@@ -4,15 +4,12 @@
  * the user has drawn shapes — RESTRICT to points inside those shapes. A drawn
  * shape narrows the selection to its interior; it does not widen it. With no
  * shapes the selection is exactly the filtered/visible set (see
- * features/export/design.md). Reads the same cached FeatureCollections the map
- * renders, via the React Query client, so no data is fetched twice.
+ * features/export/design.md). Takes the same filtered features the map and
+ * table show, so nothing is filtered or fetched twice.
  */
-import type { QueryClient } from "@tanstack/react-query"
-import type { Feature, FeatureCollection, Polygon } from "geojson"
+import type { Feature, Polygon } from "geojson"
 
 import type { LayerConfig, StaLayer } from "@/catalog/layers"
-import { staLayerKey, featuresLayerKey, arcgisLayerKey, wfsLayerKey } from "@/hooks/useLayerData"
-import { filterFeatures, type FeatureFilters } from "@/lib/filterFeatures"
 import { firstPosition, pointInAnyShape } from "@/lib/geo"
 
 /** A monitoring location chosen for export (STA source). */
@@ -53,35 +50,20 @@ function toSelectedLocation(f: Feature, layer: StaLayer): SelectedLocation {
 }
 
 /**
- * Resolve the export selection across the given (visible) layers. Drawn shapes
- * restrict the filtered set to their interior; with no shapes it is exactly the
- * filtered/visible set.
+ * Resolve the export selection across the given layers' filtered features.
+ * Drawn shapes restrict them to their interior; with no shapes it is exactly
+ * the filtered/visible set.
  */
 export function resolveSelection(
-  layers: LayerConfig[],
-  filters: FeatureFilters,
-  shapes: Polygon[],
-  queryClient: QueryClient
+  sources: { layer: LayerConfig; features: Feature[] }[],
+  shapes: Polygon[]
 ): Selection {
   const locations: SelectedLocation[] = []
   const features: SelectedFeature[] = []
   let filteredCount = 0
   let drawnCount = 0
 
-  for (const layer of layers) {
-    const key =
-      layer.source === "sta"
-        ? staLayerKey(layer)
-        : layer.source === "arcgis"
-          ? arcgisLayerKey(layer)
-          : layer.source === "wfs"
-            ? wfsLayerKey(layer)
-            : featuresLayerKey(layer)
-    const fc = queryClient.getQueryData<FeatureCollection>(key)
-    if (!fc) continue
-
-    const filtered = filterFeatures(fc, filters).features
-
+  for (const { layer, features: filtered } of sources) {
     // A drawn shape narrows the selection to its interior (matching the
     // attribute table). Without a shape, the filtered/visible set stands.
     const chosen = shapes.length

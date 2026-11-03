@@ -14,11 +14,11 @@ Feature: Home dashboard and datasets
     Given the user opens the datasets page
     Then the datasets page lists every integrated product
 
-  # SPEC §T.T14 / §V.V15 — view-on-map opens the dataset's own layer.
+  # SPEC §T.T14 / §V.V15 — view-on-map opens the map on that dataset.
   Scenario: A selected dataset opens on the map
     Given the user opens the datasets page
-    When the user selects the "nm_arsenic_trend" dataset
-    Then the dataset details link to the map with the "wfs-nm-arsenic-trend" layer
+    When the user selects the "nm_arsenic_summary" dataset
+    Then the dataset details link to the map with the "arsenic" dataset
 
   # Only collections Weaver draws as a map layer offer "View on the map".
   Scenario: A dataset with no map layer has no map link

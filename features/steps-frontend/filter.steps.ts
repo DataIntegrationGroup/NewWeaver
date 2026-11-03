@@ -2,6 +2,7 @@ import { Given, When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
+import { renderLayer } from "./common.steps"
 
 type MapSeam = {
   jumpTo: (lng: number, lat: number, zoom: number) => void
@@ -21,7 +22,7 @@ async function tableCount(world: BrowserWorld): Promise<number> {
 }
 
 async function setSwitch(world: BrowserWorld, on: boolean) {
-  await world.openSearchSection("filter")
+  await world.openSiteSearch()
   const sw = world.page.locator('[data-testid="filter-bbox"]:visible')
   if (((await sw.getAttribute("aria-checked")) === "true") !== on) await sw.click()
 }
@@ -46,10 +47,8 @@ When("the user pans to a new area", async function (this: BrowserWorld) {
 
 Then("only data within the current map extent is shown", async function (this: BrowserWorld) {
   await this.page.waitForFunction(
-    () =>
-      (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-        "st2-cabq-points"
-      ).length === 1
+    (id) => (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(id).length === 1,
+    renderLayer()
   )
 })
 
@@ -66,16 +65,16 @@ Then("data outside the current extent is shown again", async function (this: Bro
   await ensureTableOpen(this)
   await this.page.waitForFunction(() => {
     const t = document.querySelector('[data-testid="table-count"]')?.textContent ?? ""
-    return /\b2\b/.test(t)
+    return /\b5\b/.test(t)
   })
-  assert.equal(await tableCount(this), 2)
+  assert.equal(await tableCount(this), 5)
 })
 
 When("the user types a search term into the feature filter", async function (this: BrowserWorld) {
   await ensureTableOpen(this)
-  await this.openSearchSection("filter")
+  await this.openSiteSearch()
   ;(this as unknown as { totalBefore: number }).totalBefore = await tableCount(this)
-  await this.page.locator('[data-testid="filter-text"]:visible').fill("Summary 1")
+  await this.page.locator('[data-testid="filter-text"]:visible').fill("Yale")
 })
 
 Then("only features whose attributes match the term remain visible", async function (this: BrowserWorld) {
@@ -92,7 +91,7 @@ Then("only features whose attributes match the term remain visible", async funct
 
 When("the user types a search term that matches no features", async function (this: BrowserWorld) {
   await ensureTableOpen(this)
-  await this.openSearchSection("filter")
+  await this.openSiteSearch()
   await this.page.locator('[data-testid="filter-text"]:visible').fill("zzzzzznomatch")
 })
 
@@ -102,10 +101,8 @@ Then('the user sees a "no results" message', async function (this: BrowserWorld)
 
 Then("the map shows no features for that layer", async function (this: BrowserWorld) {
   await this.page.waitForFunction(
-    () =>
-      (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(
-        "st2-cabq-points"
-      ).length === 0
+    (id) => (window as unknown as { __weaverMap: MapSeam }).__weaverMap.queryRendered(id).length === 0,
+    renderLayer()
   )
 })
 
@@ -114,7 +111,7 @@ Then("the map shows an empty-filter message", async function (this: BrowserWorld
 })
 
 When("the user focuses the filter info button", async function (this: BrowserWorld) {
-  await this.openSearchSection("filter")
+  await this.openSiteSearch()
   // Base UI tooltips open on keyboard focus (:focus-visible) only; opening the
   // section was a mouse click, so press a key first to switch input modality.
   await this.page.keyboard.press("Shift")

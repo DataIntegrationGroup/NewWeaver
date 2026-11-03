@@ -6,7 +6,7 @@
  */
 import type { Collection } from "@/clients/ogcFeatures"
 import { DIE_FEATURES_BASE_URL } from "@/config"
-import { LAYER_CATALOG } from "@/catalog/layers"
+import { datasetForCollection } from "@/catalog/mapDatasets"
 
 export interface Dataset {
   id: string
@@ -20,16 +20,8 @@ export interface Dataset {
   tags: string[]
   /** The collection's HTML page on the API, for browsing its items. */
   apiUrl: string
-  /** Weaver map layer that draws this collection, if there is one. */
-  mapLayerId?: string
-}
-
-/** First map layer reading each DIE collection, keyed by collection id. */
-const MAP_LAYER_BY_COLLECTION = new Map<string, string>()
-for (const l of LAYER_CATALOG) {
-  if (l.source !== "features") continue
-  if ((l.featuresBaseUrl ?? DIE_FEATURES_BASE_URL) !== DIE_FEATURES_BASE_URL) continue
-  if (!MAP_LAYER_BY_COLLECTION.has(l.collectionId)) MAP_LAYER_BY_COLLECTION.set(l.collectionId, l.id)
+  /** Map dataset that shows this collection, if there is one. */
+  mapDatasetId?: string
 }
 
 /** A description's closing "Sources: A, B, C." sentence. */
@@ -55,7 +47,7 @@ export function toDataset(c: Collection): Dataset {
     apiUrl:
       c.links.find((l) => l.rel === "self" && l.type === "text/html")?.href ??
       `${DIE_FEATURES_BASE_URL}/collections/${c.id}?f=html`,
-    mapLayerId: MAP_LAYER_BY_COLLECTION.get(c.id),
+    mapDatasetId: datasetForCollection(c.id),
   }
 }
 

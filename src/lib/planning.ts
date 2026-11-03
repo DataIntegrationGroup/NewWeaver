@@ -357,6 +357,8 @@ export interface SeriesPoint {
   source?: string
   /** Normalized QA/approval state, e.g. `approved`, `provisional`, `unknown`. */
   approval?: string
+  /** The source's own approval label. */
+  approvalLabel?: string
   /** Data qualifier flag when the source attaches one. */
   qualifier?: string
 }
@@ -387,9 +389,13 @@ export async function fetchWellSeries(id: string): Promise<WellSeries> {
     10000,
     20
   )
+  // A bare id can repeat across agencies: keep this site's `source:id` rows,
+  // or every row if none match.
+  const own = fc.features.filter((f) => String(f.properties?.feature_id ?? "").startsWith(`${id}:`))
+  const rows = id.includes(":") && own.length > 0 ? own : fc.features
   let units = "ft"
   const points: SeriesPoint[] = []
-  for (const f of fc.features) {
+  for (const f of rows) {
     const p = (f.properties ?? {}) as Record<string, unknown>
     const t = String(p.datetime ?? "")
     const v = num(p.parameter_value)
@@ -400,6 +406,7 @@ export async function fetchWellSeries(id: string): Promise<WellSeries> {
         v,
         source: str(p.source),
         approval: str(p.approval_status_normalized),
+        approvalLabel: str(p.approval_status),
         qualifier: str(p.qualifier),
       })
     }

@@ -45,9 +45,7 @@ Feature: Interactive basemap
     And the user opens the basemap picker
     Then the "Satellite" basemap is active
 
-  # Clustering is disabled for now (points render individually). The MapLibre
-  # cluster behaviour can be re-introduced with its own scenarios later.
-  Scenario: Monitoring points render individually
-    Given the monitoring-locations layer is visible
-    Then each monitoring point renders as its own marker
+  # Datasets never cluster: clusters would hide the color-by colors.
+  Scenario: Sites render individually
+    Then each site renders as its own marker
     And no cluster counts are shown

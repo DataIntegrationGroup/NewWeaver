@@ -149,7 +149,7 @@ export function datasetSearchText(d: DatasetMeta): string {
     .toLowerCase()
 }
 
-/** Map deep link that opens this dataset's layer visible (§V.V15). */
-export function datasetMapSearch(id: string): { layers: string[] } {
-  return { layers: [id] }
+/** Map deep link that opens a map dataset (§V.V15). */
+export function datasetMapSearch(id: string): { ds: string } {
+  return { ds: id }
 }

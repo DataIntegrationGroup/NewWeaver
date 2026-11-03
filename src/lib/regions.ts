@@ -1,20 +1,10 @@
 /**
- * Region-of-interest data access: list the named regions of a kind, fetch one
- * region's geometry, and summarise what's monitored inside it (mirrors
- * lib/coverage.ts's point-radius coverage, but polygon-based).
+ * Region-of-interest data access: list the named regions of a kind and fetch
+ * one region's geometry.
  */
-import type { QueryClient } from "@tanstack/react-query"
-import type { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson"
-import type { LayerConfig } from "@/catalog/layers"
+import type { Feature, MultiPolygon, Polygon } from "geojson"
 import { REGION_CATALOG, type RegionKind } from "@/catalog/regions"
 import { arcgisClient } from "@/clients/arcGisRest"
-import { pointInAnyShape } from "@/lib/geo"
-import {
-  staLayerKey,
-  featuresLayerKey,
-  arcgisLayerKey,
-  wfsLayerKey,
-} from "@/hooks/useLayerData"
 
 export interface RegionOption {
   id: string
@@ -93,50 +83,4 @@ export function polygonsBbox(
     }
   }
   return Number.isFinite(minX) ? [minX, minY, maxX, maxY] : undefined
-}
-
-function layerCacheKey(layer: LayerConfig) {
-  if (layer.source === "sta") return staLayerKey(layer)
-  if (layer.source === "arcgis") return arcgisLayerKey(layer)
-  if (layer.source === "wfs") return wfsLayerKey(layer)
-  return featuresLayerKey(layer)
-}
-
-export interface RegionLayerCoverage {
-  layerId: string
-  title: string
-  count: number
-}
-
-export interface RegionCoverage {
-  layers: RegionLayerCoverage[]
-  total: number
-}
-
-/**
- * Summarise nearby data inside a region, reading cached GeoJSON from the query
- * client (same approach as lib/coverage.ts's nearbyCoverage). Layers with no
- * cached data are skipped.
- */
-export function regionCoverage(
-  polygons: Polygon[],
-  layers: LayerConfig[],
-  queryClient: QueryClient
-): RegionCoverage {
-  const out: RegionLayerCoverage[] = []
-  let total = 0
-
-  for (const layer of layers) {
-    const fc = queryClient.getQueryData<FeatureCollection>(layerCacheKey(layer))
-    if (!fc?.features?.length) continue
-
-    const count = fc.features.filter((f) => pointInAnyShape(f, polygons)).length
-    if (count > 0) {
-      out.push({ layerId: layer.id, title: layer.title, count })
-      total += count
-    }
-  }
-
-  out.sort((a, b) => b.count - a.count)
-  return { layers: out, total }
 }

@@ -24,6 +24,8 @@ interface ObservationTableProps {
   wellId: string
   /** Well name, used in the CSV filename. */
   name?: string
+  /** Start expanded. */
+  defaultOpen?: boolean
 }
 
 const fmtDate = (iso: string) =>
@@ -38,7 +40,7 @@ const fmtApproval = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
  * renders from the same points without re-fetching. Collapsed by default to
  * keep the inspector chart-first.
  */
-export function ObservationTable({ wellId, name }: ObservationTableProps) {
+export function ObservationTable({ wellId, name, defaultOpen }: ObservationTableProps) {
   const { data } = useWellSeries(wellId)
   const points = data?.points ?? []
   const units = data?.units ?? "ft"
@@ -50,8 +52,15 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
 
   const download = () => {
     const csv = toCsv(
-      ["datetime", `depth_to_water_${units}`, "source", "approval_status", "qualifier"],
-      points.map((p) => [p.t, p.v, p.source ?? "", p.approval ?? "", p.qualifier ?? ""])
+      ["datetime", `depth_to_water_${units}`, "source", "approval_status", "approval_status_normalized", "qualifier"],
+      points.map((p) => [
+        p.t,
+        p.v,
+        p.source ?? "",
+        p.approvalLabel ?? "",
+        p.approval ?? "",
+        p.qualifier ?? "",
+      ])
     )
     downloadFile(
       `${exportFilename(`observations-${name ?? wellId}`)}.csv`,
@@ -61,7 +70,7 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
   }
 
   return (
-    <Accordion data-testid="observation-table">
+    <Accordion data-testid="observation-table" defaultValue={defaultOpen ? ["observations"] : undefined}>
       <AccordionItem value="observations" className="border-none">
         <AccordionTrigger className="text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:no-underline">
           Observations ({points.length.toLocaleString()})
@@ -98,7 +107,7 @@ export function ObservationTable({ wellId, name }: ObservationTableProps) {
                       {p.source ?? "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {p.approval ? fmtApproval(p.approval) : "—"}
+                      {p.approvalLabel ?? (p.approval ? fmtApproval(p.approval) : "—")}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{p.qualifier ?? "—"}</TableCell>
                   </TableRow>

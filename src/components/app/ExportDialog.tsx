@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useQueryClient } from "@tanstack/react-query"
-import type { Polygon } from "geojson"
+import type { Feature, Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
 import type { LayerConfig } from "@/catalog/layers"
-import type { FeatureFilters } from "@/lib/filterFeatures"
 import { resolveSelection } from "@/lib/selection"
 import {
   gatherTimeSeriesRows,
@@ -42,20 +40,20 @@ const LARGE_LOCATION_COUNT = 25
 interface ExportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  layers: LayerConfig[]
-  filters: FeatureFilters
+  layer: LayerConfig
+  /** The layer's features, already filtered. */
+  features: Feature[]
   shapes: Polygon[]
 }
 
 export function ExportDialog({
   open,
   onOpenChange,
-  layers,
-  filters,
+  layer,
+  features,
   shapes,
 }: ExportDialogProps) {
   const posthog = usePostHog()
-  const queryClient = useQueryClient()
   const [kind, setKind] = useState<ExportKind>("timeseries")
   const [range, setRange] = useState<TimeRange>({})
   const [confirmedLarge, setConfirmedLarge] = useState(false)
@@ -64,10 +62,9 @@ export function ExportDialog({
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  // Recompute the selection from the live cache whenever inputs change.
   const selection = useMemo(
-    () => resolveSelection(layers, filters, shapes, queryClient),
-    [layers, filters, shapes, queryClient]
+    () => resolveSelection([{ layer, features }], shapes),
+    [layer, features, shapes]
   )
 
   const hasLocations = selection.locations.length > 0

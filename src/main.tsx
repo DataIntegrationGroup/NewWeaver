@@ -54,15 +54,16 @@ const app = (
             maxAge: 24 * 60 * 60 * 1000,
             buster: CATALOG_VERSION,
             dehydrateOptions: {
-              // Persist only the Integrated data products layer queries (now
-              // OGC API Features). The features query key is
-              // ["features", baseUrl, collectionId, …].
+              // Persist only the Integrated data products layer queries, the
+              // map datasets (`datasetQueryKey`) and DIE's /collections. The
+              // features query key is ["features", baseUrl, collectionId, …].
               shouldDehydrateQuery: (q) => {
                 const key = q.queryKey
+                if (key[0] === "die-collections") return q.state.status === "success"
                 return (
                   key[0] === "features" &&
                   typeof key[2] === "string" &&
-                  PERSISTED_INTEGRATED_COLLECTIONS.has(key[2])
+                  (PERSISTED_INTEGRATED_COLLECTIONS.has(key[2]) || key[3] === "dataset")
                 )
               },
             },

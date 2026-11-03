@@ -1,53 +1,124 @@
-import { Given } from "@cucumber/cucumber"
+import { Given, When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
 
-import { LAYER_CATALOG } from "@/catalog/layers"
 import type { BrowserWorld } from "./support/world"
 
-export function layerIdByTitle(title: string): string {
-  const layer = LAYER_CATALOG.find((l) => l.title === title)
-  if (!layer) throw new Error(`No catalog layer titled "${title}"`)
-  return layer.id
+/** The MapLibre layer the selected dataset renders as (MapLayers renderLayerId). */
+export function renderLayer(datasetId = "water-levels"): string {
+  return `${datasetId}-render`
 }
 
-// The layer catalog lives inside the sidebar's "Datasets" accordion, and within
-// it each section is its own collapsible group — collapsed groups unmount their
-// rows (no forceMount), so a layer toggle only exists in the DOM once its panel
-// and section are open. Open the Datasets panel, then expand every section so
-// any target layer renders and can be scrolled into view before we touch it.
-export async function revealLayerCatalog(world: BrowserWorld) {
-  const panel = world.page.getByTestId("search-widget-layers-trigger")
-  if ((await panel.getAttribute("aria-expanded")) === "false") await panel.click()
-  await world.page.getByTestId("layers-expand-all").click()
+/** The legend's site count. */
+export async function legendTotal(world: BrowserWorld): Promise<number> {
+  const text = (await world.page.getByTestId("dataset-total").textContent()) ?? ""
+  return Number(text.replace(/,/g, ""))
 }
 
-async function switchState(world: BrowserWorld, id: string): Promise<boolean> {
-  const sw = world.page.getByTestId(`layer-toggle-${id}`)
-  return (await sw.getAttribute("aria-checked")) === "true"
+/** One of the legend's bins, by label. */
+function legendBin(world: BrowserWorld, label: string) {
+  return world.page
+    .getByTestId("dataset-legend")
+    .locator('[data-testid*="-bin-"]', { hasText: label })
 }
 
-async function setLayer(world: BrowserWorld, id: string, want: boolean) {
-  await revealLayerCatalog(world)
-  if ((await switchState(world, id)) !== want) {
-    await world.page.getByTestId(`layer-toggle-${id}`).click()
-  }
-  assert.equal(await switchState(world, id), want)
+async function pickDataset(world: BrowserWorld, label: string) {
+  await world.page.getByTestId("dataset-select").click()
+  await world.page.getByRole("option", { name: label, exact: true }).click()
+  await world.page.getByTestId("dataset-select").filter({ hasText: label }).waitFor()
+}
+
+async function untickBin(world: BrowserWorld, label: string) {
+  const checkbox = legendBin(world, label).getByRole("checkbox")
+  await checkbox.click()
+  await world.page.waitForFunction(
+    (el) => el?.getAttribute("aria-checked") === "false",
+    await checkbox.elementHandle()
+  )
 }
 
 Given("the user has opened the app", async function (this: BrowserWorld) {
   await this.open()
 })
 
-// Used as both precondition (Given) and assertion (Then). Ensures the target
-// state, then asserts it — idempotent either way.
-Given("the {string} layer is toggled on", async function (this: BrowserWorld, title: string) {
-  await setLayer(this, layerIdByTitle(title), true)
+When("the user picks the {string} dataset", async function (this: BrowserWorld, label: string) {
+  await pickDataset(this, label)
+})
+Given("the user has picked the {string} dataset", async function (this: BrowserWorld, label: string) {
+  await pickDataset(this, label)
 })
 
-Given("the {string} layer is toggled off", async function (this: BrowserWorld, title: string) {
-  await setLayer(this, layerIdByTitle(title), false)
+Then("the dataset picker shows {string}", async function (this: BrowserWorld, label: string) {
+  await this.page.getByTestId("dataset-select").filter({ hasText: label }).waitFor()
 })
 
-Given("the monitoring-locations layer is visible", async function (this: BrowserWorld) {
-  await setLayer(this, "st2-cabq", true)
+Then("the legend counts {int} site(s)", async function (this: BrowserWorld, n: number) {
+  await this.page.waitForFunction(
+    (want) => document.querySelector('[data-testid="dataset-total"]')?.textContent === String(want),
+    n
+  )
+  assert.equal(await legendTotal(this), n)
+})
+
+When("the user colors the map by {string}", async function (this: BrowserWorld, label: string) {
+  await this.page.getByTestId("color-by-select").click()
+  await this.page.getByRole("option", { name: label, exact: true }).click()
+})
+
+Then("the legend lists the {string} bin", async function (this: BrowserWorld, label: string) {
+  await legendBin(this, label).waitFor()
+})
+
+When("the user unticks the {string} bin", async function (this: BrowserWorld, label: string) {
+  await untickBin(this, label)
+})
+Given("the user has unticked the {string} bin", async function (this: BrowserWorld, label: string) {
+  await untickBin(this, label)
+})
+
+Then("a filter chip reads {string}", async function (this: BrowserWorld, text: string) {
+  await this.page.getByTestId("filter-chips").getByText(text, { exact: true }).waitFor()
+})
+
+When("the user removes the {string} filter chip", async function (this: BrowserWorld, label: string) {
+  await this.page
+    .getByTestId("filter-chips")
+    .getByRole("button", { name: new RegExp(`^Remove filter: ${label}`) })
+    .click()
+})
+
+Then("no filter chips are shown", async function (this: BrowserWorld) {
+  await this.page.locator('[data-testid^="filter-chip-"]').first().waitFor({ state: "detached" })
+})
+
+When("the user clears the filters", async function (this: BrowserWorld) {
+  await this.page.getByTestId("clear-filters").click()
+})
+
+Given("the user filters sites by the text {string}", async function (this: BrowserWorld, text: string) {
+  await this.openSiteSearch()
+  await this.page.locator('[data-testid="filter-text"]:visible').fill(text)
+})
+
+Then("the sites render on the map", async function (this: BrowserWorld) {
+  await this.page.waitForFunction(
+    (id) =>
+      (
+        window as unknown as { __weaverMap: { queryRendered: (id: string) => unknown[] } }
+      ).__weaverMap.queryRendered(id).length > 0,
+    renderLayer()
+  )
+})
+
+Then("the URL records the {string} dataset", async function (this: BrowserWorld, id: string) {
+  await this.page.waitForFunction(
+    (want) => new URLSearchParams(window.location.search).get("ds") === want,
+    id
+  )
+})
+
+Then("the URL records color by {string}", async function (this: BrowserWorld, facetId: string) {
+  await this.page.waitForFunction(
+    (want) => new URLSearchParams(window.location.search).get("color") === want,
+    facetId
+  )
 })
