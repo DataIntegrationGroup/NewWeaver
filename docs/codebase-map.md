@@ -13,6 +13,10 @@
     layers, map extent, selection encoded in URL → every view is a shareable link.
   - `/about` → `About` (`src/components/site/About.tsx`).
   - `/help` → `Help` (`src/components/site/Help.tsx`).
+  - Legacy Weaver URLs redirect (history-replacing) in `router.tsx`: the old
+    dashboards/tools (`LEGACY_HOME_PATHS`) → `/`, `/groundwater` → `/map`, `/docs` → `/help`, and
+    `/location/:pointId` → `/map` with `NMBGMR:<pointId>` selected and `q`
+    filtered to it. Spec: `features/url-state/legacy-redirects-frontend.feature`.
 - **Data**: TanStack Query (`src/lib/queryClient.ts`), client-side cache only.
 - **Map**: MapLibre GL via `react-map-gl` + `terra-draw` for draw tools.
 - **UI**: shadcn/radix (`src/components/ui`), Tailwind, echarts (time series).
