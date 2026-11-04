@@ -1,4 +1,5 @@
 import { When, Then } from "@cucumber/cucumber"
+import assert from "node:assert/strict"
 
 import type { BrowserWorld } from "./support/world"
 
@@ -19,4 +20,9 @@ When("the user opens the copied link", async function (this: BrowserWorld) {
   await this.page.goto("about:blank")
   await this.page.goto(link)
   await this.page.getByTestId("site-stats").waitFor()
+})
+
+Then("the download covers {int} site(s)", async function (this: BrowserWorld, n: number) {
+  const summary = (await this.page.getByTestId("export-summary").textContent()) ?? ""
+  assert.match(summary, new RegExp(`^${n} features selected`))
 })
