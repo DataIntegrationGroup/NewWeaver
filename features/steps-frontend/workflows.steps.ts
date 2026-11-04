@@ -26,3 +26,14 @@ Then("the download covers {int} site(s)", async function (this: BrowserWorld, n:
   const summary = (await this.page.getByTestId("export-summary").textContent()) ?? ""
   assert.match(summary, new RegExp(`^${n} features selected`))
 })
+
+Then(
+  "the legend counts {int} site(s) from {string}",
+  async function (this: BrowserWorld, n: number, source: string) {
+    const bin = this.page
+      .getByTestId("dataset-legend")
+      .locator('[data-testid*="-bin-"]', { has: this.page.locator(`span[title="${source}"]`) })
+    await bin.waitFor()
+    assert.equal((await bin.locator("span.tabular-nums").textContent())?.trim(), String(n))
+  }
+)
