@@ -82,7 +82,7 @@ function PageTitle({ className, ...props }: React.ComponentProps<"h1">) {
   return (
     <h1
       data-slot="page-title"
-      className={cn("text-4xl font-extrabold tracking-tight text-balance", className)}
+      className={className}
       {...props}
     />
   )
@@ -92,7 +92,7 @@ function PageDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="page-description"
-      className={cn("max-w-2xl text-lg text-pretty text-muted-foreground", className)}
+      className={cn("max-w-4xl text-lg text-pretty text-muted-foreground", className)}
       {...props}
     />
   )
