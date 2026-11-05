@@ -68,6 +68,13 @@ export const DIE_FEATURES_BASE_URL =
   env.VITE_DIE_FEATURES_BASE_URL ??
   "https://die-pygeoapi-95715287188.us-central1.run.app"
 
+// Public Weaver API address (the DIE pygeoapi) shown on Help and About for GIS and scripted use.
+export const WEAVER_API_URL =
+  env.VITE_WEAVER_API_URL ?? "https://weaver-api.newmexicowaterdata.org"
+
+// Data Integration Engine source repository, linked from About and Help.
+export const DIE_REPO_URL = "https://github.com/DataIntegrationGroup/DataIntegrationEngine"
+
 // USGS Water Data for the Nation — the modern NWIS replacement, served as an
 // OGC API Features endpoint (same protocol as the DIE/Ocotillo pygeoapi). The
 // `monitoring-locations` collection carries NWIS sites; we read it through the
