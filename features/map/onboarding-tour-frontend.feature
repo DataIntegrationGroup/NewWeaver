@@ -17,3 +17,9 @@ Feature: Onboarding tour
     And the tour shows step 1 of 5, "Find your area"
     When the user presses Escape
     Then the tour is not shown
+
+  Scenario: The sidebar link brings the tour back
+    Given the user has opened the app
+    And the user presses Escape
+    When the user takes the tour again
+    Then the tour shows step 1 of 5, "Find your area"

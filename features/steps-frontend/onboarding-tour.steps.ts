@@ -20,6 +20,11 @@ When("the user steps through to the end of the tour", async function (this: Brow
   await this.page.getByTestId("tour-done").click()
 })
 
+When("the user takes the tour again", async function (this: BrowserWorld) {
+  await this.page.getByTestId("onboarding-tour").waitFor({ state: "detached" })
+  await this.page.getByTestId("restart-tour").click()
+})
+
 When("the user reloads the map", async function (this: BrowserWorld) {
   await this.page.reload()
   await this.page.getByTestId("dataset-legend").waitFor()
