@@ -62,26 +62,53 @@ const SIDEBAR_MIN = 240
 const SIDEBAR_MAX = 520
 const SIDEBAR_DEFAULT = 288
 
-// Getting-started tour content — points at this app's real UI. The tour
-// component itself is generic (design-system); the steps live here.
-const TOUR_STEPS: TourStep[] = [
+// Tour steps for the desktop layout, where the sidebar is always open.
+const DESKTOP_TOUR_STEPS: TourStep[] = [
   {
-    title: "Pick a dataset",
-    body: "Choose what the map shows — water levels or a water-quality result — then color and filter its sites in the sidebar.",
-    target: "#map-sidebar",
+    title: "Find your area",
+    body: "Search for a place, or filter by region to focus the map.",
+    target: "[data-tour='area']",
     place: "right",
   },
   {
-    title: "Inspect a point",
-    body: "Click any point on the map to open its details — attributes, and for monitoring sites, a time-series chart of its observations.",
-    target: "#main-content",
+    title: "Choose your data",
+    body: "Pick what the map shows — water levels or a water-quality result.",
+    target: "[data-testid='dataset-picker']",
+    place: "right",
+  },
+  {
+    title: "Color and filter",
+    body: "Change what the colors mean, and filter by categories to show only the sites you care about.",
+    target: "[data-testid='filters-section']",
+    place: "right",
+  },
+  {
+    title: "Open a site",
+    body: "Click any point to open its details panel — attributes, and a chart of its readings over time.",
+    target: "[data-testid='map']",
+    place: "left",
+  },
+  {
+    title: "Take it with you",
+    body: "Open an attribute table, copy a link to this exact view, or download the sites you've filtered.",
+    target: "[data-tour='view-actions']",
+    place: "right",
+  },
+]
+
+// Tour steps for mobile, where the sidebar hides behind a toggle button.
+const MOBILE_TOUR_STEPS: TourStep[] = [
+  {
+    title: "Open the sidebar",
+    body: "Tap here to find a place, pick a dataset, filter sites, and share or download your view.",
+    target: "[data-testid='toggle-sidebar']",
     place: "bottom",
   },
   {
-    title: "Share your view",
-    body: "The page URL captures your exact map — dataset, filters, extent, and selection. Hit Share to copy a link to it.",
-    target: "[data-testid='share-view']",
-    place: "bottom",
+    title: "Open a site",
+    body: "Tap any point to open its details panel — attributes, and a chart of its readings over time.",
+    target: "[data-testid='map']",
+    place: "right",
   },
 ]
 
@@ -379,7 +406,7 @@ export function AppShell() {
   // View actions (table / share / download) — live in the sidebar so the
   // top navigation stays identical to the content pages.
   const viewActions = (
-    <div className="grid grid-cols-3 gap-2">
+    <div data-tour="view-actions" className="grid grid-cols-3 gap-2">
       <Button
         variant="outline"
         size="sm"
@@ -423,18 +450,20 @@ export function AppShell() {
 
   const sidebar = (
     <>
-      <Field>
-        <FieldLabel htmlFor="location-search-input">Find a place</FieldLabel>
-        <LocationSearch
-          sources={coverageSources}
-          onLocate={handleLocate}
-          onExport={() => setExportOpen(true)}
-        />
-      </Field>
-      <FieldSet className="gap-3">
-        <FieldLegend variant="label">Region</FieldLegend>
-        <RegionSelector chips={regionChips} onAdd={handleAddRegion} onRemove={handleRemoveRegion} />
-      </FieldSet>
+      <div data-tour="area" className="space-y-5">
+        <Field>
+          <FieldLabel htmlFor="location-search-input">Find a place</FieldLabel>
+          <LocationSearch
+            sources={coverageSources}
+            onLocate={handleLocate}
+            onExport={() => setExportOpen(true)}
+          />
+        </Field>
+        <FieldSet className="gap-3">
+          <FieldLegend variant="label">Region</FieldLegend>
+          <RegionSelector chips={regionChips} onAdd={handleAddRegion} onRemove={handleRemoveRegion} />
+        </FieldSet>
+      </div>
       {datasetsError ? (
         <Alert variant="destructive" data-testid="datasets-error">
           <AlertTitle>Couldn’t load the datasets</AlertTitle>
@@ -665,7 +694,10 @@ export function AppShell() {
         />
       )}
 
-      <OnboardingTour steps={TOUR_STEPS} storageKey="weaver-tour-seen" />
+      <OnboardingTour
+        steps={isDesktop ? DESKTOP_TOUR_STEPS : MOBILE_TOUR_STEPS}
+        storageKey="weaver-tour-seen-v2"
+      />
     </PageShell>
   )
 }
