@@ -2,8 +2,6 @@ import { Link, useLocation } from "@tanstack/react-router"
 import { TopNav } from "@/components/top-nav"
 import { ModeToggle } from "@/components/mode-toggle"
 
-export const SLACK_URL = "https://new-mexico-water-data.slack.com"
-
 const NAV = [
   { href: "/", label: "Home" },
   { href: "/datasets", label: "Datasets" },
