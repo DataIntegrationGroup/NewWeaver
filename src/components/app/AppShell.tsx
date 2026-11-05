@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Download, SlidersHorizontal, Share2, Table2 } from "lucide-react"
+import { CircleHelp, Download, SlidersHorizontal, Share2, Table2 } from "lucide-react"
 import type { FeatureCollection, Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 import { toast } from "sonner"
@@ -61,6 +61,9 @@ const SIDEBAR_WIDTH_KEY = "weaver-sidebar-width"
 const SIDEBAR_MIN = 240
 const SIDEBAR_MAX = 520
 const SIDEBAR_DEFAULT = 288
+
+// localStorage key that remembers the tour was seen.
+const TOUR_KEY = "weaver-tour-key"
 
 // Tour steps for the desktop layout, where the sidebar is always open.
 const DESKTOP_TOUR_STEPS: TourStep[] = [
@@ -142,6 +145,8 @@ export function AppShell() {
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>()
   const [tableOpen, setTableOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Bumped to remount the tour from step 1 when the user asks to see it again.
+  const [tourRun, setTourRun] = useState(0)
   const [exportOpen, setExportOpen] = useState(false)
   const [shapes, setShapes] = useState<Polygon[]>([])
   const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
@@ -406,7 +411,7 @@ export function AppShell() {
   // View actions (table / share / download) — live in the sidebar so the
   // top navigation stays identical to the content pages.
   const viewActions = (
-    <div data-tour="view-actions" className="grid grid-cols-3 gap-2">
+    <div data-tour="view-actions" className="grid grid-cols-2 gap-2">
       <Button
         variant="outline"
         size="sm"
@@ -444,6 +449,26 @@ export function AppShell() {
       >
         <Download />
         <span>Download</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="justify-center"
+        data-testid="restart-tour"
+        aria-label="Open the getting started tour"
+        onClick={() => {
+          posthog.capture("tour_restarted")
+          try {
+            localStorage.removeItem(TOUR_KEY)
+          } catch {
+            // Ignore storage failures — the remount below still reopens the tour.
+          }
+          setSidebarOpen(false)
+          setTourRun((n) => n + 1)
+        }}
+      >
+        <CircleHelp />
+        <span>Getting started</span>
       </Button>
     </div>
   )
@@ -695,8 +720,9 @@ export function AppShell() {
       )}
 
       <OnboardingTour
+        key={tourRun}
         steps={isDesktop ? DESKTOP_TOUR_STEPS : MOBILE_TOUR_STEPS}
-        storageKey="weaver-tour-seen-v2"
+        storageKey={TOUR_KEY}
       />
     </PageShell>
   )

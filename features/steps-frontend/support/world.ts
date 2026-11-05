@@ -250,7 +250,7 @@ Before(async function (this: BrowserWorld, { pickle }) {
   if (!pickle.tags.some((t) => t.name === "@tour")) {
     await this.context.addInitScript(() => {
       try {
-        localStorage.setItem("weaver-tour-seen-v2", "1")
+        localStorage.setItem("weaver-tour-key", "1")
       } catch {
         /* ignore */
       }
