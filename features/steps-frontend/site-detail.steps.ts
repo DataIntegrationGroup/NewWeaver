@@ -62,7 +62,10 @@ When(
 )
 
 Then("the site panel is titled {string}", async function (this: BrowserWorld, title: string) {
-  assert.equal(await text(this.page.getByTestId("site-detail-title")), title)
+  // Shows the raw id until the dataset loads.
+  const heading = this.page.getByTestId("site-detail-title")
+  await heading.filter({ hasText: title }).waitFor().catch(() => {})
+  assert.equal(await text(heading), title)
 })
 
 Then("the site panel's subtitle reads {string}", async function (this: BrowserWorld, subtitle: string) {

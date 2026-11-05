@@ -10,7 +10,8 @@ import { Home } from "@/components/site/Home"
 import { About } from "@/components/site/About"
 import { Help } from "@/components/site/Help"
 import { DatasetsPage } from "@/components/site/datasets/DatasetsPage"
-import { validateSearch } from "@/lib/urlState"
+import { DEFAULT_DATASET_ID } from "@/catalog/mapDatasets"
+import { encodeSelection, validateSearch } from "@/lib/urlState"
 
 /**
  * Datasets search params: free-text query, the selected (shareable) dataset id,
@@ -84,6 +85,71 @@ const catalogRoute = createRoute({
   },
 })
 
+// Legacy Weaver URLs: history-replacing redirects to the closest page here.
+
+/** Old pages with no counterpart here. */
+const LEGACY_HOME_PATHS = [
+  "/st",
+  "/hv",
+  "/die",
+  "/surfacewater",
+  "/pvacd",
+  "/collabnet",
+  "/pws",
+  "/site_cross_ref",
+] as const
+
+const legacyHomeRoutes = LEGACY_HOME_PATHS.map((path) =>
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path,
+    beforeLoad: () => {
+      throw redirect({ to: "/", replace: true })
+    },
+  })
+)
+
+const legacyDocsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/docs",
+  beforeLoad: () => {
+    throw redirect({ to: "/help", replace: true })
+  },
+})
+
+/** Old groundwater dashboard → the map. */
+const legacyGroundwaterRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/groundwater",
+  beforeLoad: () => {
+    throw redirect({ to: "/map", replace: true })
+  },
+})
+
+/** Legacy point IDs are bare NMBGMR PointIDs; DIE keys sites `NMBGMR:<id>`. */
+const LEGACY_SOURCE = "NMBGMR"
+
+/** Old site page → that site selected and filtered on the map. */
+const legacyLocationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/location/$pointId",
+  beforeLoad: ({ params }) => {
+    const raw = params.pointId.trim()
+    if (!raw) throw redirect({ to: "/map", replace: true })
+    const featureId = raw.includes(":") ? raw : `${LEGACY_SOURCE}:${raw}`
+    const bareId = featureId.slice(featureId.indexOf(":") + 1)
+    throw redirect({
+      to: "/map",
+      search: {
+        ds: DEFAULT_DATASET_ID,
+        sel: encodeSelection({ layerId: DEFAULT_DATASET_ID, featureId }),
+        q: bareId,
+      },
+      replace: true,
+    })
+  },
+})
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   mapRoute,
@@ -91,6 +157,10 @@ const routeTree = rootRoute.addChildren([
   helpRoute,
   datasetsRoute,
   catalogRoute,
+  ...legacyHomeRoutes,
+  legacyDocsRoute,
+  legacyGroundwaterRoute,
+  legacyLocationRoute,
 ])
 
 export const router = createRouter({ routeTree })
