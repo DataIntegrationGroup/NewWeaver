@@ -20,7 +20,7 @@ export function ExportGisBanner() {
       <MonitorCog className="mt-0.5 size-4 shrink-0 text-primary" />
       <p className="text-muted-foreground">
         Working with this data regularly? Connect QGIS or ArcGIS Pro straight
-        to the live OGC API instead of downloading files.{" "}
+        to the live Weaver API instead of downloading files.{" "}
         <Link
           to="/help"
           hash="gis"
