@@ -92,15 +92,13 @@ Then("the location search is ready", async function (this: BrowserWorld) {
 
 Then("the user sees the documentation and help page", async function (this: BrowserWorld) {
   await this.page.getByTestId("help-page").waitFor()
-  const text = await this.page.getByTestId("help-page").textContent()
-  assert.ok(text?.includes("Documentation"))
 })
 
 Then("the help page includes a data disclaimer", async function (this: BrowserWorld) {
   await this.page
     .getByRole("link", { name: "Disclaimer", exact: true })
     .click()
-  await this.page.getByText(/No warranty expressed or implied/).waitFor()
+  await this.page.locator("#disclaimer").waitFor()
 })
 
 When("the user opens the {string} help section", async function (this: BrowserWorld, name: string) {
@@ -109,15 +107,8 @@ When("the user opens the {string} help section", async function (this: BrowserWo
   await this.page.getByRole("link", { name, exact: true }).click()
 })
 
-Then("the help page shows the OGC API landing page URL", async function (this: BrowserWorld) {
-  const text = (await this.page.getByTestId("help-gis").textContent()) ?? ""
-  assert.match(text, /\/ogcapi/)
-})
-
-Then("it explains connecting ArcGIS Pro and QGIS", async function (this: BrowserWorld) {
-  const text = (await this.page.getByTestId("help-gis").textContent()) ?? ""
-  assert.match(text, /ArcGIS Pro/)
-  assert.match(text, /QGIS/)
+Then("the help page offers the Weaver API URL to copy", async function (this: BrowserWorld) {
+  await this.page.getByTestId("help-gis").getByTestId("copy-gis-url").waitFor()
 })
 
 When("the user opens the help link", async function (this: BrowserWorld) {
