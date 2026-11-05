@@ -1,26 +1,17 @@
 import { useEffect, useState } from "react"
-import { useLocation } from "@tanstack/react-router"
+import { Link, useLocation } from "@tanstack/react-router"
 import { Check, Copy } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { PageDescription, PageHeader, PageTitle } from "@/components/ui/page"
 import { cn } from "@/lib/utils"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
-import {
-  OCOTILLO_FEATURES_BASE_URL,
-  OSE_ARCGIS_BASE_URL,
-  STA_BASE_URL,
-  STA_ST2_BASE_URL,
-  USGS_OGC_BASE_URL,
-} from "@/config"
+import { DIE_REPO_URL, WEAVER_API_URL } from "@/config"
 import { SitePage } from "./SitePage"
 
-const OGC_LANDING_URL = OCOTILLO_FEATURES_BASE_URL.replace(/\/+$/, "")
-const OGC_COLLECTIONS_URL = `${OGC_LANDING_URL}/collections`
-
-const USGS_LANDING_URL = USGS_OGC_BASE_URL.replace(/\/+$/, "")
-const USGS_COLLECTIONS_URL = `${USGS_LANDING_URL}/collections`
-const OSE_POD_URL = `${OSE_ARCGIS_BASE_URL}/OSE_Points_of_Diversion/FeatureServer/0`
-const OSE_AQUIFER_URL = `${OSE_ARCGIS_BASE_URL}/OSE_Aquifer_Test_Wells_view_pub/FeatureServer/0`
+const API_URL = WEAVER_API_URL.replace(/\/+$/, "")
+const API_COLLECTIONS_URL = `${API_URL}/collections`
 
 /** External link styled for the docs body. */
 function A({ href, children }: { href: string; children: React.ReactNode }) {
@@ -29,21 +20,41 @@ function A({ href, children }: { href: string; children: React.ReactNode }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="break-all text-primary underline underline-offset-2"
+      className="link break-all"
     >
       {children}
     </a>
   )
 }
 
-/** One API-endpoint row: a service label and its linked base URL. */
-function ApiRow({ label, url }: { label: string; url: string }) {
+/** One example API request: what it does and its linked URL. */
+function Example({ label, path }: { label: string; path: string }) {
+  const url = `${API_URL}${path}`
   return (
-    <li>
-      <strong>{label}</strong> — <A href={url}>{url}</A>
+    <li className="space-y-1">
+      <p>{label}</p>
+      <code className="block rounded-md bg-muted px-3 py-2 text-sm">
+        <A href={url}>{path}</A>
+      </code>
     </li>
   )
 }
+
+/** Agencies whose records feed the integrated datasets. */
+const AGENCIES = [
+  "NM Bureau of Geology and Mineral Resources (NMBGMR)",
+  "U.S. Geological Survey (USGS)",
+  "Water Quality Portal",
+  "NM Environment Department, Drinking Water Bureau",
+  "NM Office of the State Engineer",
+  "NM Interstate Stream Commission",
+  "U.S. Bureau of Reclamation",
+  "City of Albuquerque",
+  "Bernalillo County",
+  "City of Roswell",
+  "Elephant Butte Irrigation District",
+  "Pecos Valley Artesian Conservancy District",
+]
 
 const GIS_DOCS = {
   arcgis:
@@ -51,16 +62,15 @@ const GIS_DOCS = {
   qgis: "https://docs.qgis.org/latest/en/docs/user_manual/working_with_ogc/ogc_client_support.html",
 }
 
+/** Starter collections for a GIS connection, linked to their Datasets entry. */
 const COMMON_COLLECTIONS = [
-  "Water Wells",
-  "Springs",
-  "Latest Depth to Water (Wells)",
-  "Average TDS (Wells)",
-  "Latest TDS (Wells)",
+  { id: "nm_waterlevels_summary", title: "NM Unified Water Levels Summary" },
+  { id: "nm_tds_summary", title: "NM TDS Summary" },
+  { id: "nm_arsenic_summary", title: "NM Arsenic Summary" },
 ]
 
-/** Copyable URL pill — click to copy the OGC endpoint to the clipboard. */
-function CopyUrl({ value, label }: { value: string; label: string }) {
+/** Copyable URL pill — click to copy the API URL to the clipboard. */
+function CopyUrl({ value, label, testId }: { value: string; label: string; testId: string }) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     try {
@@ -81,7 +91,7 @@ function CopyUrl({ value, label }: { value: string; label: string }) {
         variant="outline"
         size="icon-sm"
         aria-label={label}
-        data-testid="copy-ogc-url"
+        data-testid={testId}
         onClick={copy}
       >
         {copied ? <Check /> : <Copy />}
@@ -103,30 +113,31 @@ function ConnectCard({
   href: string
 }) {
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-4">
-      <h3 className="!text-lg font-semibold text-primary">{title}</h3>
-      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-        {steps.map((s) => (
-          <li key={s}>{s}</li>
-        ))}
-      </ol>
-      {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-block break-all text-sm text-primary underline underline-offset-2"
-      >
-        Official documentation
-      </a>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h3>{title}</h3>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
+          {steps.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ol>
+        {note ? <p className="text-muted-foreground">{note}</p> : null}
+        <a href={href} target="_blank" rel="noreferrer" className="link">
+          Official documentation
+        </a>
+      </CardContent>
+    </Card>
   )
 }
 
 const SECTIONS = [
   { id: "using", label: "Using the map" },
-  { id: "exporting", label: "Exporting data" },
   { id: "sources", label: "Data sources" },
+  { id: "api", label: "Weaver API" },
   { id: "gis", label: "Desktop GIS" },
   { id: "glossary", label: "Glossary" },
   { id: "faq", label: "FAQ" },
@@ -136,6 +147,22 @@ const SECTIONS = [
 /** Glossary entries — plain-language definitions of terms used across Weaver. */
 const GLOSSARY: { term: string; def: React.ReactNode }[] = [
   {
+    term: "Source",
+    def: "The agency that collected a site’s data. Its site ID is that agency’s own.",
+  },
+  {
+    term: "Summary and time series",
+    def: "A summary is one row per site (latest value, count, range, dates); a time series is one row per reading or sample.",
+  },
+  {
+    term: "Approval status",
+    def: "Whether the agency has reviewed a reading, such as provisional or approved.",
+  },
+  {
+    term: "Major ions",
+    def: "The constituents that make up most dissolved minerals: calcium, magnesium, sodium, potassium, bicarbonate, carbonate, sulfate and chloride.",
+  },
+  {
     term: "Depth to water (DTW / BGS)",
     def: "How far below the ground surface the water table sits, in feet. Larger numbers mean a deeper water level. “BGS” = below ground surface.",
   },
@@ -144,20 +171,8 @@ const GLOSSARY: { term: string; def: React.ReactNode }[] = [
     def: "A plot of one well’s depth-to-water over time. Because depth increases downward, the y-axis is inverted — a line trending up on the page means the water level is rising.",
   },
   {
-    term: "Water-level status",
-    def: "Where a well’s most recent reading falls against its own history, ranked into percentile classes from “much below normal” to “much above normal.” Wells without enough record are “insufficient data.”",
-  },
-  {
     term: "Groundwater trend",
     def: "The long-term direction of a well’s depth-to-water from a linear fit over its record. Because the measure is depth, “deepening” means the level is falling and “rising” means it is recovering.",
-  },
-  {
-    term: "Depletion projection",
-    def: "An estimate of when a well would decline to its reported well depth if the current trend continues. “Projected” wells are those on track to run dry.",
-  },
-  {
-    term: "Seasonal amplitude",
-    def: "How much a well’s water level swings within a typical year — the within-year high-to-low range.",
   },
   {
     term: "Monitoring recency",
@@ -181,8 +196,8 @@ const GLOSSARY: { term: string; def: React.ReactNode }[] = [
 function Faq({ q, children }: { q: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <h3 className="!text-base font-semibold text-foreground">{q}</h3>
-      <div className="text-sm text-muted-foreground">{children}</div>
+      <h3 className="text-base font-semibold">{q}</h3>
+      <div className="text-muted-foreground">{children}</div>
     </div>
   )
 }
@@ -269,155 +284,164 @@ export function Help() {
   }, [])
 
   return (
-    <SitePage>
+    <SitePage
+      header={
+        <PageHeader>
+          <PageTitle>Documentation &amp; Help</PageTitle>
+          <PageDescription>
+            Using the map, where the data comes from, the Weaver API, and the
+            terms of use.
+          </PageDescription>
+        </PageHeader>
+      }
+    >
       <div data-testid="help-page">
-        <header className="mb-8">
-          <h1 className="!text-4xl text-primary">Documentation &amp; Help</h1>
-          <p className="mt-2 text-muted-foreground">
-            How to use Weaver, where its data comes from, and the terms under
-            which it is provided.
-          </p>
-        </header>
-
         <div className="flex gap-10">
           <DocsSidebar active={active} />
 
           <div className="min-w-0 flex-1 space-y-12">
             <section id="using" className="scroll-mt-6 space-y-4">
-              <h2 className="!text-2xl text-primary">Using the map</h2>
-              <p className="text-muted-foreground">
-                Weaver is a map-first way to explore New Mexico water data. Turn
-                on the layers you care about, click a site to read its details,
-                narrow to an area, and download what you find.
-              </p>
+              <h2>Using the map</h2>
               <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
                 <li>
-                  <strong>Layers.</strong> Use the sidebar to toggle data layers
-                  on and off. Each layer is a monitoring network or an integrated
-                  dataset, grouped by source. Dense point layers cluster when
-                  zoomed out and separate as you zoom in.
+                  <strong>Dataset.</strong> Pick one from the top of the
+                  sidebar: water levels, major ions, or trace constituents such
+                  as arsenic and nitrate.
                 </li>
                 <li>
-                  <strong>Inspect a site.</strong> Click any point to open its
-                  details panel — identifiers, attributes, and, where a site has a
-                  record, its water-level or water-quality time series.
+                  <strong>Color by.</strong> The legend colors sites by one
+                  property and counts the sites in each bin.
                 </li>
                 <li>
-                  <strong>Attribute table.</strong> Open the table to see every
-                  visible feature as sortable rows. It stays in sync with the map,
-                  the current filters, and any area you’ve selected.
+                  <strong>Filter.</strong> Tick bins under any property to keep
+                  only matching sites. Active filters show as chips over the
+                  map; remove a chip to clear it.
                 </li>
                 <li>
-                  <strong>Find a place.</strong> Search an address to recenter the
-                  map and see what’s monitored nearby, with the coverage — and
-                  gaps — for that location.
+                  <strong>Find a place.</strong> Search an address or place to
+                  move the map there.
                 </li>
                 <li>
-                  <strong>Select an area.</strong> Draw a rectangle or polygon, or
-                  pick a region of interest (a county, public water system, or
-                  hydrologic basin) to restrict the data to that area for viewing
-                  and export.
+                  <strong>Region.</strong> Pick a county, water system or
+                  groundwater basin to keep only the sites inside it, or draw
+                  your own shape on the map.
                 </li>
                 <li>
-                  <strong>Filter.</strong> Restrict data to the current map extent
-                  with “Filter to map view,” or type in the feature filter to
-                  match attributes.
+                  <strong>Site details.</strong> Selecting a site shows its
+                  chart, summary, and every reading or sample behind it.
                 </li>
                 <li>
-                  <strong>Basemap &amp; theme.</strong> Switch the basemap (Light,
-                  Dark, Satellite, and more) to suit the task, and toggle light or
-                  dark mode from the header.
-                </li>
-                <li>
-                  <strong>Share.</strong> The visible layers, map extent, and
-                  selection are encoded in the page URL — copy it to share the
-                  exact view.
+                  <strong>Share.</strong> The URL saves your whole view;{" "}
+                  <strong>Share</strong> copies it.
                 </li>
               </ul>
-            </section>
-
-
-            <section id="exporting" className="scroll-mt-6 space-y-4">
-              <h2 className="!text-2xl text-primary">Exporting data</h2>
-              <p className="text-muted-foreground">
-                Everything you see is downloadable. Make a selection — draw a
-                shape, pick a region, or filter the map — then open{" "}
-                <strong>Download data</strong> and choose a format:
-              </p>
-              <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
-                <li>
-                  <strong>Time series (CSV).</strong> Every observation for the
-                  selected monitoring locations, one row per reading — the format
-                  for trend analysis and charting.
-                </li>
-                <li>
-                  <strong>Latest observation (CSV).</strong> The most recent
-                  reading per location — a compact snapshot of current conditions.
-                </li>
-                <li>
-                  <strong>Features (GeoJSON).</strong> A geospatial inventory of
-                  the selection for use in a GIS or mapping tool.
-                </li>
-              </ul>
-              <p className="text-sm text-muted-foreground">
-                Time-series and latest exports need monitoring locations that carry
-                a record; the Features export also works for vector-only layers.
-                For a live connection instead of a one-time file, connect a{" "}
-                <a
-                  href="#gis"
-                  className="text-primary underline underline-offset-2"
-                >
-                  desktop GIS
-                </a>{" "}
-                to the OGC API.
-              </p>
             </section>
 
             <section id="sources" className="scroll-mt-6 space-y-4">
-              <h2 className="!text-2xl text-primary">Data sources</h2>
+              <h2>Data sources</h2>
               <p className="text-muted-foreground">
-                Weaver reads public data through open, standards-based interfaces
-                — no source-specific code. Four services back the map today:
+                Every value comes from one of these agencies. A site’s{" "}
+                <strong>source</strong> is the agency that collected it, and its
+                ID is that agency’s own. The agency’s record is authoritative.
               </p>
-              <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
-                <li>
-                  <strong>OGC API Features</strong> — vector / integrated layers
-                  published by New Mexico Water Data (wells, springs, surface
-                  water, chemistry, and more).
-                </li>
-                <li>
-                  <strong>OGC SensorThings API (STA)</strong> — monitoring
-                  locations and time series, including multiple agency networks
-                  (e.g. City of Albuquerque, Bernalillo County, NM Office of the
-                  State Engineer).
-                </li>
-                <li>
-                  <strong>ArcGIS REST (OSE GIS)</strong> — the Office of the State
-                  Engineer’s Esri Feature Services: statewide Points of Diversion
-                  and Aquifer Test Wells.
-                </li>
-                <li>
-                  <strong>USGS Water Data for the Nation (NWIS)</strong> — USGS’s
-                  modern OGC API, read for New Mexico groundwater sites and their
-                  continuous, daily, field, and channel measurements.
-                </li>
+              <ul className="grid list-disc gap-x-6 gap-y-1 pl-6 text-muted-foreground sm:grid-cols-2">
+                {AGENCIES.map((a) => (
+                  <li key={a}>{a}</li>
+                ))}
               </ul>
+            </section>
 
-              <div id="api" className="scroll-mt-6 space-y-2 pt-1">
-                <h3 className="!text-lg font-semibold text-primary">
-                  API endpoints
+            <section id="api" className="scroll-mt-6 space-y-4">
+              <h2>The Weaver API</h2>
+              <p className="text-muted-foreground">
+                The Weaver API is a public{" "}
+                <strong>OGC API – Features</strong> service and the only one the
+                map reads. No key is needed.
+              </p>
+              <CopyUrl value={API_URL} label="Copy Weaver API URL" testId="copy-api-url" />
+
+              <div className="space-y-2">
+                <h3>
+                  How the data is integrated
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  Every layer reads one of these public APIs directly — no
-                  Weaver-only backend. Use them in your own tools.
+                <p className="text-muted-foreground">
+                  On a monthly schedule, the Data Integration Engine:
                 </p>
-                <ul className="list-disc space-y-1.5 pl-6 text-sm text-muted-foreground">
-                  <ApiRow label="OGC API Features — integrated collections" url={OGC_LANDING_URL} />
-                  <ApiRow label="SensorThings — NM Water Data (primary)" url={STA_BASE_URL} />
-                  <ApiRow label="SensorThings — agency networks" url={STA_ST2_BASE_URL} />
-                  <ApiRow label="OSE ArcGIS REST — Points of Diversion" url={OSE_POD_URL} />
-                  <ApiRow label="OSE ArcGIS REST — Aquifer Test Wells" url={OSE_AQUIFER_URL} />
-                  <ApiRow label="USGS Water Data for the Nation" url={USGS_LANDING_URL} />
+                <ol className="list-decimal space-y-2 pl-6 text-muted-foreground">
+                  <li>
+                    <strong>Gathers</strong> sites, water levels and
+                    water-quality results from each agency.
+                  </li>
+                  <li>
+                    <strong>Harmonizes</strong> names and units into a common
+                    shape, keeping each agency’s originals.
+                  </li>
+                  <li>
+                    <strong>Publishes</strong> the results to the Weaver API.
+                  </li>
+                </ol>
+                <p className="text-muted-foreground">
+                  The code is <A href={DIE_REPO_URL}>open source</A>, and we
+                  welcome feedback.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3>
+                  What it serves
+                </h3>
+                <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+                  <li>
+                    <code>nm_&lt;analyte&gt;_summary</code>: one row per site.
+                  </li>
+                  <li>
+                    <code>nm_&lt;analyte&gt;_timeseries</code>: one row per
+                    reading or sample.
+                  </li>
+                  <li>
+                    Derived products such as major chemistry, hardness, trends
+                    and MCL exceedances.
+                  </li>
+                </ul>
+                <p className="text-muted-foreground">
+                  See the <A href={API_COLLECTIONS_URL}>collections list</A>.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3>
+                  Getting the data
+                </h3>
+                <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+                  <li>
+                    <strong>Download data</strong> on the map saves the
+                    filtered sites as GeoJSON or CSV.
+                  </li>
+                  <li>
+                    A well’s <strong>Readings</strong> tab downloads its
+                    readings as CSV.
+                  </li>
+                  <li>
+                    For anything larger, query the API or{" "}
+                    <a href="#gis" className="link">
+                      connect a desktop GIS
+                    </a>
+                    .
+                  </li>
+                </ul>
+                <ul className="space-y-3 pt-1 text-muted-foreground">
+                  <Example
+                    label="Arsenic summaries as GeoJSON:"
+                    path="/collections/nm_arsenic_summary/items?f=json&limit=100"
+                  />
+                  <Example
+                    label="TDS summaries in a bounding box, as CSV:"
+                    path="/collections/nm_tds_summary/items?f=csv&bbox=-107,34.9,-106.4,35.3"
+                  />
+                  <Example
+                    label="One site’s water levels, by source and ID:"
+                    path="/collections/nm_waterlevels_timeseries/items?f=csv&source=ST2/BernCo&id=10000&limit=10000"
+                  />
                 </ul>
               </div>
             </section>
@@ -427,150 +451,88 @@ export function Help() {
               data-testid="help-gis"
               className="scroll-mt-6 space-y-4"
             >
-              <h2 className="!text-2xl text-primary">
-                Connect a desktop GIS to the OGC API
+              <h2>
+                Connect a desktop GIS
               </h2>
               <p className="text-muted-foreground">
-                The same OGC API Features service behind this map can be added
-                directly to <strong>ArcGIS Pro</strong> and <strong>QGIS</strong>,
-                so you can browse, query, and export the collections in your own
-                GIS. These layers are <strong>read-only</strong> — use them for
-                discovery, display, querying, and export.
+                Add the Weaver API to <strong>ArcGIS Pro</strong> or{" "}
+                <strong>QGIS</strong> as a read-only OGC API connection. Use
+                the landing page URL, not a collection’s items URL.
               </p>
-
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">OGC API landing page URL</p>
-                <CopyUrl
-                  value={OGC_LANDING_URL}
-                  label="Copy OGC landing page URL"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use this landing page URL as the server connection — not a
-                  single collection’s items URL.
-                </p>
-              </div>
+              <CopyUrl
+                value={API_URL}
+                label="Copy Weaver API landing page URL"
+                testId="copy-gis-url"
+              />
 
               <div className="grid gap-4 md:grid-cols-2">
                 <ConnectCard
-                  title="ArcGIS Pro / Desktop"
+                  title="ArcGIS Pro"
                   steps={[
-                    "Open the Catalog pane and create a new OGC API Server connection.",
-                    "Paste the OGC API landing page URL above.",
-                    "Expand the server connection, choose the collection you want, and add it to the current map.",
-                    "If ArcGIS prompts for layer options, set extent or maximum-feature limits for large collections.",
+                    "In the Catalog pane, create a new OGC API Server connection.",
+                    "Paste the URL above.",
+                    "Expand the connection and add a collection to the map.",
                   ]}
                   href={GIS_DOCS.arcgis}
                 />
                 <ConnectCard
                   title="QGIS"
                   steps={[
-                    "Open the Data Source Manager.",
-                    "Choose the WFS / OGC API – Features connection tab.",
-                    "Create a new connection using the OGC API landing page URL above.",
-                    "Connect to the server, select one or more collections, and add them to the map.",
-                    "For large layers, set paging or feature limits in the connection and layer options.",
+                    "Open the Data Source Manager, WFS / OGC API – Features tab.",
+                    "Create a connection with the URL above.",
+                    "Connect and add one or more collections.",
                   ]}
-                  note="QGIS expects the OGC API landing page, not a single collection items URL, when you create the server connection."
                   href={GIS_DOCS.qgis}
                 />
               </div>
 
               <div className="space-y-2">
-                <h3 className="!text-lg font-semibold text-primary">
-                  Useful endpoints
+                <h3>
+                  Good collections to start with
                 </h3>
-                <ul className="space-y-1.5 text-sm text-muted-foreground">
-                  <li>
-                    <strong>OGC API landing page</strong> —{" "}
-                    <A href={OGC_LANDING_URL}>{OGC_LANDING_URL}</A> (use as the OGC
-                    API server connection URL).
-                  </li>
-                  <li>
-                    <strong>Available collections</strong> —{" "}
-                    <A href={OGC_COLLECTIONS_URL}>{OGC_COLLECTIONS_URL}</A> (review
-                    what’s published before connecting).
-                  </li>
-                  <li>
-                    <strong>USGS Water Data for the Nation</strong> —{" "}
-                    <A href={USGS_LANDING_URL}>{USGS_LANDING_URL}</A> — another OGC
-                    API landing page; connect the same way (see its{" "}
-                    <A href={USGS_COLLECTIONS_URL}>collections</A>).
-                  </li>
-                  <li>
-                    <strong>OSE Points of Diversion</strong> —{" "}
-                    <A href={OSE_POD_URL}>{OSE_POD_URL}</A> — an ArcGIS REST Feature
-                    Service; add it as an <em>ArcGIS Server</em> connection rather
-                    than an OGC API one.
-                  </li>
-                  <li>
-                    <strong>OSE Aquifer Test Wells</strong> —{" "}
-                    <A href={OSE_AQUIFER_URL}>{OSE_AQUIFER_URL}</A> — ArcGIS REST
-                    Feature Service (same as above).
-                  </li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="!text-lg font-semibold text-primary">
-                  Common collections to look for
-                </h3>
-                <div className="flex flex-wrap gap-2">
+                <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
                   {COMMON_COLLECTIONS.map((c) => (
-                    <span
-                      key={c}
-                      className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground"
-                    >
-                      {c}
-                    </span>
+                    <li key={c.id}>
+                      <Link to="/datasets" search={{ dataset: c.id }} className="link">
+                        {c.title}
+                      </Link>
+                    </li>
                   ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Collection names vary by deployment. If one is missing, open
-                  the{" "}
-                  <a
-                    href={OGC_COLLECTIONS_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary underline underline-offset-2"
-                  >
-                    collections endpoint
-                  </a>{" "}
-                  and use the names published there.
+                </ul>
+                <p className="text-muted-foreground">
+                  Time-series collections are large; set a feature limit or
+                  filter when adding them.
                 </p>
               </div>
             </section>
 
             <section id="glossary" className="scroll-mt-6 space-y-4">
-              <h2 className="!text-2xl text-primary">Glossary</h2>
+              <h2>Glossary</h2>
               <p className="text-muted-foreground">
                 Plain-language definitions of terms used across the map.
               </p>
-              <dl className="space-y-3">
+              <dl className="divide-y border-y">
                 {GLOSSARY.map((g) => (
-                  <div key={g.term} className="rounded-lg border bg-card p-4">
-                    <dt className="font-semibold text-foreground">{g.term}</dt>
-                    <dd className="mt-1 text-sm text-muted-foreground">{g.def}</dd>
+                  <div key={g.term} className="py-3">
+                    <dt className="font-medium">{g.term}</dt>
+                    <dd className="mt-1 text-muted-foreground">{g.def}</dd>
                   </div>
                 ))}
               </dl>
             </section>
 
             <section id="faq" className="scroll-mt-6 space-y-4">
-              <h2 className="!text-2xl text-primary">
+              <h2>
                 Frequently asked questions
               </h2>
               <div className="space-y-5">
                 <Faq q="Why don’t I see any data?">
-                  Make sure at least one layer is turned on in the sidebar. Some
-                  layers only reveal individual points as you zoom in, and any
-                  active filter (map view, feature filter, or a selected area) can
-                  hide features outside it — clear filters to see everything again.
+                  A filter is likely hiding it. Remove the chips over the map to
+                  see the whole dataset.
                 </Faq>
-                <Faq q="A site has no time series — why?">
-                  Not every feature carries a record. Water-level and
-                  water-quality series come from monitoring locations that report
-                  to the SensorThings networks; vector-only layers (for example
-                  Points of Diversion) are locations without an attached series.
+                <Faq q="A site has no chart — why?">
+                  The site may have only one reading. Major chemistry has no
+                  chart yet.
                 </Faq>
                 <Faq q="What does “depth to water” mean, and why is the chart upside down?">
                   Depth to water is measured downward from the ground surface, so a
@@ -578,58 +540,49 @@ export function Help() {
                   y-axis so a rising water level reads as an upward line. See the{" "}
                   <a
                     href="#glossary"
-                    className="text-primary underline underline-offset-2"
+                    className="link"
                   >
                     glossary
                   </a>
                   .
                 </Faq>
                 <Faq q="How current is the data?">
-                  Weaver reads the source APIs live, so you see what each service
-                  currently publishes. Update frequency varies by network and
-                  site.
+                  Each dataset refreshes monthly; its abstract on the{" "}
+                  <Link to="/datasets" className="link">
+                    Datasets
+                  </Link>{" "}
+                  page gives the day of the month. Agencies publish on their own
+                  schedules, so recency also varies by site.
+                </Faq>
+                <Faq q="Why does a value differ from the agency’s own website?">
+                  It may have been converted to a common unit, or the agency
+                  may have updated it since the last monthly run. The agency’s
+                  value is authoritative.
                 </Faq>
                 <Faq q="Can I use this data in my own tools?">
-                  Yes. Export CSV or GeoJSON from{" "}
-                  <a
-                    href="#exporting"
-                    className="text-primary underline underline-offset-2"
-                  >
-                    Download data
+                  Yes. Download from the map, query the{" "}
+                  <a href="#api" className="link">
+                    Weaver API
                   </a>
-                  , connect a{" "}
-                  <a
-                    href="#gis"
-                    className="text-primary underline underline-offset-2"
-                  >
-                    desktop GIS
-                  </a>{" "}
-                  to the OGC API, or call the{" "}
-                  <a
-                    href="#api"
-                    className="text-primary underline underline-offset-2"
-                  >
-                    public API endpoints
-                  </a>{" "}
-                  directly. Please read the{" "}
-                  <a
-                    href="#disclaimer"
-                    className="text-primary underline underline-offset-2"
-                  >
+                  , or{" "}
+                  <a href="#gis" className="link">
+                    connect a desktop GIS
+                  </a>
+                  . Please read the{" "}
+                  <a href="#disclaimer" className="link">
                     disclaimer
                   </a>{" "}
                   first.
                 </Faq>
-                <Faq q="Is a shared link private?">
-                  No. The URL encodes only the view — layers, extent, and
-                  selection — and points at the same public data everyone sees. It
-                  contains no personal information.
+                <Faq q="What does a shared link contain?">
+                  Only your map view: the dataset, filters, region and selected
+                  site. It holds no personal information.
                 </Faq>
               </div>
             </section>
 
             <section id="disclaimer" className="scroll-mt-6 space-y-4">
-              <h2 className="!text-2xl text-primary">Disclaimer</h2>
+              <h2>Disclaimer</h2>
               <p className="text-muted-foreground">
                 At NMBGMR, we use different tools to collect groundwater level
                 measurements, including continuous data recorders and manual
