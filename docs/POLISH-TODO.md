@@ -46,7 +46,7 @@ Brainstormed UI/UX polish, grouped. ⚡ = quick win. Checked = shipped.
 
 ## Onboarding / sharing
 
-- [x] First-visit hint tour (3 steps: layers → inspect → share; dismissed once per browser)
+- [x] First-visit hint tour (5 steps: area → dataset → color & filter → site → share; 2 on mobile; dismissed once per browser)
 - [x] Interactive tour — each step spotlights its target (dim backdrop + cut-out +
       pulsing ring) and anchors the card beside it; arrow keys / dot nav; click
       backdrop to dismiss
