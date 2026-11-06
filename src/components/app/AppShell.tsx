@@ -69,25 +69,25 @@ const TOUR_KEY = "weaver-tour-key"
 const DESKTOP_TOUR_STEPS: TourStep[] = [
   {
     title: "Find your area",
-    body: "Search for a place, or filter by region to focus the map.",
+    body: "Search for a place or filter by region to focus the map.",
     target: "[data-tour='area']",
     place: "right",
   },
   {
     title: "Choose your data",
-    body: "Pick what the map shows — water levels or a water-quality result.",
+    body: "Pick what the map shows — water levels or water chemistry.",
     target: "[data-testid='dataset-picker']",
     place: "right",
   },
   {
     title: "Color and filter",
-    body: "Change what the colors mean, and filter by categories to show only the sites you care about.",
+    body: "Change what the colors mean and filter by categories to show only the sites you care about.",
     target: "[data-testid='filters-section']",
     place: "right",
   },
   {
     title: "Open a site",
-    body: "Click any point to open its details panel — attributes, and a chart of its readings over time.",
+    body: "Click any point to open its details panel — site attributes and a chart of its readings over time.",
     target: "[data-testid='map']",
     place: "left",
   },
@@ -109,7 +109,7 @@ const MOBILE_TOUR_STEPS: TourStep[] = [
   },
   {
     title: "Open a site",
-    body: "Tap any point to open its details panel — attributes, and a chart of its readings over time.",
+    body: "Tap any point to open its details panel — site attributes and a chart of its readings over time.",
     target: "[data-testid='map']",
     place: "right",
   },
