@@ -411,11 +411,11 @@ export function AppShell() {
   // View actions (table / share / download) — live in the sidebar so the
   // top navigation stays identical to the content pages.
   const viewActions = (
-    <div data-tour="view-actions" className="grid grid-cols-2 gap-2">
+    <div data-tour="view-actions" className="flex flex-wrap gap-2">
       <Button
         variant="outline"
         size="sm"
-        className="justify-center"
+        className="grow"
         data-testid="toggle-table"
         aria-pressed={tableOpen}
         aria-label={tableOpen ? "Hide attribute table" : "Show attribute table"}
@@ -431,7 +431,7 @@ export function AppShell() {
       <Button
         variant="outline"
         size="sm"
-        className="justify-center"
+        className="grow"
         data-testid="share-view"
         aria-label="Share this view"
         onClick={shareView}
@@ -442,7 +442,7 @@ export function AppShell() {
       <Button
         variant="outline"
         size="sm"
-        className="justify-center"
+        className="grow"
         data-testid="open-export"
         aria-label="Download data"
         onClick={() => setExportOpen(true)}
@@ -453,7 +453,7 @@ export function AppShell() {
       <Button
         variant="outline"
         size="sm"
-        className="justify-center"
+        className="grow"
         data-testid="restart-tour"
         aria-label="Open the getting started tour"
         onClick={() => {

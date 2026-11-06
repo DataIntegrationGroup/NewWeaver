@@ -23,3 +23,9 @@ Feature: Onboarding tour
     And the user presses Escape
     When the user takes the tour again
     Then the tour shows step 1 of 5, "Find your area"
+
+  Scenario: The sidebar actions fit the narrowest sidebar
+    Given the user has opened the app
+    And the user presses Escape
+    When the user narrows the sidebar as far as it goes
+    Then every sidebar action fits inside its button

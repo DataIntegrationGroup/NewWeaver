@@ -33,3 +33,21 @@ When("the user reloads the map", async function (this: BrowserWorld) {
 Then("the tour is not shown", async function (this: BrowserWorld) {
   assert.equal(await this.page.getByTestId("onboarding-tour").count(), 0)
 })
+
+When("the user narrows the sidebar as far as it goes", async function (this: BrowserWorld) {
+  const box = await this.page.getByTestId("sidebar-resize").boundingBox()
+  assert.ok(box, "sidebar resize handle not found")
+  await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await this.page.mouse.down()
+  await this.page.mouse.move(0, box.y + box.height / 2, { steps: 5 })
+  await this.page.mouse.up()
+})
+
+Then("every sidebar action fits inside its button", async function (this: BrowserWorld) {
+  const overflowing = await this.page
+    .locator("[data-tour='view-actions'] button")
+    .evaluateAll((els) =>
+      els.filter((el) => el.scrollWidth > el.clientWidth).map((el) => el.textContent?.trim())
+    )
+  assert.deepEqual(overflowing, [])
+})
