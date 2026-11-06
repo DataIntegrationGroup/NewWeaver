@@ -181,33 +181,27 @@
         font-family: var(--font-heading);
         color: var(--foreground);
     }
+    /* Design-system heading scale; components may still override with utilities. */
     h1 {
-        font-weight: 700;
-        font-size: 48px;
-        line-height: 1.4;
+        @apply text-4xl font-extrabold tracking-tight text-balance;
     }
     h2 {
-        font-weight: 600;
-        font-size: 36px;
-        line-height: 1.5;
+        @apply text-2xl font-semibold tracking-tight;
     }
     h3 {
-        font-weight: 500;
-        font-size: 28px;
-        line-height: 1.5;
+        @apply text-lg font-semibold tracking-tight;
     }
     h4 {
-        font-weight: 500;
-        font-size: 22px;
-        line-height: 1.6;
+        @apply text-base font-semibold;
     }
     @media (max-width: 600px) {
-        h1 { font-size: 36px; }
-        h2 { font-size: 28px; }
-        h3 { font-size: 24px; line-height: 1.6; }
-        h4 { font-size: 20px; }
         body { font-size: 14px; }
     }
+}
+
+/* Inline text link in prose. */
+@utility link {
+    @apply text-primary underline underline-offset-2;
 }
 
 /* Hover popup — themed card chrome instead of MapLibre's default white bubble.

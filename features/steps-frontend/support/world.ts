@@ -242,18 +242,20 @@ export class BrowserWorld extends World {
 
 setWorldConstructor(BrowserWorld)
 
-Before(async function (this: BrowserWorld) {
+Before(async function (this: BrowserWorld, { pickle }) {
   this.context = await browser.newContext({
     permissions: ["clipboard-read", "clipboard-write"],
   })
-  // Suppress the first-visit onboarding tour so it can't overlap other specs.
-  await this.context.addInitScript(() => {
-    try {
-      localStorage.setItem("weaver-tour-seen", "1")
-    } catch {
-      /* ignore */
-    }
-  })
+  // Suppress the first-visit onboarding tour so it can't overlap other specs; @tour scenarios keep it.
+  if (!pickle.tags.some((t) => t.name === "@tour")) {
+    await this.context.addInitScript(() => {
+      try {
+        localStorage.setItem("weaver-tour-key", "1")
+      } catch {
+        /* ignore */
+      }
+    })
+  }
   this.page = await this.context.newPage()
   // Mock upstream APIs; let everything else (basemap tiles, app assets) through.
   await this.context.route("**/*", async (route) => {

@@ -38,8 +38,7 @@ When("the user follows the Desktop GIS link", async function (this: BrowserWorld
 })
 
 Then("the Desktop GIS help section is shown", async function (this: BrowserWorld) {
-  const text = (await this.page.getByTestId("help-gis").textContent()) ?? ""
-  assert.match(text, /\/ogcapi/)
+  await this.page.getByTestId("help-gis").waitFor()
 })
 
 Then(

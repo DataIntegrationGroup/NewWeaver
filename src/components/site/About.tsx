@@ -1,84 +1,93 @@
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { SitePage } from "./SitePage"
-import { SLACK_URL } from "./SiteHeader"
+import { Link } from "@tanstack/react-router"
+import { ArrowRight } from "lucide-react"
+
+import { buttonVariants } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { PageDescription, PageHeader, PageTitle } from "@/components/ui/page"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
+import { DIE_REPO_URL } from "@/config"
+import { SitePage } from "./SitePage"
+
+/** In-app link to a Help section. */
+function HelpLink({ hash, children }: { hash: string; children: React.ReactNode }) {
+  return (
+    <Link to="/help" hash={hash} className="link">
+      {children}
+    </Link>
+  )
+}
 
 export function About() {
   useDocumentTitle("Weaver — About")
   return (
-    <SitePage>
-      <article className="space-y-8" data-testid="about-page">
-        <header>
-          <h1 className="!text-4xl text-primary">About Weaver</h1>
-        </header>
-
-        <section>
-          <h2 className="!text-2xl text-primary">What is Weaver?</h2>
-          <p className="mt-2 text-muted-foreground">
-            Weaver is developed by the Water Data Initiative team at the New
-            Mexico Bureau of Geology and Mineral Resources (NMBGMR). Our goal is
-            to share water data collected by NMBGMR and interweave it with other
-            water-data sources to create integrated datasets — displayed here as
-            a public, interactive map.
+    <SitePage
+      header={
+        <PageHeader>
+          <PageTitle>About Weaver</PageTitle>
+          <PageDescription>
+            Integrated water data for New Mexico, harmonized from the agencies
+            that collect it.
+          </PageDescription>
+        </PageHeader>
+      }
+    >
+      <article className="space-y-12" data-testid="about-page">
+        <section className="space-y-3">
+          <h2>What is Weaver?</h2>
+          <p className="text-muted-foreground">
+            Weaver harmonizes water data from agencies across New Mexico into
+            integrated datasets for mapping, analysis and downstream use. It
+            complements the source data and never replaces it: each agency
+            remains the authoritative record. See the{" "}
+            <HelpLink hash="disclaimer">disclaimer</HelpLink>.
+          </p>
+          <p className="text-muted-foreground">
+            Built by the Water Data Initiative at the New Mexico Bureau of
+            Geology and Mineral Resources (NMBGMR).
           </p>
         </section>
 
-        <Separator />
-
-        <section>
-          <h2 className="!text-2xl text-primary">How it works</h2>
-          <p className="mt-2 text-muted-foreground">
-            Weaver is a display surface only — it reads public data through
-            open, standards-based interfaces and never stores or edits anything:
+        <section className="space-y-3">
+          <h2>The Weaver API</h2>
+          <p className="text-muted-foreground">
+            The integrated datasets are served by the Weaver API, an open OGC
+            API – Features service refreshed monthly. It converts units and
+            names into a common shape while keeping each agency’s originals and
+            site IDs. The code is{" "}
+            <a href={DIE_REPO_URL} target="_blank" rel="noreferrer" className="link">
+              public and open source
+            </a>
+            , and we welcome feedback. See{" "}
+            <HelpLink hash="api">the Weaver API</HelpLink> to query it.
           </p>
-          <ul className="mt-3 list-disc space-y-2 pl-6 text-muted-foreground">
-            <li>
-              <strong>OGC API Features</strong> — vector / integrated layers
-              (e.g. water-level summaries) published by New Mexico Water Data,
-              plus USGS Water Data for the Nation.
-            </li>
-            <li>
-              <strong>OGC SensorThings API (STA)</strong> — monitoring locations
-              and time-series observations from participating agencies.
-            </li>
-            <li>
-              <strong>OGC WFS &amp; ArcGIS REST</strong> — integrated summary
-              products and Office of the State Engineer GIS datasets.
-            </li>
+        </section>
+
+        <section className="space-y-3">
+          <h2>What you can do</h2>
+          <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+            <li>Map water levels or water quality across every agency at once.</li>
+            <li>Filter by value, source or area, and open any site’s full record.</li>
+            <li>Download what you find, or connect your own tools to the API.</li>
           </ul>
         </section>
 
-        <Separator />
-
-        <section>
-          <h2 className="!text-2xl text-primary">What you can do</h2>
-          {/* Interface-mechanics bullets removed — the UI communicates these by
-              affordance now (SPEC §T.T10 / §V.V7). Scope/capability statements
-              kept. */}
-          <ul className="mt-3 list-disc space-y-2 pl-6 text-muted-foreground">
-            <li>
-              Find what’s monitored near an address, or browse by what’s measured —
-              water levels, water quality, surface water — across every network at once.
-            </li>
-            <li>
-              Take the data with you: download a result or connect your own tools to
-              the same open APIs.
-            </li>
-          </ul>
-        </section>
-
-        <Separator />
-
-        <section className="text-center">
-          <h2 className="!text-2xl text-secondary">Join our community</h2>
-          <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
-            Help shape the future of water-data accessibility in New Mexico.
-          </p>
-          <Button className="mt-4" onClick={() => window.open(SLACK_URL, "_blank")}>
-            Join on Slack
-          </Button>
-        </section>
+        <Card className="items-start gap-6 p-8 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2">
+            <h2>Check out our other work</h2>
+            <p className="text-muted-foreground">
+              Weaver is part of the New Mexico Water Data Initiative. See the
+              initiative's other projects, tools, and data.
+            </p>
+          </div>
+          <a
+            href="https://newmexicowaterdata.org/"
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants()}
+          >
+            Visit New Mexico Water Data <ArrowRight data-icon="inline-end" />
+          </a>
+        </Card>
       </article>
     </SitePage>
   )

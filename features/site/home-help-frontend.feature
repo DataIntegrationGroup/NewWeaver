@@ -56,8 +56,7 @@ Feature: Home and help pages
     When the user opens the help link
     Then the user sees the documentation and help page
 
-  Scenario: Help documents connecting a desktop GIS to the OGC API
+  Scenario: Help documents connecting a desktop GIS to the Weaver API
     Given the user opens the help page
     When the user opens the "Desktop GIS" help section
-    Then the help page shows the OGC API landing page URL
-    And it explains connecting ArcGIS Pro and QGIS
+    Then the help page offers the Weaver API URL to copy

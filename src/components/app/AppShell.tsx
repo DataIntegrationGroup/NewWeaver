@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Download, SlidersHorizontal, Share2, Table2 } from "lucide-react"
+import { CircleHelp, Download, SlidersHorizontal, Share2, Table2 } from "lucide-react"
 import type { FeatureCollection, Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 import { toast } from "sonner"
@@ -62,26 +62,56 @@ const SIDEBAR_MIN = 240
 const SIDEBAR_MAX = 520
 const SIDEBAR_DEFAULT = 288
 
-// Getting-started tour content — points at this app's real UI. The tour
-// component itself is generic (design-system); the steps live here.
-const TOUR_STEPS: TourStep[] = [
+// localStorage key that remembers the tour was seen.
+const TOUR_KEY = "weaver-tour-key"
+
+// Tour steps for the desktop layout, where the sidebar is always open.
+const DESKTOP_TOUR_STEPS: TourStep[] = [
   {
-    title: "Pick a dataset",
-    body: "Choose what the map shows — water levels or a water-quality result — then color and filter its sites in the sidebar.",
-    target: "#map-sidebar",
+    title: "Find your area",
+    body: "Search for a place or filter by region to focus the map.",
+    target: "[data-tour='area']",
     place: "right",
   },
   {
-    title: "Inspect a point",
-    body: "Click any point on the map to open its details — attributes, and for monitoring sites, a time-series chart of its observations.",
-    target: "#main-content",
+    title: "Choose your data",
+    body: "Pick what the map shows — water levels or water chemistry.",
+    target: "[data-testid='dataset-picker']",
+    place: "right",
+  },
+  {
+    title: "Color and filter",
+    body: "Change what the colors mean and filter by categories to show only the sites you care about.",
+    target: "[data-testid='filters-section']",
+    place: "right",
+  },
+  {
+    title: "Open a site",
+    body: "Click any point to open its details panel — site attributes and a chart of its readings over time.",
+    target: "[data-testid='map']",
+    place: "left",
+  },
+  {
+    title: "Take it with you",
+    body: "Open an attribute table, copy a link to this exact view, or download the sites you've filtered.",
+    target: "[data-tour='view-actions']",
+    place: "right",
+  },
+]
+
+// Tour steps for mobile, where the sidebar hides behind a toggle button.
+const MOBILE_TOUR_STEPS: TourStep[] = [
+  {
+    title: "Open the sidebar",
+    body: "Tap here to find a place, pick a dataset, filter sites, and share or download your view.",
+    target: "[data-testid='toggle-sidebar']",
     place: "bottom",
   },
   {
-    title: "Share your view",
-    body: "The page URL captures your exact map — dataset, filters, extent, and selection. Hit Share to copy a link to it.",
-    target: "[data-testid='share-view']",
-    place: "bottom",
+    title: "Open a site",
+    body: "Tap any point to open its details panel — site attributes and a chart of its readings over time.",
+    target: "[data-testid='map']",
+    place: "right",
   },
 ]
 
@@ -115,6 +145,8 @@ export function AppShell() {
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>()
   const [tableOpen, setTableOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // Bumped to remount the tour from step 1 when the user asks to see it again.
+  const [tourRun, setTourRun] = useState(0)
   const [exportOpen, setExportOpen] = useState(false)
   const [shapes, setShapes] = useState<Polygon[]>([])
   const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
@@ -379,11 +411,11 @@ export function AppShell() {
   // View actions (table / share / download) — live in the sidebar so the
   // top navigation stays identical to the content pages.
   const viewActions = (
-    <div className="grid grid-cols-3 gap-2">
+    <div data-tour="view-actions" className="flex flex-wrap gap-2">
       <Button
         variant="outline"
         size="sm"
-        className="justify-center"
+        className="grow"
         data-testid="toggle-table"
         aria-pressed={tableOpen}
         aria-label={tableOpen ? "Hide attribute table" : "Show attribute table"}
@@ -399,7 +431,7 @@ export function AppShell() {
       <Button
         variant="outline"
         size="sm"
-        className="justify-center"
+        className="grow"
         data-testid="share-view"
         aria-label="Share this view"
         onClick={shareView}
@@ -410,7 +442,7 @@ export function AppShell() {
       <Button
         variant="outline"
         size="sm"
-        className="justify-center"
+        className="grow"
         data-testid="open-export"
         aria-label="Download data"
         onClick={() => setExportOpen(true)}
@@ -418,23 +450,45 @@ export function AppShell() {
         <Download />
         <span>Download</span>
       </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="grow"
+        data-testid="restart-tour"
+        aria-label="Open the getting started tour"
+        onClick={() => {
+          posthog.capture("tour_restarted")
+          try {
+            localStorage.removeItem(TOUR_KEY)
+          } catch {
+            // Ignore storage failures — the remount below still reopens the tour.
+          }
+          setSidebarOpen(false)
+          setTourRun((n) => n + 1)
+        }}
+      >
+        <CircleHelp />
+        <span>Getting started</span>
+      </Button>
     </div>
   )
 
   const sidebar = (
     <>
-      <Field>
-        <FieldLabel htmlFor="location-search-input">Find a place</FieldLabel>
-        <LocationSearch
-          sources={coverageSources}
-          onLocate={handleLocate}
-          onExport={() => setExportOpen(true)}
-        />
-      </Field>
-      <FieldSet className="gap-3">
-        <FieldLegend variant="label">Region</FieldLegend>
-        <RegionSelector chips={regionChips} onAdd={handleAddRegion} onRemove={handleRemoveRegion} />
-      </FieldSet>
+      <div data-tour="area" className="space-y-5">
+        <Field>
+          <FieldLabel htmlFor="location-search-input">Find a place</FieldLabel>
+          <LocationSearch
+            sources={coverageSources}
+            onLocate={handleLocate}
+            onExport={() => setExportOpen(true)}
+          />
+        </Field>
+        <FieldSet className="gap-3">
+          <FieldLegend variant="label">Region</FieldLegend>
+          <RegionSelector chips={regionChips} onAdd={handleAddRegion} onRemove={handleRemoveRegion} />
+        </FieldSet>
+      </div>
       {datasetsError ? (
         <Alert variant="destructive" data-testid="datasets-error">
           <AlertTitle>Couldn’t load the datasets</AlertTitle>
@@ -665,7 +719,11 @@ export function AppShell() {
         />
       )}
 
-      <OnboardingTour steps={TOUR_STEPS} storageKey="weaver-tour-seen" />
+      <OnboardingTour
+        key={tourRun}
+        steps={isDesktop ? DESKTOP_TOUR_STEPS : MOBILE_TOUR_STEPS}
+        storageKey={TOUR_KEY}
+      />
     </PageShell>
   )
 }

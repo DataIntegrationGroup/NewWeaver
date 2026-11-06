@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -62,6 +62,8 @@ export function OnboardingTour({
   })
   const [step, setStep] = useState(0)
   const [rect, setRect] = useState<Rect | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [cardH, setCardH] = useState(0)
 
   const dismiss = useCallback(() => {
     try {
@@ -81,6 +83,8 @@ export function OnboardingTour({
   useLayoutEffect(() => {
     if (!open) return
     const target = steps[idx]?.target
+    // Bring the target into view (e.g. lower in a scrolled sidebar) before measuring.
+    if (target) document.querySelector(target)?.scrollIntoView({ block: "nearest", inline: "nearest" })
     const update = () => setRect(target ? measure(target) : null)
     update()
     window.addEventListener("resize", update)
@@ -90,6 +94,11 @@ export function OnboardingTour({
       window.removeEventListener("scroll", update, true)
     }
   }, [open, idx, steps])
+
+  // Track the card's real height so vertical clamping keeps it fully on screen.
+  useLayoutEffect(() => {
+    if (cardRef.current) setCardH(cardRef.current.offsetHeight)
+  }, [open, idx, rect])
 
   // Arrow keys advance / go back; Esc dismisses.
   useEffect(() => {
@@ -124,18 +133,18 @@ export function OnboardingTour({
     }
     if (s.place === "right") {
       cardStyle = {
-        top: clamp(rect.top, 0, vh),
+        top: clamp(rect.top, cardH, vh),
         left: clamp(rect.left + rect.width + GAP, CARD_W, vw),
       }
     } else if (s.place === "left") {
       cardStyle = {
-        top: clamp(rect.top, 0, vh),
+        top: clamp(rect.top, cardH, vh),
         left: clamp(rect.left - CARD_W - GAP, CARD_W, vw),
       }
     } else {
       // bottom
       cardStyle = {
-        top: clamp(rect.top + rect.height + GAP, 0, vh),
+        top: clamp(rect.top + rect.height + GAP, cardH, vh),
         left: clamp(rect.left + rect.width / 2 - CARD_W / 2, CARD_W, vw),
       }
     }
@@ -170,6 +179,7 @@ export function OnboardingTour({
       )}
 
       <div
+        ref={cardRef}
         data-testid="onboarding-tour"
         style={{ position: "fixed", width: CARD_W, ...cardStyle }}
         className="z-50 rounded-xl border bg-card p-4 shadow-lg"
