@@ -94,7 +94,7 @@ async function photonQuery(
     }).toString()
 
   const res = await fetch(url, { signal })
-  if (!res.ok) return []
+  if (!res.ok) throw new Error(`Photon geocoder responded ${res.status}`)
 
   const body = (await res.json()) as PhotonResponse
   const seen = new Set<string>()
@@ -202,7 +202,7 @@ export async function suggestPlaces(
 /**
  * Geocode a free-text address or place to a single best match. Census first for
  * precise US street addresses, then Photon for places / non-US. Resolves null
- * when neither matches or on a transport error.
+ * when neither matches; rejects when Photon can't be reached.
  */
 export async function geocodeAddress(
   address: string,
@@ -215,10 +215,6 @@ export async function geocodeAddress(
   if (precise) return precise
   if (signal?.aborted) return null
 
-  try {
-    const matches = await photonQuery(text, 1, signal)
-    return matches[0] ?? null
-  } catch {
-    return null
-  }
+  const matches = await photonQuery(text, 1, signal)
+  return matches[0] ?? null
 }
