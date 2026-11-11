@@ -1,11 +1,15 @@
+import { useMemo } from "react"
 import { useSearch, useNavigate } from "@tanstack/react-router"
 
 import type { RegionKind } from "@/catalog/regions"
+import type { GeocodeResult } from "@/lib/geocode"
 import {
   decodeSelection,
   encodeSelection,
   decodeRegionRefs,
   encodeRegionRef,
+  decodePlace,
+  placeSearch,
   type Selection,
   type WeaverSearch,
 } from "@/lib/urlState"
@@ -29,11 +33,16 @@ export function useViewState() {
 
   const selection = decodeSelection(search.sel)
   const regions = decodeRegionRefs(search.regions)
+  // Memoized so consumers get a stable object until the pin itself changes.
+  const { place: placeLabel, pin } = search
+  const place = useMemo(() => decodePlace({ place: placeLabel, pin }), [placeLabel, pin])
 
   return {
     search,
     selection,
     regions,
+    /** The searched place, pinned on the map. */
+    place,
     /** Show a dataset and clear the selection. */
     setDataset(id: string) {
       // Facets differ per dataset, so color-by and bin selections reset.
@@ -88,6 +97,10 @@ export function useViewState() {
     },
     clearRegions() {
       patch({ regions: undefined })
+    },
+    /** Pin a searched place, or clear it with null. */
+    setPlace(r: GeocodeResult | null) {
+      patch(r ? placeSearch(r) : { place: undefined, pin: undefined })
     },
   }
 }

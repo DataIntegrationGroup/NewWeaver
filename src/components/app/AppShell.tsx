@@ -61,6 +61,8 @@ const SIDEBAR_WIDTH_KEY = "weaver-sidebar-width"
 const SIDEBAR_MIN = 240
 const SIDEBAR_MAX = 520
 const SIDEBAR_DEFAULT = 288
+/** Minimum zoom when showing a searched place. */
+const PLACE_ZOOM = 12
 
 // localStorage key that remembers the tour was seen.
 const TOUR_KEY = "weaver-tour-key"
@@ -125,6 +127,8 @@ export function AppShell() {
     search,
     selection,
     regions,
+    place,
+    setPlace,
     setDataset,
     setColorBy,
     setFacet,
@@ -150,8 +154,6 @@ export function AppShell() {
   const [exportOpen, setExportOpen] = useState(false)
   const [shapes, setShapes] = useState<Polygon[]>([])
   const [basemap, setBasemap] = useState(DEFAULT_BASEMAP)
-  // Pin dropped by the location search (SPEC §T.T3); null when none.
-  const [searchMarker, setSearchMarker] = useState<{ lng: number; lat: number } | null>(null)
 
   // Resizable sidebar (desktop only); width persisted across visits.
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -291,10 +293,12 @@ export function AppShell() {
   ])
   const filtersActive = filterChips.length > 0
 
+  // A saved view wins, then a searched place, then New Mexico fit to the data.
+  const hasView = search.lng !== undefined || search.lat !== undefined || search.z !== undefined
   const initialView = {
-    longitude: search.lng ?? NEW_MEXICO_VIEW.longitude,
-    latitude: search.lat ?? NEW_MEXICO_VIEW.latitude,
-    zoom: search.z ?? NEW_MEXICO_VIEW.zoom,
+    longitude: search.lng ?? place?.lng ?? NEW_MEXICO_VIEW.longitude,
+    latitude: search.lat ?? place?.lat ?? NEW_MEXICO_VIEW.latitude,
+    zoom: search.z ?? (place ? PLACE_ZOOM : NEW_MEXICO_VIEW.zoom),
   }
 
   // Test seam: lets the BDD harness pick a feature deterministically without
@@ -348,7 +352,7 @@ export function AppShell() {
     if (!map) return
     map.easeTo({
       center: [lng, lat],
-      zoom: Math.max(map.getZoom(), 13),
+      zoom: Math.max(map.getZoom(), PLACE_ZOOM),
       duration: 600,
     })
   }
@@ -383,16 +387,16 @@ export function AppShell() {
     posthog.capture("region_removed", { region_kind: kind })
   }
 
-  // Location search located (or cleared) a place: drop/clear the pin and fly to it.
+  // Location search located (or cleared) a place: pin it in the URL; the effect below flies there.
   const handleLocate = (r: GeocodeResult | null) => {
-    if (r) {
-      setSearchMarker({ lng: r.lng, lat: r.lat })
-      flyTo(r.lng, r.lat)
-      posthog.capture("location_searched", { label: r.label })
-    } else {
-      setSearchMarker(null)
-    }
+    setPlace(r)
+    if (r) posthog.capture("location_searched", { label: r.label })
   }
+
+  // Fly to the pin whenever it changes, including Back/Forward.
+  useEffect(() => {
+    if (place) flyTo(place.lng, place.lat)
+  }, [place])
 
   const shareView = async () => {
     try {
@@ -480,6 +484,7 @@ export function AppShell() {
           <FieldLabel htmlFor="location-search-input">Find a place</FieldLabel>
           <LocationSearch
             sources={coverageSources}
+            place={place}
             onLocate={handleLocate}
             onExport={() => setExportOpen(true)}
           />
@@ -649,13 +654,9 @@ export function AppShell() {
                 data={filtered}
                 empty={!isLoading && data.features.length > 0 && total === 0}
                 selection={selection}
-                marker={searchMarker}
+                marker={place ?? null}
                 initialView={initialView}
-                autoFit={
-                  search.lng === undefined &&
-                  search.lat === undefined &&
-                  search.z === undefined
-                }
+                autoFit={!hasView && !place}
                 basemap={basemap}
                 basemaps={BASEMAPS}
                 onBasemapChange={setBasemap}

@@ -20,14 +20,14 @@ When(
 Then(
   "location suggestions are shown",
   async function (this: BrowserWorld) {
-    await this.page.getByTestId("location-search-suggestions").waitFor()
+    await this.page.getByTestId("place-suggestions").waitFor()
   }
 )
 
 When(
   "the user picks the first suggestion",
   async function (this: BrowserWorld) {
-    await this.page.getByTestId("location-search-suggestion").first().click()
+    await this.page.getByTestId("place-suggestion").first().click()
   }
 )
 
@@ -58,3 +58,9 @@ Then(
     await this.page.getByTestId("location-search-notfound").waitFor()
   }
 )
+
+When("the user reloads the page", async function (this: BrowserWorld) {
+  await this.page.waitForFunction(() => /[?&]pin=/.test(window.location.search))
+  await this.page.reload()
+  await this.page.getByTestId("dataset-legend").waitFor()
+})

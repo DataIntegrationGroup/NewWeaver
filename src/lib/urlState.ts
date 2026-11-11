@@ -5,6 +5,7 @@
  */
 import { DEFAULT_DATASET_ID } from "@/catalog/mapDatasets"
 import { REGION_KINDS, type RegionKind } from "@/catalog/regions"
+import type { GeocodeResult } from "@/lib/geocode"
 
 export interface Selection {
   layerId: string
@@ -31,6 +32,10 @@ export interface WeaverSearch {
   q?: string
   /** Selected regions of interest, each encoded "<kind>:<id>". */
   regions?: string[]
+  /** A searched place's label, shown in the place search. Goes with `pin`. */
+  place?: string
+  /** A searched place's pin, encoded "<lng>,<lat>". */
+  pin?: string
 }
 
 export interface RegionRef {
@@ -72,6 +77,9 @@ export function validateSearch(raw: Record<string, unknown>): WeaverSearch {
   // loaded yet); else Water Levels.
   const ds = DATASET_ID.test(asString(raw.ds) ?? "") ? (raw.ds as string) : DEFAULT_DATASET_ID
 
+  // A place needs a valid pin; the label alone can't be shown on the map.
+  const pin = decodePin(asString(raw.pin))
+
   return {
     ds,
     color: asString(raw.color),
@@ -83,7 +91,34 @@ export function validateSearch(raw: Record<string, unknown>): WeaverSearch {
     bbox: raw.bbox === true || raw.bbox === "true",
     q: asString(raw.q),
     regions: asList(raw.regions),
+    // A ZIP like 87801 can come back from the router's JSON parsing as a number.
+    place: pin ? asString(typeof raw.place === "number" ? String(raw.place) : raw.place) : undefined,
+    pin: pin ? encodePin(pin) : undefined,
   }
+}
+
+/** "<lng>,<lat>" to 5 decimals (about a metre). */
+function encodePin(p: { lng: number; lat: number }): string {
+  return `${p.lng.toFixed(5)},${p.lat.toFixed(5)}`
+}
+
+function decodePin(pin: string | undefined): { lng: number; lat: number } | undefined {
+  const parts = (pin ?? "").split(",")
+  if (parts.length !== 2) return undefined
+  const [lng, lat] = parts.map(Number)
+  return Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : undefined
+}
+
+/** The URL params for a searched place. */
+export function placeSearch(r: GeocodeResult): Pick<WeaverSearch, "place" | "pin"> {
+  return { place: r.label, pin: encodePin(r) }
+}
+
+/** The searched place in the URL, if any. */
+export function decodePlace(search: WeaverSearch): GeocodeResult | undefined {
+  const pin = decodePin(search.pin)
+  if (!pin) return undefined
+  return { id: `pin:${search.pin}`, label: search.place ?? search.pin!, ...pin }
 }
 
 export function encodeSelection(sel: Selection): string {

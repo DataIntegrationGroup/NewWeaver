@@ -31,3 +31,10 @@ Feature: Location search and coverage
     When the user picks the first suggestion
     Then a pin is dropped at the searched location
     And the coverage panel lists nearby monitored data
+
+  Scenario: The searched place is kept in the URL
+    When the user searches for the location "100 Yale Blvd, Albuquerque"
+    Then a pin is dropped at the searched location
+    When the user reloads the page
+    Then a pin is dropped at the searched location
+    And the coverage panel lists nearby monitored data
