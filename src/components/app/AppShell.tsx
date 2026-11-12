@@ -716,6 +716,7 @@ export function AppShell() {
           layer={layer}
           features={filtered.features}
           shapes={shapes}
+          timeseriesCollectionId={dataset?.detail?.timeseries}
         />
       )}
 
