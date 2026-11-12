@@ -1,8 +1,8 @@
 @frontend
 Feature: Download modal
-  A "Download" button opens a modal where the user picks what to export and how.
-  The modal resolves the current selection, lets the user choose the export
-  kind and options, and triggers a client-side file download.
+  A "Download" button opens a modal where the user exports the filtered site summary
+  as CSV or GeoJSON, built in the browser from the sites on the map, or hands
+  off to the full time-series download for the dataset.
 
   Background:
     Given the user has opened the app
@@ -11,7 +11,7 @@ Feature: Download modal
   Scenario: Opening the download modal
     When the user clicks the "Download" button
     Then a download modal opens
-    And it offers time series, latest observation, and features exports
+    And it offers site summary and time series exports
     And it shows how many sites are selected
 
   Scenario: The download modal points to the Desktop GIS integration
@@ -33,19 +33,27 @@ Feature: Download modal
     And the filters contribute nothing while a shape restricts the selection
 
   @smoke
-  Scenario: Downloading features as GeoJSON
+  Scenario: Downloading the filtered site summary as CSV
     When the user opens the download modal
-    And the user chooses the features export
+    And the user chooses the CSV format
+    And the user clicks download
+    Then a CSV file download is triggered
+    And the file name begins with "weaver-water-levels-sites-"
+    And the CSV has as many rows as the selected count
+
+  Scenario: Downloading the filtered site summary as GeoJSON
+    When the user opens the download modal
+    And the user chooses the GeoJSON format
     And the user clicks download
     Then a GeoJSON file download is triggered
-    And the file name begins with "weaver-features-"
+    And the file name begins with "weaver-water-levels-sites-"
 
-  Scenario: Time range is offered only for time-series exports
+  Scenario: Time series hands off to the full dataset download
     When the user opens the download modal
     And the user chooses the time series export
-    Then the user can set a from and to date
-    When the user chooses the features export
-    Then no time range inputs are shown
+    And the user continues to the time series download
+    Then the dataset download shows 882,280 rows in 89 requests
+    And the large download warning is shown and download is disabled
 
   Scenario: Nothing selected disables download
     Given the user filters sites by the text "zzzzzznomatch"

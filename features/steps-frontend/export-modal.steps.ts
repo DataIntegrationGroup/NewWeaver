@@ -1,5 +1,6 @@
 import { When, Then } from "@cucumber/cucumber"
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import type { Download } from "playwright"
 
 import type { BrowserWorld } from "./support/world"
@@ -41,19 +42,16 @@ Then("the Desktop GIS help section is shown", async function (this: BrowserWorld
   await this.page.getByTestId("help-gis").waitFor()
 })
 
-Then(
-  "it offers time series, latest observation, and features exports",
-  async function (this: BrowserWorld) {
-    await this.page.getByTestId("export-kind-timeseries").waitFor()
-    await this.page.getByTestId("export-kind-latest").waitFor()
-    await this.page.getByTestId("export-kind-features").waitFor()
-  }
-)
+Then("it offers site summary and time series exports", async function (this: BrowserWorld) {
+  await this.page.getByTestId("export-kind-sites").waitFor()
+  await this.page.getByTestId("export-kind-timeseries").waitFor()
+})
 
 Then("it shows how many sites are selected", async function (this: BrowserWorld) {
-  // A DIE dataset is vector features, so the modal opens on the features export.
   const txt = (await this.page.getByTestId("export-summary").textContent()) ?? ""
-  assert.match(txt, /\b5 features selected/)
+  assert.match(txt, /\b5 sites selected/)
+  const note = (await this.page.getByTestId("export-sites-note").textContent()) ?? ""
+  assert.match(note, /Water Levels summary/)
 })
 
 When("the user pans to a smaller area", async function (this: BrowserWorld) {
@@ -96,9 +94,15 @@ When("the user chooses the time series export", async function (this: BrowserWor
   await this.page.getByTestId("export-kind-timeseries").click()
 })
 
-When("the user chooses the features export", async function (this: BrowserWorld) {
+When("the user chooses the {word} format", async function (this: BrowserWorld, format: string) {
   await openModal(this)
-  await this.page.getByTestId("export-kind-features").click()
+  await this.page.getByTestId(`export-format-${format.toLowerCase()}`).click()
+})
+
+When("the user continues to the time series download", async function (this: BrowserWorld) {
+  await this.page.getByTestId("export-download").click()
+  await this.page.getByTestId("dataset-download-dialog").waitFor()
+  await this.page.getByTestId("export-dialog").waitFor({ state: "detached" })
 })
 
 When("the user clicks download", async function (this: World) {
@@ -114,17 +118,19 @@ Then("a GeoJSON file download is triggered", function (this: World) {
   assert.match(this.download!.suggestedFilename(), /\.geojson$/)
 })
 
+Then("a CSV file download is triggered", function (this: World) {
+  assert.ok(this.download, "expected a download")
+  assert.match(this.download!.suggestedFilename(), /\.csv$/)
+})
+
+Then("the CSV has as many rows as the selected count", async function (this: World) {
+  const text = await readFile((await this.download!.path())!, "utf8")
+  const rows = text.split(/\r?\n/).filter(Boolean).length - 1
+  assert.equal(rows, (await selectionCounts(this)).total)
+})
+
 Then("the file name begins with {string}", function (this: World, prefix: string) {
   assert.ok(this.download!.suggestedFilename().startsWith(prefix))
-})
-
-Then("the user can set a from and to date", async function (this: BrowserWorld) {
-  await this.page.getByTestId("export-from").waitFor()
-  await this.page.getByTestId("export-to").waitFor()
-})
-
-Then("no time range inputs are shown", async function (this: BrowserWorld) {
-  assert.equal(await this.page.getByTestId("export-from").count(), 0)
 })
 
 Then("the download action is disabled", async function (this: BrowserWorld) {
