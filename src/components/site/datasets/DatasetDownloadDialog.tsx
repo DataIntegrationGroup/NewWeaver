@@ -27,17 +27,13 @@ import {
 } from "@/components/export/ExportParts"
 import { die, useDieCount } from "@/hooks/useDieCollections"
 import {
+  EXPORT_FORMATS,
   EXPORT_PAGE_SIZE,
   collectionParts,
   type CollectionFormat,
 } from "@/lib/export/collection"
 import { downloadFile, exportFilename } from "@/lib/export/csv"
 import type { Dataset } from "./collections"
-
-const FORMATS: { id: CollectionFormat; label: string; ext: string; mime: string }[] = [
-  { id: "csv", label: "CSV", ext: "csv", mime: "text/csv" },
-  { id: "geojson", label: "GeoJSON", ext: "geojson", mime: "application/geo+json" },
-]
 
 /** Above this many rows the dialog flags a large file. */
 const LARGE_ROW_COUNT = 30_000
@@ -46,10 +42,12 @@ const CONFIRM_ROW_COUNT = 100_000
 
 export function DatasetDownloadDialog({
   dataset,
+  description = "The full dataset, straight from the Weaver API.",
   open,
   onOpenChange,
 }: {
-  dataset: Dataset
+  dataset: Pick<Dataset, "id" | "title">
+  description?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -68,7 +66,7 @@ export function DatasetDownloadDialog({
   const needsConfirm = total > CONFIRM_ROW_COUNT
   const running = phase === "running"
   const ready = count.isSuccess && total > 0 && (!needsConfirm || confirmedLarge)
-  const spec = FORMATS.find((f) => f.id === format)!
+  const spec = EXPORT_FORMATS.find((f) => f.id === format)!
 
   async function runDownload() {
     const controller = new AbortController()
@@ -108,13 +106,13 @@ export function DatasetDownloadDialog({
       <DialogContent data-testid="dataset-download-dialog" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Download {dataset.title}</DialogTitle>
-          <DialogDescription>The full dataset, straight from the Weaver API.</DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <ExportGisBanner />
 
         <div role="radiogroup" aria-label="File format" className="grid grid-cols-2 gap-2">
-          {FORMATS.map((f) => (
+          {EXPORT_FORMATS.map((f) => (
             <Button
               key={f.id}
               type="button"
