@@ -8,18 +8,20 @@ Feature: Export data for a well or a selection (W10-486)
     When the user draws a selection around a single site
     And the user opens the download modal
     Then the download covers 1 site
-    When the user chooses the features export
+    When the user chooses the CSV format
     And the user clicks download
-    Then a GeoJSON file download is triggered
+    Then a CSV file download is triggered
+    And the CSV has as many rows as the selected count
 
   Scenario: Download a filtered selection
     Given the user has opened the app
     And the user has unticked the "Within 2 years" bin
     When the user opens the download modal
     Then the download covers 4 sites
-    When the user chooses the features export
+    When the user chooses the CSV format
     And the user clicks download
-    Then a GeoJSON file download is triggered
+    Then a CSV file download is triggered
+    And the CSV has as many rows as the selected count
 
   Scenario: Download a whole dataset as CSV
     Given the user opens the datasets page
