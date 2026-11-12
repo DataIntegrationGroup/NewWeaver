@@ -1,66 +1,32 @@
 @client
 Feature: Export file generation
-  The download feature turns the selected STA / Features data into files. These
-  scenarios pin the file contents — independent of the UI — against mocked STA
-  responses, so the transforms (CSV shape, GeoJSON contents, latest-observation
-  reduction) are guaranteed regardless of how the modal drives them.
+  The map's download turns the selected sites into a CSV or GeoJSON file. These
+  scenarios pin the file contents independent of the UI, so the shape of the
+  export holds regardless of how the modal drives it.
 
   Background:
-    Given a selection of monitoring locations with datastreams and observations
-
-  # --- Time series: combined long / tidy CSV --------------------------------
+    Given a selection of map sites
 
   @smoke
-  Scenario: Time series exports as one combined long-format CSV
-    When the user exports the selection as time series
-    Then a single CSV file is produced
-    And its header is "location_id,location_name,longitude,latitude,datastream_id,datastream_name,unit,phenomenon_time,result"
-    And every observation across all selected datastreams appears as its own row
-    And rows from different datastreams share the one file
+  Scenario: Sites export as one CSV row per site
+    When the user exports the sites as CSV
+    Then the CSV header begins with "feature_id,name,longitude,latitude"
+    And the CSV has one row per selected site
+    And each row carries the site's longitude and latitude
 
-  Scenario: Each time-series row carries its own unit and timestamp
-    When the user exports the selection as time series
-    Then each row's "unit" matches its datastream's unit of measurement
-    And each row's "phenomenon_time" is an ISO 8601 instant
+  Scenario: The CSV covers every property across the sites
+    When the user exports the sites as CSV
+    Then the CSV has a column for every site property
+    And it has no internal "id" column
 
-  Scenario: A time range filters the exported observations
-    Given the export is configured with a time range
-    When the user exports the selection as time series
-    Then only observations whose phenomenon time is within the range are included
-    And observations outside the range are excluded
-
-  Scenario: Datastreams with no observations contribute no rows
-    Given one selected datastream has no observations
-    When the user exports the selection as time series
-    Then that datastream produces no rows
-    And the other datastreams' rows are still present
-
-  # --- Latest observation: snapshot CSV -------------------------------------
+  Scenario: Nested values are JSON-encoded in the CSV
+    When the user exports the sites as CSV
+    Then a nested property value appears as JSON in its cell
 
   @smoke
-  Scenario: Latest observation exports one newest row per datastream
-    When the user exports the selection as latest observation
-    Then a single CSV file is produced
-    And it contains exactly one row per selected datastream
-    And each row holds that datastream's most recent observation
-
-  Scenario: Latest observation includes location coordinates and result time
-    When the user exports the selection as latest observation
-    Then each row includes the location longitude and latitude
-    And each row includes the observation result time
-
-  # --- Features: GeoJSON inventory ------------------------------------------
-
-  @smoke
-  Scenario: Features export is GeoJSON of the selected things only
-    When the user exports the selection as features
+  Scenario: Sites export as GeoJSON keeps geometry and drops the internal id
+    When the user exports the sites as GeoJSON
     Then a GeoJSON FeatureCollection is produced
-    And it contains one feature per selected thing
-    And each feature's geometry is its location point
-    And each feature lists its datastreams in properties
-    And no observations are included in the GeoJSON
-
-  Scenario: OGC Features layers pass through unchanged in a features export
-    Given the selection includes vector features from an OGC API Features layer
-    When the user exports the selection as features
-    Then those features appear in the GeoJSON with their original geometry and properties
+    And it contains one feature per selected site
+    And each feature keeps its original geometry
+    And no feature carries an internal "id" property
