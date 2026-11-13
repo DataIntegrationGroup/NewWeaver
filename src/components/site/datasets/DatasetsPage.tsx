@@ -182,8 +182,9 @@ export function DatasetsPage() {
         />
 
         {selected && isWide && (
-          <Card className="sticky top-6">
-            <CardContent>
+          // Capped to the viewport (minus nav and gutters) so a tall detail scrolls on its own.
+          <Card className="sticky top-6 max-h-[calc(100svh-8rem)]">
+            <CardContent className="min-h-0 overflow-y-auto overscroll-contain">
               <DatasetDetail d={selected} />
             </CardContent>
           </Card>
