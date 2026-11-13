@@ -1,17 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+/** The map's download modal: the filtered site summary as CSV/GeoJSON, or the dataset's full time series. */
+import { useMemo, useState } from "react"
 import type { Feature, Polygon } from "geojson"
 import { usePostHog } from "posthog-js/react"
 
 import type { LayerConfig } from "@/catalog/layers"
 import { resolveSelection } from "@/lib/selection"
-import {
-  gatherTimeSeriesRows,
-  timeSeriesCsv,
-  type TimeRange,
-} from "@/lib/export/timeSeries"
-import { gatherLatestRows, latestCsv } from "@/lib/export/latest"
-import { buildFeaturesGeoJSON } from "@/lib/export/geojson"
+import { EXPORT_FORMATS, type CollectionFormat } from "@/lib/export/collection"
 import { downloadFile, exportFilename } from "@/lib/export/csv"
+import { sitesCsv, sitesGeoJSON } from "@/lib/export/sites"
 
 import {
   Dialog,
@@ -22,20 +18,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ExportGisBanner, ExportProgress, LargeExportConfirm } from "@/components/export/ExportParts"
+import { ExportGisBanner } from "@/components/export/ExportParts"
+import { DatasetDownloadDialog } from "@/components/site/datasets/DatasetDownloadDialog"
 
-type ExportKind = "timeseries" | "latest" | "features"
-
-const KINDS: { id: ExportKind; label: string; ext: string }[] = [
-  { id: "timeseries", label: "Time series", ext: "csv" },
-  { id: "latest", label: "Latest observation", ext: "csv" },
-  { id: "features", label: "Features (GeoJSON)", ext: "geojson" },
-]
-
-/** Above this many locations, an unbounded time-series export is flagged. */
-const LARGE_LOCATION_COUNT = 25
+type ExportKind = "sites" | "timeseries"
 
 interface ExportDialogProps {
   open: boolean
@@ -44,6 +30,8 @@ interface ExportDialogProps {
   /** The layer's features, already filtered. */
   features: Feature[]
   shapes: Polygon[]
+  /** DIE collection with every reading for the dataset, if it has one. */
+  timeseriesCollectionId?: string
 }
 
 export function ExportDialog({
@@ -52,238 +40,148 @@ export function ExportDialog({
   layer,
   features,
   shapes,
+  timeseriesCollectionId,
 }: ExportDialogProps) {
   const posthog = usePostHog()
-  const [kind, setKind] = useState<ExportKind>("timeseries")
-  const [range, setRange] = useState<TimeRange>({})
-  const [confirmedLarge, setConfirmedLarge] = useState(false)
-  const [phase, setPhase] = useState<"idle" | "running" | "error">("idle")
-  const [progress, setProgress] = useState({ done: 0, total: 0 })
-  const [error, setError] = useState<string | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const [kind, setKind] = useState<ExportKind>("sites")
+  const [format, setFormat] = useState<CollectionFormat>("csv")
+  const [seriesOpen, setSeriesOpen] = useState(false)
 
-  const selection = useMemo(
-    () => resolveSelection([{ layer, features }], shapes),
-    [layer, features, shapes]
-  )
+  const selection = useMemo(() => resolveSelection(features, shapes), [features, shapes])
+  const count = selection.features.length
+  const isSeries = kind === "timeseries" && !!timeseriesCollectionId
+  const spec = EXPORT_FORMATS.find((f) => f.id === format)!
 
-  const hasLocations = selection.locations.length > 0
-  const hasFeatures = selection.features.length > 0
-  // Time series / latest need STA locations; features can also use vector data.
-  const exportable = kind === "features" ? hasLocations || hasFeatures : hasLocations
+  const kinds: { id: ExportKind; label: string }[] = [
+    { id: "sites", label: "Site summary (filtered)" },
+    ...(timeseriesCollectionId
+      ? [{ id: "timeseries" as const, label: "Time series (full dataset)" }]
+      : []),
+  ]
 
-  // Auto-pick a sensible default export kind: time series when STA locations are
-  // present, otherwise Features for vector-only selections (e.g. a WFS layer
-  // opened straight from a catalog Download link). Stops once the user chooses.
-  const userPickedKind = useRef(false)
-  useEffect(() => {
-    if (!open) {
-      userPickedKind.current = false
+  function runExport() {
+    if (isSeries) {
+      onOpenChange(false)
+      setSeriesOpen(true)
       return
     }
-    if (userPickedKind.current) return
-    if (!hasLocations && hasFeatures) setKind("features")
-    else if (hasLocations) setKind("timeseries")
-  }, [open, hasLocations, hasFeatures])
-
-  const isLarge =
-    kind === "timeseries" &&
-    !range.from &&
-    !range.to &&
-    selection.locations.length > LARGE_LOCATION_COUNT
-  const blockedByConfirm = isLarge && !confirmedLarge
-
-  const onProgress = (done: number, total: number) => setProgress({ done, total })
-
-  async function runExport() {
-    const controller = new AbortController()
-    abortRef.current = controller
-    setError(null)
-    setPhase("running")
-    setProgress({ done: 0, total: selection.locations.length })
-
-    posthog.capture("export_started", {
-      export_kind: kind,
-      location_count: selection.locations.length,
-      feature_count: selection.features.length,
-      has_date_range: !!(range.from || range.to),
-    })
-
-    try {
-      if (kind === "timeseries") {
-        const rows = await gatherTimeSeriesRows(selection.locations, {
-          range,
-          signal: controller.signal,
-          onProgress,
-        })
-        downloadFile(`${exportFilename("timeseries")}.csv`, timeSeriesCsv(rows), "text/csv")
-      } else if (kind === "latest") {
-        const rows = await gatherLatestRows(selection.locations, {
-          signal: controller.signal,
-          onProgress,
-        })
-        downloadFile(`${exportFilename("latest")}.csv`, latestCsv(rows), "text/csv")
-      } else {
-        const fc = await buildFeaturesGeoJSON(selection, {
-          signal: controller.signal,
-          onProgress,
-        })
-        downloadFile(
-          `${exportFilename("features")}.geojson`,
-          JSON.stringify(fc, null, 2),
-          "application/geo+json"
-        )
-      }
-
-      posthog.capture("export_completed", {
-        export_kind: kind,
-        location_count: selection.locations.length,
-      })
-
-      setPhase("idle")
-      onOpenChange(false)
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") {
-        setPhase("idle")
-      } else {
-        const message = e instanceof Error ? e.message : "Export failed"
-        posthog.capture("export_failed", {
-          export_kind: kind,
-          error_message: message,
-        })
-        setError(message)
-        setPhase("error")
-      }
-    } finally {
-      abortRef.current = null
-    }
+    const stem = exportFilename(`${layer.id}-sites`)
+    const content =
+      format === "csv" ? sitesCsv(selection.features) : JSON.stringify(sitesGeoJSON(selection.features))
+    downloadFile(`${stem}.${spec.ext}`, content, spec.mime)
+    posthog.capture("export_completed", { export_kind: `sites_${format}`, feature_count: count })
+    onOpenChange(false)
   }
 
-  const running = phase === "running"
-
   return (
-    <Dialog open={open} onOpenChange={(o) => !running && onOpenChange(o)}>
-      <DialogContent data-testid="export-dialog" className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Download data</DialogTitle>
-          <DialogDescription>
-            Export the current selection. Drawn shapes and the visible/filtered
-            points both feed the selection.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent data-testid="export-dialog" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Download data</DialogTitle>
+            <DialogDescription>
+              Export the summary for the sites you've filtered or drawn around, or the
+              dataset's full time series.
+            </DialogDescription>
+          </DialogHeader>
 
-        <ExportGisBanner />
+          <ExportGisBanner />
 
-        {/* Export kind */}
-        <div role="radiogroup" aria-label="Export type" className="grid grid-cols-3 gap-2">
-          {KINDS.map((k) => (
-            <Button
-              key={k.id}
-              type="button"
-              role="radio"
-              aria-checked={kind === k.id}
-              data-testid={`export-kind-${k.id}`}
-              variant={kind === k.id ? "default" : "outline"}
-              size="sm"
-              className="h-auto whitespace-normal py-2 text-xs"
-              disabled={running}
-              onClick={() => {
-                userPickedKind.current = true
-                setKind(k.id)
-              }}
-            >
-              {k.label}
-            </Button>
-          ))}
-        </div>
-
-        {/* Selection summary */}
-        <p data-testid="export-summary" className="text-sm">
-          {kind === "features" ? (
-            <span>
-              <strong>{selection.locations.length + selection.features.length}</strong>{" "}
-              features selected
-            </span>
-          ) : (
-            <span>
-              <strong>{selection.locations.length}</strong> monitoring locations selected
-            </span>
-          )}
-          <span className="text-muted-foreground">
-            {" "}
-            ({selection.counts.drawn} from drawing, {selection.counts.filtered} from filters)
-          </span>
-        </p>
-
-        {/* Time range — time series only */}
-        {kind === "timeseries" && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="export-from" className="text-xs">From</Label>
-              <Input
-                id="export-from"
-                type="date"
-                data-testid="export-from"
-                value={range.from ?? ""}
-                disabled={running}
-                onChange={(e) => setRange((r) => ({ ...r, from: e.target.value || undefined }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="export-to" className="text-xs">To</Label>
-              <Input
-                id="export-to"
-                type="date"
-                data-testid="export-to"
-                value={range.to ?? ""}
-                disabled={running}
-                onChange={(e) => setRange((r) => ({ ...r, to: e.target.value || undefined }))}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Large-export warning */}
-        {isLarge && (
-          <LargeExportConfirm
-            title="Large export"
-            checked={confirmedLarge}
-            disabled={running}
-            onCheckedChange={setConfirmedLarge}
+          <div
+            role="radiogroup"
+            aria-label="Export type"
+            className={kinds.length > 1 ? "grid grid-cols-2 gap-2" : "grid gap-2"}
           >
-            This may download a very large file ({selection.locations.length} locations,
-            full history).
-          </LargeExportConfirm>
-        )}
+            {kinds.map((k) => (
+              <Button
+                key={k.id}
+                type="button"
+                role="radio"
+                aria-checked={kind === k.id}
+                data-testid={`export-kind-${k.id}`}
+                variant={kind === k.id ? "default" : "outline"}
+                size="sm"
+                className="h-auto whitespace-normal py-2 text-xs"
+                onClick={() => setKind(k.id)}
+              >
+                {k.label}
+              </Button>
+            ))}
+          </div>
 
-        {!exportable && (
-          <p data-testid="export-empty" className="text-sm text-muted-foreground">
-            Nothing is selected. Toggle a layer, adjust filters, or draw a selection.
-          </p>
-        )}
-
-        {running && <ExportProgress done={progress.done} total={progress.total} unit="locations" />}
-
-        {phase === "error" && error && (
-          <p className="text-sm text-destructive" role="alert">{error}</p>
-        )}
-
-        <DialogFooter>
-          {running ? (
-            <Button variant="outline" onClick={() => abortRef.current?.abort()}>
-              Cancel
-            </Button>
+          {isSeries ? (
+            <div data-testid="export-summary" className="space-y-2 text-sm">
+              <p>
+                Every reading for every site in {layer.title}: the raw data the site summary is
+                calculated from. Useful for reproducing or checking the summary values, or
+                running your own analysis.
+              </p>
+              <p className="text-muted-foreground">
+                It's a large file covering the whole dataset, not just your filters or drawing.
+                For a quick look, check out the site summary for this or other parameters.
+              </p>
+            </div>
           ) : (
+            <>
+              <div role="radiogroup" aria-label="File format" className="grid grid-cols-2 gap-2">
+                {EXPORT_FORMATS.map((f) => (
+                  <Button
+                    key={f.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={format === f.id}
+                    data-testid={`export-format-${f.id}`}
+                    variant={format === f.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFormat(f.id)}
+                  >
+                    {f.label}
+                  </Button>
+                ))}
+              </div>
+
+              <p data-testid="export-summary" className="text-sm">
+                <strong>{count}</strong> sites selected
+                <span className="text-muted-foreground">
+                  {" "}
+                  ({selection.counts.drawn} from drawing, {selection.counts.filtered} from
+                  filters)
+                </span>
+              </p>
+
+              <p data-testid="export-sites-note" className="text-sm text-muted-foreground">
+                One row per site from the {layer.title} summary, not individual readings.
+              </p>
+
+              {count === 0 && (
+                <p data-testid="export-empty" className="text-sm text-muted-foreground">
+                  Nothing is selected. Adjust filters or draw a selection.
+                </p>
+              )}
+            </>
+          )}
+
+          <DialogFooter>
             <Button
               data-testid="export-download"
-              disabled={!exportable || blockedByConfirm}
+              disabled={!isSeries && count === 0}
               onClick={runExport}
             >
-              Download {KINDS.find((k) => k.id === kind)?.ext.toUpperCase()}
+              {isSeries ? "Continue" : `Download ${spec.label}`}
             </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {timeseriesCollectionId && (
+        <DatasetDownloadDialog
+          key={timeseriesCollectionId}
+          dataset={{ id: timeseriesCollectionId, title: `${layer.title} time series` }}
+          description="Every reading behind the site summary, for every site in the dataset, straight from the Weaver API."
+          open={seriesOpen}
+          onOpenChange={setSeriesOpen}
+        />
+      )}
+    </>
   )
 }

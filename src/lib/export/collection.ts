@@ -10,6 +10,12 @@ export const EXPORT_PAGE_SIZE = 10000
 
 export type CollectionFormat = "csv" | "geojson"
 
+/** File formats offered by the dataset and map export dialogs. */
+export const EXPORT_FORMATS: { id: CollectionFormat; label: string; ext: string; mime: string }[] = [
+  { id: "csv", label: "CSV", ext: "csv", mime: "text/csv" },
+  { id: "geojson", label: "GeoJSON", ext: "geojson", mime: "application/geo+json" },
+]
+
 interface Options {
   /** Total rows to fetch (the collection's numberMatched). */
   total: number

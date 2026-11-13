@@ -24,7 +24,7 @@ When("the user opens the copied link", async function (this: BrowserWorld) {
 
 Then("the download covers {int} site(s)", async function (this: BrowserWorld, n: number) {
   const summary = (await this.page.getByTestId("export-summary").textContent()) ?? ""
-  assert.match(summary, new RegExp(`^${n} features selected`))
+  assert.match(summary, new RegExp(`^${n} sites selected`))
 })
 
 Then(
