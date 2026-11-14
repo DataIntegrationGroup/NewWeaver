@@ -22,6 +22,10 @@ import { PAGE_CONTAINER as CONTAINER, PageShell } from "@/components/ui/page"
 import { SiteHeader } from "./SiteHeader"
 import { DataSourceCarousel } from "./DataSourceCarousel"
 import { DataDashboard } from "./DataDashboard"
+import { PlaceSuggestions } from "@/components/place-search/PlaceSuggestions"
+import { usePlaceSearch } from "@/hooks/usePlaceSearch"
+import type { GeocodeResult } from "@/lib/geocode"
+import { placeSearch } from "@/lib/urlState"
 import { DataFlowBeam } from "./DataFlowBeam"
 import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import { TRY_DATASETS } from "@/catalog/datasets"
@@ -39,12 +43,17 @@ const HERO_CHIP = "border-white/40 text-white hover:bg-white/10"
 
 function HeroSearch() {
   const navigate = useNavigate()
-  const [placeQuery, setPlaceQuery] = useState("")
   const [datasetQuery, setDatasetQuery] = useState("")
 
-  // The place text isn't handed to the map yet — #find opens and focuses the
-  // map's own location search. Homepage geocoding (with suggestions) comes later.
-  const findPlace = (e: React.FormEvent) => {
+  // #find opens the map's sidebar and focuses its place search (needed on mobile).
+  const openOnMap = (r: GeocodeResult | null) => {
+    if (r) navigate({ to: "/map", search: placeSearch(r), hash: "find" })
+  }
+  const places = usePlaceSearch({ onLocate: openOnMap })
+
+  // An empty search still opens the map, ready to search there.
+  const searchPlace = (e: React.FormEvent) => {
+    if (places.text.trim()) return places.submit(e)
     e.preventDefault()
     navigate({ to: "/map", hash: "find" })
   }
@@ -67,22 +76,42 @@ function HeroSearch() {
       </TabsList>
 
       <TabsContent value="place" className="flex flex-col gap-3">
-        <form onSubmit={findPlace} className="flex flex-col gap-2 sm:flex-row">
-          <InputGroup className="bg-background text-foreground">
-            <InputGroupAddon>
-              <MapPin />
-            </InputGroupAddon>
-            <InputGroupInput
-              aria-label="Address or place"
-              placeholder="Address, city, or ZIP"
-              value={placeQuery}
-              onChange={(e) => setPlaceQuery(e.target.value)}
-            />
-          </InputGroup>
-          <Button type="submit">
-            Search map <ArrowRight data-icon="inline-end" />
+        <form onSubmit={searchPlace} className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <InputGroup className="bg-background text-foreground">
+              <InputGroupAddon>
+                <MapPin />
+              </InputGroupAddon>
+              <InputGroupInput
+                {...places.inputProps}
+                aria-label="Address or place"
+                placeholder="Address, city, or ZIP"
+                data-testid="home-place-input"
+              />
+            </InputGroup>
+            {places.showSuggestions && (
+              <PlaceSuggestions
+                id={places.listId}
+                suggestions={places.suggestions}
+                onPick={places.pick}
+              />
+            )}
+          </div>
+          <Button type="submit" disabled={places.searching} data-testid="home-place-submit">
+            {places.searching ? "Searching…" : "Search map"}
+            <ArrowRight data-icon="inline-end" />
           </Button>
         </form>
+        {places.notFound && (
+          <p className="text-sm text-white" data-testid="home-place-notfound">
+            Couldn’t find that place. Try a street address, city, or ZIP in New Mexico.
+          </p>
+        )}
+        {places.failed && (
+          <p className="text-sm text-white" data-testid="home-place-error">
+            Place search is unavailable right now. Please try again.
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2 text-white/90">
           <span>Try</span>
           {TRY_PLACES.map((label) => (
@@ -90,7 +119,7 @@ function HeroSearch() {
               key={label}
               variant="outline"
               className={HERO_CHIP}
-              render={<button type="button" onClick={() => setPlaceQuery(label)} />}
+              render={<button type="button" onClick={() => places.search(label)} />}
             >
               {label}
             </Badge>

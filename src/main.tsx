@@ -20,9 +20,9 @@ import { layerPersister } from "./lib/persister"
 import { CATALOG_VERSION, PERSISTED_INTEGRATED_COLLECTIONS } from "./catalog/layers"
 import { router } from "./router"
 
-// Wire the generic (design-system) loading bar to this app's query activity.
+// Wire the generic (design-system) loading bar to this app's query activity, minus queries marked `meta.quiet`.
 function GlobalLoadingBar() {
-  return <TopLoadingBar active={useIsFetching() > 0} />
+  return <TopLoadingBar active={useIsFetching({ predicate: (q) => !q.meta?.quiet }) > 0} />
 }
 
 // MapLibre v6 resolves its worker relative to its own module, which breaks
