@@ -584,7 +584,12 @@ export function Help() {
             <section id="disclaimer" className="scroll-mt-6 space-y-4">
               <h2>Disclaimer</h2>
               <p className="text-muted-foreground">
-                At NMBGMR, we use different tools to collect groundwater level
+                Weaver provides access to data collected by the New Mexico Bureau
+                of Geology and Mineral Resources (NMBGMR) and data collected by
+                other entities.
+              </p>
+              <p className="text-muted-foreground">
+                <strong>Data Collected by NMBGMR:</strong> At NMBGMR, we use different tools to collect groundwater level
                 measurements, including continuous data recorders and manual
                 measurements. All data provided here are in feet, depth to water,
                 below ground surface (BGS). We use pressure transducers to record
@@ -606,19 +611,22 @@ export function Help() {
                 utility of the data for general or scientific purposes.
               </p>
               <p className="text-muted-foreground">
-                This geospatial data is being provided to the public as a resource
-                to aid in the understanding of the resources of New Mexico.
-                However, there are limitations for all data, particularly when
-                aggregated with other data that may have been collected at
-                different times, by different agencies or people, and for
-                different purposes. All geospatial data sets are inherently
-                scale-dependent and may falsely imply relationships with other
-                data or a false level of accuracy when zoomed-in beyond the scale
-                of analysis. Users of this data should carefully read the included
-                metadata for each data set. Site-specific conditions should also
-                be verified, especially for legally binding decisions. Users are
-                also welcome to contact us for clarification regarding the
-                strengths and limitations of our data.
+                <strong>Data Collected by NMBGMR and other entities:</strong>{" "}
+                These geospatial data are shared to help the public understand
+                New Mexico’s geologic and water resources. All datasets have
+                limitations, particularly when combining data collected at
+                different times, scales, or for different purposes. Users should
+                review the metadata for each dataset and verify conditions
+                on-site before making legal, regulatory, or other
+                high-consequence decisions. All geospatial datasets are
+                inherently scale-dependent. The New Mexico Bureau of Geology and
+                Mineral Resources (NMBGMR) provides these data ‘as-is’ without
+                warranties. NMBGMR does not guarantee the accuracy, completeness,
+                and timeliness of these data for any particular purpose.
+                Conditions may have changed since the data were collected.
+                Neither NMBGMR nor any partner agency providing data assumes
+                liability for any errors, omissions, or consequences arising from
+                the use or misuse of these data.
               </p>
             </section>
           </div>
