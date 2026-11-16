@@ -43,9 +43,9 @@ export const DATA_SOURCES: DataSource[] = [
     blurb: "Statewide Points of Diversion and Aquifer Test Wells via ArcGIS REST, plus OSE monitoring networks.",
   },
   {
-    name: "Albuquerque Bernalillo County Water Utility Authority",
-    org: "abcwua",
-    icon: "https://catalog.newmexicowaterdata.org/uploads/group/2020-07-07-215854.151050wuath.jpg",
+    name: "City of Albuquerque",
+    org: "city-of-albuquerque-environmental-health",
+    icon: "https://catalog.newmexicowaterdata.org/uploads/group/2021-04-21-043530.571527MedallionDome3in.png",
     blurb: "City of Albuquerque groundwater monitoring locations and time series via SensorThings (STA).",
   },
   {
