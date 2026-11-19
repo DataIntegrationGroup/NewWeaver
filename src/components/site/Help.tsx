@@ -56,6 +56,9 @@ const AGENCIES = [
   "Pecos Valley Artesian Conservancy District",
 ]
 
+/** Contact for analytics and privacy questions. */
+const PRIVACY_CONTACT = "data-services-nmbg@nmt.edu"
+
 const GIS_DOCS = {
   arcgis:
     "https://pro.arcgis.com/en/pro-app/latest/help/data/services/use-ogc-api-services.htm",
@@ -141,6 +144,7 @@ const SECTIONS = [
   { id: "gis", label: "Desktop GIS" },
   { id: "glossary", label: "Glossary" },
   { id: "faq", label: "FAQ" },
+  { id: "privacy", label: "Privacy & Analytics" },
   { id: "disclaimer", label: "Disclaimer" },
 ] as const
 
@@ -578,6 +582,76 @@ export function Help() {
                   Only your map view: the dataset, filters, region and selected
                   site. It holds no personal information.
                 </Faq>
+              </div>
+            </section>
+
+            <section id="privacy" className="scroll-mt-6 space-y-4">
+              <h2>Privacy &amp; Analytics</h2>
+
+              <div className="space-y-2">
+                <h3>What is collected for analytics</h3>
+                <p className="text-muted-foreground">
+                  Weaver uses <A href="https://posthog.com">PostHog</A> to
+                  collect site analytics. Analytics events record page views,
+                  clicks, navigation and general interface behavior so the
+                  development team can understand where Weaver is confusing,
+                  slow, or broken. Events include:
+                </p>
+                <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+                  <li>
+                    Page views, including the page address, which holds your
+                    map view, filters, region and selected site.
+                  </li>
+                  <li>
+                    Clicks, filters, datasets chosen, sites selected and place
+                    searches.
+                  </li>
+                  <li>
+                    Browser and device details, such as browser type and screen
+                    size.
+                  </li>
+                  <li>Error reports when something on the page breaks.</li>
+                </ul>
+                <p className="text-muted-foreground">
+                  PostHog sets a first-party cookie and local storage holding a
+                  random ID. Weaver has no user login, and analytics data isn’t linked to
+                  a name or email.
+                </p>
+                <p className="text-muted-foreground">
+                  PostHog stores and processes this data for the New Mexico
+                  Bureau of Geology and Mineral Resources, on servers in the US.
+                  The Bureau decides what Weaver collects.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <h3>Why we need it</h3>
+                <p className="text-muted-foreground">
+                  Site analytics help the team:
+                </p>
+                <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
+                  <li>Find broken or confusing screens</li>
+                  <li>
+                    Understand which datasets, filters and workflows are useful,
+                    and which need performance or usability improvements
+                  </li>
+                  <li>
+                    Troubleshoot support requests with the page and browser
+                    context needed to reproduce problems
+                  </li>
+                  <li>Prioritize fixes based on real usage instead of guesses</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h3>Questions</h3>
+                <p className="text-muted-foreground">
+                  Contact the Bureau of Geology Data Services team at{" "}
+                  <a href={`mailto:${PRIVACY_CONTACT}`} className="link">
+                    {PRIVACY_CONTACT}
+                  </a>{" "}
+                  with questions about Weaver analytics.
+                </p>
               </div>
             </section>
 

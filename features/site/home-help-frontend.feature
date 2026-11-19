@@ -60,3 +60,8 @@ Feature: Home and help pages
     Given the user opens the help page
     When the user opens the "Desktop GIS" help section
     Then the help page offers the Weaver API URL to copy
+
+  Scenario: Help page explains Weaver's usage analytics
+    Given the user opens the help page
+    When the user opens the "Privacy & Analytics" help section
+    Then the help page explains the usage analytics
