@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "6f698d610fbfc6a7e2c19898f65460c2f9bf1f54",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "weaver",
+      "changelog-path": "CHANGELOG.md",
+      "include-component-in-tag": false
+    }
+  }
+}
