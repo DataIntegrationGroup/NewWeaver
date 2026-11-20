@@ -18,7 +18,7 @@ ENV VITE_POSTHOG_HOST=$VITE_POSTHOG_HOST
 RUN pnpm build
 
 # --- Serve with nginx -----------------------------------------------------
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:stable-alpine AS runtime
 # Cloud Run injects PORT (default 8080); the nginx image envsubst's templates
 # in /etc/nginx/templates/*.template into /etc/nginx/conf.d at startup.
 ENV PORT=8080
