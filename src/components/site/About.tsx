@@ -71,6 +71,16 @@ export function About() {
           </ul>
         </section>
 
+        <section className="space-y-3">
+          <h2>New to Weaver?</h2>
+          <p className="text-muted-foreground">
+            The <Link to="/help" className="link">help</Link> page walks through{" "}
+            <HelpLink hash="faq">frequently asked questions</HelpLink>, common{" "}
+            <HelpLink hash="glossary">glossary</HelpLink> terms, and the{" "}
+            <HelpLink hash="privacy">privacy and analytics</HelpLink> notice.
+          </p>
+        </section>
+
         <Card className="items-start gap-6 p-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-col gap-2">
             <h2>Check out our other work</h2>

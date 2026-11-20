@@ -118,3 +118,9 @@ When("the user opens the help link", async function (this: BrowserWorld) {
   await this.page.waitForURL(/\/help/)
   await this.page.getByTestId("help-page").waitFor()
 })
+
+Then("the help page explains the usage analytics", async function (this: BrowserWorld) {
+  const section = this.page.locator("#privacy")
+  await section.getByRole("link", { name: "PostHog", exact: true }).waitFor()
+  await section.locator('a[href^="mailto:"]').waitFor()
+})
