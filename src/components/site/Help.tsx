@@ -600,15 +600,15 @@ export function Help() {
                 <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
                   <li>
                     Page views, including the page address, which holds your
-                    map view, filters, region and selected site.
+                    map view, filters, region and selected site;
                   </li>
                   <li>
                     Clicks, filters, datasets chosen, sites selected and place
-                    searches.
+                    searches;
                   </li>
                   <li>
                     Browser and device details, such as browser type and screen
-                    size.
+                    size; and
                   </li>
                   <li>Error reports when something on the page breaks.</li>
                 </ul>
@@ -630,16 +630,16 @@ export function Help() {
                   Site analytics help the team:
                 </p>
                 <ul className="list-disc space-y-2 pl-6 text-muted-foreground">
-                  <li>Find broken or confusing screens</li>
+                  <li>Find broken or confusing screens;</li>
                   <li>
                     Understand which datasets, filters and workflows are useful,
-                    and which need performance or usability improvements
+                    and which need performance or usability improvements;
                   </li>
                   <li>
                     Troubleshoot support requests with the page and browser
-                    context needed to reproduce problems
+                    context needed to reproduce problems; and
                   </li>
-                  <li>Prioritize fixes based on real usage instead of guesses</li>
+                  <li>Prioritize fixes based on real usage instead of guesses.</li>
                 </ul>
               </div>
 
